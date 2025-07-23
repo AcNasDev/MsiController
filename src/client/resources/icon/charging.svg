@@ -1,0 +1,12 @@
+<!-- Charging -->
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <!-- Charge level (set height dynamically: y = 4 + 16*(1-level)) -->
+    <rect x="7" y="4" width="10" height="16" fill="transparent" class="charge-level"/>
+
+    <!-- Battery outline -->
+    <rect x="6" y="2" width="12" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <rect x="9" y="0" width="6" height="2" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+
+    <!-- Centered charging symbol -->
+    <path d="M12 7L9 13H12L10 21L15 15H12L12 7Z" fill="currentColor" transform="translate(0 -1)"/>
+</svg>

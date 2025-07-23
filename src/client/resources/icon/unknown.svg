@@ -1,0 +1,11 @@
+<!-- Неизвестно (центрированный) -->
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <rect x="7" y="4" width="10" height="16" fill="transparent" class="charge-level"/>
+    <rect x="6" y="2" width="12" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <rect x="9" y="0" width="6" height="2" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+
+    <path d="M10.5 10C10.5 8.5 12 8 13 8C14.5 8 15.5 9 15.5 10C15.5 11 13 11.5 13 14V14.5"
+          stroke="currentColor" stroke-width="1.5" fill="none"
+          transform="translate(-1.5 0)"/>
+    <circle cx="11.5" cy="17.5" r="1" fill="currentColor"/>
+</svg>

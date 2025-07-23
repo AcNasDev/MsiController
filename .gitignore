@@ -1,0 +1,102 @@
+# --- General ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+*.tmp
+*.temp
+*.log
+
+# --- VSCode ---
+.vscode/
+.history/
+.code-workspace
+
+# --- Qt Creator ---
+*.user
+*.user.*
+*.pro.user
+*.qbs.user
+*.creator.user
+*.creator
+*.autosave
+*.pro.user.*
+*.qmlproject.user
+*.qmlproject.user.*
+
+# --- Qt build directories ---
+build-*/
+build/
+_build*/
+out/
+out-build*/
+*.build/
+*.obj/
+*.moc/
+*.rcc/
+*.uic/
+*.qrc.depends
+*.qrc.translations
+*.qrc
+*.qrc.cpp
+
+# --- CMake ---
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+install_manifest.txt
+
+# --- qmake ---
+*.pro.user
+*.pro.user.*
+*.qmake.stash
+*.qmake.cache
+
+# --- Compiled binaries ---
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.o
+*.obj
+*.lo
+*.la
+*.out
+*.app
+*.elf
+
+# --- Qt resource files ---
+*.qm
+*.ts~
+
+# --- QML cache ---
+.qmlcache/
+*.qmlc
+*.jsc
+
+# --- Generated files ---
+moc_*
+ui_*
+qrc_*
+
+# --- Test and coverage ---
+*.gcda
+*.gcno
+*.gcov
+*.profraw
+*.profdata
+
+# --- Other IDEs ---
+.idea/
+*.iml
+
+# --- System files ---
+*.orig
+*.rej
+*~
+# End
