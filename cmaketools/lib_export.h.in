@@ -1,0 +1,16 @@
+#ifndef NAME_GLOBAL_H
+#define NAME_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#ifndef NAME_NOLIBRARY
+#if defined(NAME_LIBRARY)
+#define NAME_EXPORT Q_DECL_EXPORT
+#else
+#define NAME_EXPORT Q_DECL_IMPORT
+#endif
+#else
+#define NAME_EXPORT
+#endif
+
+#endif // NAME_GLOBAL_H

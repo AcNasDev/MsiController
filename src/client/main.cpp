@@ -15,6 +15,9 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+    qDebug() << CMAKE_TOOLS_GIT_TAG_MAJOR <<    
+                CMAKE_TOOLS_GIT_TAG_MINOR << 
+                CMAKE_TOOLS_GIT_TAG_PATCH;
     qmlRegisterUncreatableMetaObject(Msi::staticMetaObject, "Msi", 1, 0, "Msi", "Enums only");
     qmlRegisterType<Msi::Range>("Msi", 1, 0, "range");
     qmlRegisterType<EsProxy>("MsiController", 1, 0, "EsProxy");
@@ -29,7 +32,8 @@ int main(int argc, char *argv[])
     );
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("qtversion", QString(qVersion()));
-    engine.rootContext()->setContextProperty("appversion", QString(VERSION));
+    engine.rootContext()->setContextProperty("appversion", QString(CMAKE_TOOLS_GIT_TAG_MAJOR) + "." +
+        QString(CMAKE_TOOLS_GIT_TAG_MINOR) + "." + QString(CMAKE_TOOLS_GIT_TAG_PATCH));
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreationFailed,
