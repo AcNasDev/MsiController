@@ -1,0 +1,13 @@
+if(NOT DEFINED CMAKE_INSTALL_PREFIX)
+    set(CMAKE_INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@")
+endif()
+
+file(REMOVE_RECURSE
+    "@CMAKE_INSTALL_FULL_BINDIR@/MsiControlCenterService"
+    "/etc/dbus-1/system.d/msi-ec-service.conf"
+    "/lib/systemd/system/msi-ec-service.service"
+)
+
+execute_process(COMMAND systemctl disable msi-ec-service.service)
+execute_process(COMMAND systemctl stop msi-ec-service.service)
+execute_process(COMMAND systemctl daemon-reload)

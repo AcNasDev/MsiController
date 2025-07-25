@@ -8,7 +8,7 @@ Parameter::Parameter(const QVariant &name, const QVariant &available, const bool
     : QObject(parent), mName(name), mAvailable(available), mIsReadOnly(isReadOnly) 
 {
     QTimer::singleShot(0, this, [this]() {
-    QSettings settings(qApp->applicationName() + ".ini", QSettings::IniFormat);
+        QSettings settings("/etc/MsiController/settings.ini", QSettings::IniFormat);
         settings.beginGroup("Parameters");
         if(settings.contains(mName.toString())) {
             setValue(settings.value(mName.toString()));
@@ -23,7 +23,7 @@ void Parameter::setValue(const QVariant &value)
     if(value == mValue) return;
     if(mIsReadOnly) return;
 
-    QSettings settings(qApp->applicationName() + ".ini", QSettings::IniFormat);
+    QSettings settings("/etc/MsiController/settings.ini", QSettings::IniFormat);
     settings.beginGroup("Parameters");
     qDebug() << "Setting value for parameter:" << mName << "to" << value;
     settings.setValue(mName.toString(), value);

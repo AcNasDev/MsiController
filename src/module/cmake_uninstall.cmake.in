@@ -1,0 +1,2 @@
+file(REMOVE "/lib/modules/@KERNEL_VERSION@/extra/msiecmodule.ko")
+file(REMOVE "/etc/modules-load.d/msiecmodule.conf")

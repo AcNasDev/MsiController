@@ -1,0 +1,12 @@
+[Unit]
+Description=Msi EC Control Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/MsiControlCenterService
+Restart=on-failure
+User=root
+
+[Install]
+WantedBy=multi-user.target

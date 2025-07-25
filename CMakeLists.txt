@@ -10,3 +10,7 @@ add_subdirectory(src/helper)
 add_subdirectory(src/module)
 add_subdirectory(src/service)
 add_subdirectory(src/client)
+
+add_custom_target(uninstall
+    DEPENDS uninstall_module uninstall_client uninstall_service uninstall_helper uninstall_module
+)

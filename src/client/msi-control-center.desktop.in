@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Msi Control Center
+Exec=@CMAKE_INSTALL_FULL_BINDIR@/MsiControlCenterClient
+Icon=msi-control-center
+Categories=Utility;

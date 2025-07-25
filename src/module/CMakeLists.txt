@@ -37,3 +37,17 @@ install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/msiecmodule.ko
     DESTINATION /lib/modules/${KERNEL_VERSION}/extra
 )
+
+install(CODE "file(WRITE \"\$ENV{DESTDIR}/etc/modules-load.d/msiecmodule.conf\" \"msiecmodule\n\")")
+
+if(NOT TARGET uninstall_module)
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+        IMMEDIATE @ONLY
+    )
+
+    add_custom_target(uninstall_module
+        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
+    )
+endif()
