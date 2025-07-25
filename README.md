@@ -171,6 +171,9 @@ Special thanks to [BeardOverflow/msi-ec](https://github.com/BeardOverflow/msi-ec
 
 This project is licensed under the MIT License.
 
+**Note:** This project uses the Qt framework, which is licensed under the GNU Lesser General Public License (LGPL) version 3.  
+See [https://www.qt.io/licensing](https://www.qt.io/licensing) and the `LICENSE.LGPL3` file for details.
+
 ```
 MIT License
 
