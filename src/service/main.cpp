@@ -18,7 +18,7 @@ void registerEsSys(EcService &service);
 
 int main(int argc, char* argv[]) {
     QCoreApplication app(argc, argv);
-    app.setApplicationName("msi-ec-service");
+    // app.setApplicationName("msi-ec-service");
     EcService service;
     EcAdaptor ecAdaptor(&service);
 

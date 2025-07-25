@@ -701,7 +701,7 @@ ApplicationWindow {
                     running: cpuContent.visible
                     repeat: true
                     onTriggered: {
-                        var estimateError = 0.05;
+                        var estimateError = 0.003 * interval;
                         var measurementError = 10.0;
                         for (var i = 0; i < cpuContent.rawFregs.length; i++) {
                             var filteredFreq = cpuContent.kalmanFilter(cpuContent.prevFregs[i], cpuContent.rawFregs[i], estimateError, measurementError);
@@ -807,7 +807,11 @@ ApplicationWindow {
                                             freqGraph.tooltipY = parent.y;
                                             freqGraph.tooltipText = (cpuContent.denormalized(cpuContent.valueFregs[index], index) / 1000000.).toFixed(1) + " GHz";
                                         }
-                                        onExited: freqGraph.hoveredIndex = -1
+                                        onExited: {
+                                            freqGraph.hoveredIndex = -1
+                                            parent.opacity = 0.7
+                                        }
+                                        onEntered: parent.opacity = 1.0
                                     }
                                 }
                             }
@@ -831,7 +835,11 @@ ApplicationWindow {
                                             freqGraph.tooltipY = parent.y;
                                             freqGraph.tooltipText = (cpuContent.valueUsage[index] * 100).toFixed(1) + "%";
                                         }
-                                        onExited: freqGraph.hoveredIndex = -1
+                                        onExited: {
+                                            freqGraph.hoveredIndex = -1
+                                            parent.opacity = 0.5
+                                        }
+                                        onEntered: parent.opacity = 1.0
                                     }
                                 }
                             }
@@ -866,7 +874,7 @@ ApplicationWindow {
                                             freqGraph.hoveredIndex = index;
                                             freqGraph.tooltipX = parent.x + parent.width / 2;
                                             freqGraph.tooltipY = parent.y;
-                                            freqGraph.tooltipText = (norm * 100).toFixed(1) + "%";
+                                            freqGraph.tooltipText = (cpuContent.denormalized(norm, parent.idx) / 1000000).toFixed(1) + "GHz";
                                         }
                                         onPositionChanged: function(mouse) {
                                             var newY = parent.y + mouse.y - parent.dragStartY + parent.height / 2;
@@ -879,7 +887,7 @@ ApplicationWindow {
                                             freqGraph.hoveredIndex = index;
                                             freqGraph.tooltipX = parent.x + parent.width / 2;
                                             freqGraph.tooltipY = parent.y;
-                                            freqGraph.tooltipText = (norm * 100).toFixed(1) + "%";
+                                            freqGraph.tooltipText = (cpuContent.denormalized(norm, parent.idx) / 1000000).toFixed(1) + "GHz";
                                         }
                                         onReleased: {
                                             freqGraph.hoveredIndex = -1;
