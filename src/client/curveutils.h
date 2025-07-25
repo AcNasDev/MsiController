@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QVector>
 #include <QPointF>
+#include <QVariant>
 
 class CurveUtils : public QObject {
     Q_OBJECT
