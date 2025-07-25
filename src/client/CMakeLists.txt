@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(Client VERSION 0.1 LANGUAGES CXX)
+project(MsiControlCenterClient VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -12,7 +12,7 @@ find_package(Qt6 REQUIRED COMPONENTS Charts Core Gui Qml Quick DBus)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
-add_executable(Client
+add_executable(MsiControlCenterClient
     main.cpp
     esproxy.cpp
     esproxy.h
@@ -23,10 +23,10 @@ add_executable(Client
     resources.qrc
 )
 
-target_include_directories(Client PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} 
+target_include_directories(MsiControlCenterClient PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} 
                                        ${CMAKE_CURRENT_BINARY_DIR})
 
-qt_add_qml_module(Client
+qt_add_qml_module(MsiControlCenterClient
     URI client
     VERSION 1.0
     QML_FILES
@@ -37,14 +37,14 @@ qt_add_qml_module(Client
     
 )
 
-set_target_properties(Client PROPERTIES
+set_target_properties(MsiControlCenterClient PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
 
-target_link_libraries(Client PUBLIC
+target_link_libraries(MsiControlCenterClient PUBLIC
     Qt6::Quick
     Qt6::DBus
     Qt6::Charts
@@ -55,7 +55,7 @@ target_link_libraries(Client PUBLIC
 )
 
 include(GNUInstallDirs)
-install(TARGETS Client
+install(TARGETS MsiControlCenterClient
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

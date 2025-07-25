@@ -262,7 +262,7 @@ function fillSplineSeries(series, xValues, yValues) {
             borderColor: Fusion.highlight(control.palette) 
             borderWidth: 2
             markerSize: 10
-         pointLabelsFormat: "@yPoint" + unit + " @xPoint" + tempUnit
+            pointLabelsFormat: "@yPoint" + unit + " @xPoint" + tempUnit
             pointLabelsVisible: true
             pointLabelsColor: control.palette.text
         }

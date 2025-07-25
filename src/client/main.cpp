@@ -1,23 +1,23 @@
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext> 
+#include <QIcon>
 
 #include "ecinterface.h"
 #include "esproxy.h"
 #include "curveutils.h"
-
 #include "struct.h"
-
-#ifndef VERSION
-#define VERSION "1.0.0"
-#endif
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    qDebug() << CMAKE_TOOLS_GIT_TAG_MAJOR <<    
-                CMAKE_TOOLS_GIT_TAG_MINOR << 
-                CMAKE_TOOLS_GIT_TAG_PATCH;
+    app.setApplicationName("MSI Control Center");
+    app.setApplicationVersion(QString(CMAKE_TOOLS_GIT_TAG_MAJOR) + "." +
+                             QString(CMAKE_TOOLS_GIT_TAG_MINOR) + "." +
+                             QString(CMAKE_TOOLS_GIT_TAG_PATCH));
+    app.setOrganizationName("AcNas");
+    app.setOrganizationDomain("acnas.net");
+    app.setWindowIcon(QIcon(":/resources/icon/logo.svg"));
     qmlRegisterUncreatableMetaObject(Msi::staticMetaObject, "Msi", 1, 0, "Msi", "Enums only");
     qmlRegisterType<Msi::Range>("Msi", 1, 0, "range");
     qmlRegisterType<EsProxy>("MsiController", 1, 0, "EsProxy");

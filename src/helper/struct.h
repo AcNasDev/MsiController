@@ -58,6 +58,7 @@ namespace Msi {
         MicMuteEc,
         MuteLedEc,
         FirmwareReleaseTimeEc,
+        CpuConfig,
         CountEs
     };
     Q_ENUM_NS(Parametr)
@@ -128,6 +129,91 @@ namespace Msi {
     };
     Q_ENUM_NS(Enable)
 
+
+    struct CpuControl
+    {
+        Q_GADGET
+        Q_PROPERTY(quint32 minFreq MEMBER minFreq)
+        Q_PROPERTY(quint32 maxFreq MEMBER maxFreq)
+        Q_PROPERTY(quint32 scalingMaxFreq MEMBER scalingMaxFreq)
+        Q_PROPERTY(quint32 scalingMinFreq MEMBER scalingMinFreq)
+        Q_PROPERTY(quint32 currentFreq MEMBER currentFreq)
+        Q_PROPERTY(QString availableGovernor MEMBER availableGovernor)
+    public:
+        quint32 minFreq{ 0 };
+        quint32 maxFreq{ 0 };
+        quint32 scalingMaxFreq{ 0 };
+        quint32 scalingMinFreq{ 0 };
+        quint32 currentFreq{ 0 };
+        QString availableGovernor;
+        friend QDataStream &operator<<(QDataStream &out, const Msi::CpuControl &cpu)
+        {
+            out << cpu.minFreq << cpu.maxFreq << cpu.currentFreq << cpu.availableGovernor 
+                 << cpu.scalingMaxFreq << cpu.scalingMinFreq;
+            return out;
+        }
+        friend QDataStream &operator>>(QDataStream &in, Msi::CpuControl &cpu)
+        {
+            in >> cpu.minFreq >> cpu.maxFreq >> cpu.currentFreq >> cpu.availableGovernor
+               >> cpu.scalingMaxFreq >> cpu.scalingMinFreq;
+            return in;
+        }
+        bool operator==(const CpuControl& other) const {
+            return minFreq == other.minFreq &&
+                   maxFreq == other.maxFreq &&
+                   currentFreq == other.currentFreq &&
+                   availableGovernor == other.availableGovernor &&
+                   scalingMaxFreq == other.scalingMaxFreq &&
+                   scalingMinFreq == other.scalingMinFreq;
+        }
+    };
+    struct Cpu : public CpuControl
+    {
+        Q_GADGET
+        Q_PROPERTY(double usage MEMBER usage)
+        Q_PROPERTY(QStringList availableGovernors MEMBER availableGovernors)
+    public:
+        double usage{ 0.0 };
+        QStringList availableGovernors;
+        bool operator==(const Cpu& other) const {
+            return static_cast<const CpuControl&>(*this) == static_cast<const CpuControl&>(other) &&
+                   usage == other.usage &&
+                   availableGovernors == other.availableGovernors;
+        }
+        friend QDataStream &operator<<(QDataStream &out, const Msi::Cpu &cpu)
+        {
+            out << static_cast<const Msi::CpuControl&>(cpu) << cpu.usage << cpu.availableGovernors;
+            return out;
+        }
+        friend QDataStream &operator>>(QDataStream &in, Msi::Cpu &cpu)
+        {
+            in >> static_cast<Msi::CpuControl&>(cpu) >> cpu.usage >> cpu.availableGovernors;
+            return in;
+        }
+    };
+
+    struct CpuConfig
+    {
+        Q_GADGET
+        Q_PROPERTY(QList<Cpu> cpus MEMBER cpus)
+    public:
+        QList<Cpu> cpus;
+        bool operator==(const CpuConfig& other) const {
+            return cpus == other.cpus;
+        }
+        friend QDataStream &operator<<(QDataStream &out, const Msi::CpuConfig &config)
+        {
+            out << config.cpus;
+            return out;
+        }
+        friend QDataStream &operator>>(QDataStream &in, Msi::CpuConfig &config)
+        {
+            in >> config.cpus;
+            return in;
+        }
+    };
+    
+
     struct Msg{
         Q_GADGET
         Q_PROPERTY(QVariant variant MEMBER variant)
@@ -183,6 +269,8 @@ Q_DECLARE_METATYPE(Msi::ShiftMode)
 Q_DECLARE_METATYPE(Msi::FanMode)
 Q_DECLARE_METATYPE(Msi::Enable)
 Q_DECLARE_METATYPE(Msi::Msg)
+Q_DECLARE_METATYPE(Msi::Cpu)
+Q_DECLARE_METATYPE(Msi::CpuConfig)
 
 inline void registerMetaType() {
     qRegisterMetaType<Msi::Parametr>("Msi::Parametr");
@@ -200,6 +288,9 @@ inline void registerMetaType() {
     qRegisterMetaType<QList<Msi::FanMode>>("QList<Msi::FanMode>");
     qRegisterMetaType<QList<Msi::ShiftMode>>("QList<Msi::ShiftMode>");
     qRegisterMetaType<QList<Msi::Msg>>("QList<Msi::Msg>");
+    qRegisterMetaType<Msi::Cpu>("Msi::Cpu");
+    qRegisterMetaType<Msi::CpuConfig>("Msi::CpuConfig");
+
 
     qDBusRegisterMetaType<Msi::Msg>();
 }

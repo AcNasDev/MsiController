@@ -9,6 +9,7 @@
 #include "ecadaptor.h"
 #include "ioparameter.h"
 #include "struct.h"
+#include "cpuparameter.h"
 
 bool loadEcSysModule();
 void registerEsSys(EcService &service);
@@ -400,4 +401,5 @@ void registerEsSys(EcService &service)
             service.registerParameter(p);
         }
     }
+    service.registerParameter(new CpuParameter(QVariant::fromValue(Msi::Parametr::CpuConfig), &service));
 }
