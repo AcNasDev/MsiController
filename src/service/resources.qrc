@@ -1,5 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <!-- Добавьте сюда ваши ресурсы, если они есть -->
+        <file>settings.ini</file>
     </qresource>
 </RCC>
