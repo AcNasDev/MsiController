@@ -1,0 +1,6 @@
+sync_to_github:
+  stage: deploy
+  script:
+    - git push --mirror https://$GITHUB_TOKEN@github.com/AcNasDev/MsiController.git
+  only:
+    - main
