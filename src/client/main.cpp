@@ -2,15 +2,35 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext> 
 #include <QIcon>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QWindow>
 
 #include "ecinterface.h"
 #include "esproxy.h"
 #include "curveutils.h"
 #include "struct.h"
 
+const char* UNIQUE_KEY = "MsiControlCenterUniqueKey";
+
 int main(int argc, char *argv[])
 {
+
+
     QApplication app(argc, argv);
+    QLocalSocket socket;
+    socket.connectToServer(UNIQUE_KEY);
+    if (socket.waitForConnected(100)) {
+        socket.write("raise");
+        socket.flush();
+        socket.waitForBytesWritten(100);
+        return 0;
+    }
+
+    QLocalServer server;
+    server.removeServer(UNIQUE_KEY);
+    server.listen(UNIQUE_KEY);
+
     app.setApplicationName("MSI Control Center");
     app.setApplicationVersion(QString(CMAKE_TOOLS_GIT_TAG_MAJOR) + "." +
                              QString(CMAKE_TOOLS_GIT_TAG_MINOR) + "." +
@@ -30,6 +50,8 @@ int main(int argc, char *argv[])
         return new EnumHelper();
     }
     );
+
+
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("qtversion", QString(qVersion()));
     engine.rootContext()->setContextProperty("appversion", QString(CMAKE_TOOLS_GIT_TAG_MAJOR) + "." +
@@ -41,5 +63,25 @@ int main(int argc, char *argv[])
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
     engine.loadFromModule("client", "Main");
+
+    QObject::connect(&server, &QLocalServer::newConnection, [&engine, &server]() {
+        QLocalSocket* client = server.nextPendingConnection();
+        if (client) {
+            client->waitForReadyRead(100);
+            QByteArray msg = client->readAll();
+            if (msg == "raise") {
+                for (auto obj : engine.rootObjects()) {
+                    if (auto window = qobject_cast<QWindow*>(obj)) {
+                        if (window->visibility() != QWindow::Windowed) {
+                            window->showNormal();
+                        }
+                        window->raise();
+                        window->requestActivate();
+                    }
+                }
+            }
+            client->disconnectFromServer();
+        }
+    });
     return app.exec();
 }
