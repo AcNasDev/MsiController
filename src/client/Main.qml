@@ -45,6 +45,7 @@ ApplicationWindow {
         }
     }
     
+    
     EsProxy {
         id: proxy
     }
