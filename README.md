@@ -1,3 +1,5 @@
+[![GitLab CI](https://gitlab.com/app/msicontroller/badges/main/pipeline.svg)](https://gitlab.com/app/msicontroller/-/pipelines)
+
 # MsiController
 
 **MsiController** is a comprehensive project for managing and monitoring MSI devices on Linux. The project consists of several components: a service, a client application, a helper library, and a kernel module.

@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <!-- Добавьте сюда ваши ресурсы, если они есть -->
+    </qresource>
+</RCC>
+        <file>resources/icon/discharging.svg</file>
+        <file>resources/icon/fullycharged.svg</file>
+        <file>resources/icon/fullychargednopower.svg</file>
+        <file>resources/icon/notcharging.svg</file>
+        <file>resources/icon/unknown.svg</file>
+    </qresource>
+</RCC>
