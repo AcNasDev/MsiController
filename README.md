@@ -41,7 +41,7 @@
 
 - CMake >= 3.16
 - C++17 compiler (e.g. g++ or clang++)
-- Qt6 (qt6-base-dev, qt6-declarative-dev, qt6-tools-dev, qt6-tools-dev-tools, qt6-quickcontrols2-dev, qt6-charts-dev, qt6-qmltooling-plugins, qt6-qml-dev-tools, qt6-qml-dev)
+- Qt6 (qt6-base-dev, qt6-declarative-dev, qt6-tools-dev, qt6-tools-dev-tools, qt6-charts-dev, qt6-qmltooling-plugins)
 - libdbus-1-dev
 - ninja-build
 - pkg-config
@@ -55,8 +55,8 @@
 > ```sh
 > sudo apt install build-essential cmake ninja-build pkg-config git \
 >   qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools \
->   qt6-quickcontrols2-dev qt6-charts-dev qt6-qmltooling-plugins \
->   qt6-qml-dev-tools qt6-qml-dev libdbus-1-dev libsystemd-dev \
+>   qt6-charts-dev qt6-qmltooling-plugins \
+>   libdbus-1-dev libsystemd-dev \
 >   linux-headers-$(uname -r)
 > ```
 
