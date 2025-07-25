@@ -21,6 +21,6 @@ sync_to_github:
   image: docker:20.10
   script:
     - apk add --no-cache git
-    - git push --mirror https://$GITHUB_TOKEN@github.com/AcNasDev/MsiController.git
+    - git push https://$GITHUB_TOKEN@github.com/AcNasDev/MsiController.git main:main
   only:
     - main
