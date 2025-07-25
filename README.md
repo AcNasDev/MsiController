@@ -1,4 +1,4 @@
-[![GitLab CI](https://gitlab.com/app/msicontroller/badges/main/pipeline.svg)](https://gitlab.com/app/msicontroller/-/pipelines)
+[![GitLab CI](https://gitlab.acnas.net/app/msicontroller/badges/main/pipeline.svg)](https://gitlab.acnas.net/app/msicontroller/-/pipelines)
 
 # MsiController
 
