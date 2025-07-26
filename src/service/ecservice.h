@@ -26,11 +26,10 @@ public:
     void registerParameter(Parameter* param);
     Parameter *parameter(const QVariant &name) const;
 
-public slots:
     QDBusVariant availableParameters() const override;
     QDBusVariant readParameter(const QDBusVariant& name) const override;
-    bool writeParameter(const QDBusVariant& name, const QDBusVariant& value) override;
     QDBusVariant availableValues(const QDBusVariant& name) const override;
+    bool writeParameter(const QDBusVariant& name, const QDBusVariant& value) override;
 
 private:
     QHash<QVariant, Parameter*> mParameters;

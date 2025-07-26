@@ -60,7 +60,6 @@ QMap<QString, QVariant> getConfig(const QString &firmavareVersion) {
                 settings.endGroup();
                 break;
             } else if(allowedFw.canConvert<QStringList>() && allowedFw.toStringList().contains(firmavareVersion)) {
-                const auto allowedFwList = allowedFw.toStringList();
                 configSelect = g;
                 settings.endGroup();
                 break;

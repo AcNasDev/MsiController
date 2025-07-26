@@ -27,7 +27,7 @@ CpuParameter::CpuParameter(const QVariant &name, QObject *parent)
         qWarning() << "CPU directory does not exist:" << rootPath;
         return;
     }
-    QRegularExpression cpuRegex("^cpu[0-9]+$");
+    static const QRegularExpression cpuRegex("^cpu[0-9]+$");
     QStringList cpuDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     cpuDirs = cpuDirs.filter(cpuRegex);
     std::sort(cpuDirs.begin(), cpuDirs.end(), [&](const QString &a, const QString &b) {
@@ -55,13 +55,14 @@ QString readFile(const QString &filePath)
 QVector<CpuParameter::CpuCoreStat> CpuParameter::readCoreStats() const
 {
     QVector<CpuCoreStat> stats;
+    static const QRegularExpression rx("^cpu([0-9]+)\\s+");
     QFile file(statPath);
-    QRegularExpression rx("^cpu([0-9]+)\\s+");
+    QRegularExpressionMatch match;
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QString content = QString::fromUtf8(file.readAll());
         QStringList lines = content.split('\n', Qt::SkipEmptyParts);
         for (const QString &strLine : std::as_const(lines)) {
-            QRegularExpressionMatch match = rx.match(strLine.trimmed());
+            match = rx.match(strLine.trimmed());
             if (match.hasMatch()) {
                 QStringList parts = strLine.simplified().split(' ');
                 if (parts.size() < 5) continue;
