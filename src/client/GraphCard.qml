@@ -130,6 +130,25 @@ GroupBox {
         }
     }
     
+    function updateSeriesColors() {
+        for (var i = 0; i < sensorsContainer.children.length; i++) {
+            var sensor = sensorsContainer.children[i]
+            if (!sensor || !sensor.isSensor) continue
+            var series = internal.seriesMap[sensor.name]
+            if (series) {
+                series.color = Qt.rgba(sensor.color.r, sensor.color.g, sensor.color.b, 0.1)
+                series.borderColor = sensor.color
+            }
+        }
+    }
+
+    Connections {
+        target: mainWindow
+        function onCurrentThemeChanged() {
+            updateSeriesColors()
+        }
+    }
+    
     ColumnLayout {
         anchors.fill: parent
         RowLayout {
@@ -163,13 +182,12 @@ GroupBox {
             Layout.fillWidth: true
             Layout.fillHeight: true
             plotArea: Qt.rect(x, y, width, height)
-            
             backgroundColor: "transparent"
             plotAreaColor: "transparent"
             legend.visible: false
             antialiasing: true
             margins { left: 0; top: 0; right: 0; bottom: 0 }
-            
+
             ValueAxis {
                 id: axisX
                 min: 0
@@ -178,7 +196,6 @@ GroupBox {
                 lineVisible: false
                 gridVisible: false
             }
-
             ValueAxis {
                 id: axisY
                 min: internal.minYValue

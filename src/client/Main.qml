@@ -6,6 +6,8 @@ import QtQuick.Shapes
 import QtQuick.Effects
 import QtQuick.Controls.Fusion
 import Qt.labs.platform as Platform
+import QtCore 6.5 as QtCore
+import Qt.labs.settings 1.1
 import QtQuick.Controls
 // import QtQuick.Dialogs
 
@@ -20,6 +22,449 @@ ApplicationWindow {
     height: 600
     minimumWidth: mainContent.implicitWidth
     minimumHeight: mainContent.implicitHeight
+
+    // --- Theme logic ---
+    QtCore.Settings {
+        id: appSettings
+        property string savedTheme: "darkplus"
+    }
+
+    property string currentTheme: appSettings.savedTheme
+    property var palettes: ({
+        darkplus: { // VSCode Dark+
+            window: "#1e1e1e",
+            windowText: "#d4d4d4",
+            base: "#1e1e1e",
+            alternateBase: "#252526",
+            text: "#d4d4d4",
+            button: "#2d2d2d",
+            buttonText: "#d4d4d4",
+            highlight: "#007acc",
+            highlightedText: "#ffffff",
+            link: "#3794ff",
+            linkVisited: "#c586c0",
+            toolTipBase: "#252526",
+            toolTipText: "#d4d4d4",
+            placeholderText: "#6a9955",
+            accent: "#007acc",
+            mid: "#333333",
+            shadow: "#00000080",
+            brightText: "#ffffff",
+            light: "#3c3c3c",
+            dark: "#1e1e1e"
+        },
+        lightplus: { // VSCode Light+
+            window: "#ffffff",
+            windowText: "#333333",
+            base: "#ffffff",
+            alternateBase: "#f3f3f3",
+            text: "#333333",
+            button: "#e7e7e7",
+            buttonText: "#333333",
+            highlight: "#0066b8",
+            highlightedText: "#ffffff",
+            link: "#006ab1",
+            linkVisited: "#a259c4",
+            toolTipBase: "#f3f3f3",
+            toolTipText: "#333333",
+            placeholderText: "#a6a6a6",
+            accent: "#0066b8",
+            mid: "#cccccc",
+            shadow: "#00000020",
+            brightText: "#222222",
+            light: "#eaeaea",
+            dark: "#cccccc"
+        },
+        solarized_dark: {
+            window: "#002b36",
+            windowText: "#839496",
+            base: "#073642",
+            alternateBase: "#002b36",
+            text: "#839496",
+            button: "#073642",
+            buttonText: "#839496",
+            highlight: "#268bd2",
+            highlightedText: "#fdf6e3",
+            link: "#268bd2",
+            linkVisited: "#6c71c4",
+            toolTipBase: "#073642",
+            toolTipText: "#839496",
+            placeholderText: "#586e75",
+            accent: "#b58900",
+            mid: "#586e75",
+            shadow: "#00000080",
+            brightText: "#fdf6e3",
+            light: "#586e75",
+            dark: "#002b36"
+        },
+        solarized_light: {
+            window: "#fdf6e3",
+            windowText: "#657b83",
+            base: "#fdf6e3",
+            alternateBase: "#eee8d5",
+            text: "#657b83",
+            button: "#eee8d5",
+            buttonText: "#657b83",
+            highlight: "#268bd2",
+            highlightedText: "#002b36",
+            link: "#268bd2",
+            linkVisited: "#6c71c4",
+            toolTipBase: "#eee8d5",
+            toolTipText: "#657b83",
+            placeholderText: "#93a1a1",
+            accent: "#b58900",
+            mid: "#93a1a1",
+            shadow: "#00000020",
+            brightText: "#002b36",
+            light: "#eee8d5",
+            dark: "#93a1a1"
+        },
+        monokai: {
+            window: "#272822",
+            windowText: "#f8f8f2",
+            base: "#272822",
+            alternateBase: "#383830",
+            text: "#f8f8f2",
+            button: "#49483e",
+            buttonText: "#f8f8f2",
+            highlight: "#66d9ef",
+            highlightedText: "#272822",
+            link: "#a6e22e",
+            linkVisited: "#f92672",
+            toolTipBase: "#49483e",
+            toolTipText: "#f8f8f2",
+            placeholderText: "#75715e",
+            accent: "#fd971f",
+            mid: "#75715e",
+            shadow: "#00000080",
+            brightText: "#f8f8f2",
+            light: "#49483e",
+            dark: "#272822"
+        },
+        dracula: {
+            window: "#282a36",
+            windowText: "#f8f8f2",
+            base: "#282a36",
+            alternateBase: "#44475a",
+            text: "#f8f8f2",
+            button: "#44475a",
+            buttonText: "#f8f8f2",
+            highlight: "#bd93f9",
+            highlightedText: "#282a36",
+            link: "#8be9fd",
+            linkVisited: "#ff79c6",
+            toolTipBase: "#44475a",
+            toolTipText: "#f8f8f2",
+            placeholderText: "#6272a4",
+            accent: "#50fa7b",
+            mid: "#6272a4",
+            shadow: "#00000080",
+            brightText: "#f8f8f2",
+            light: "#44475a",
+            dark: "#282a36"
+        },
+        darcula: { // JetBrains Darcula
+            window: "#2b2b2b",
+            windowText: "#a9b7c6",
+            base: "#3c3f41",
+            alternateBase: "#313335",
+            text: "#a9b7c6",
+            button: "#4e5254",
+            buttonText: "#a9b7c6",
+            highlight: "#287bde",
+            highlightedText: "#ffffff",
+            link: "#287bde",
+            linkVisited: "#bc3fbc",
+            toolTipBase: "#313335",
+            toolTipText: "#a9b7c6",
+            placeholderText: "#606366",
+            accent: "#ffc66d",
+            mid: "#606366",
+            shadow: "#00000080",
+            brightText: "#ffffff",
+            light: "#4e5254",
+            dark: "#2b2b2b"
+        },
+        atomonedark: { // Atom One Dark
+            window: "#282c34",
+            windowText: "#abb2bf",
+            base: "#21252b",
+            alternateBase: "#282c34",
+            text: "#abb2bf",
+            button: "#3e4451",
+            buttonText: "#abb2bf",
+            highlight: "#61afef",
+            highlightedText: "#282c34",
+            link: "#56b6c2",
+            linkVisited: "#c678dd",
+            toolTipBase: "#21252b",
+            toolTipText: "#abb2bf",
+            placeholderText: "#5c6370",
+            accent: "#98c379",
+            mid: "#5c6370",
+            shadow: "#00000080",
+            brightText: "#ffffff",
+            light: "#3e4451",
+            dark: "#282c34"
+        },
+        sublime: { // Sublime Text
+            window: "#23241f",
+            windowText: "#f8f8f2",
+            base: "#272822",
+            alternateBase: "#383830",
+            text: "#f8f8f2",
+            button: "#75715e",
+            buttonText: "#f8f8f2",
+            highlight: "#fd971f",
+            highlightedText: "#23241f",
+            link: "#a6e22e",
+            linkVisited: "#f92672",
+            toolTipBase: "#383830",
+            toolTipText: "#f8f8f2",
+            placeholderText: "#75715e",
+            accent: "#66d9ef",
+            mid: "#75715e",
+            shadow: "#00000080",
+            brightText: "#f8f8f2",
+            light: "#49483e",
+            dark: "#23241f"
+        },
+        eclipse: { // Eclipse IDE
+            window: "#323232",
+            windowText: "#dcdcdc",
+            base: "#232323",
+            alternateBase: "#323232",
+            text: "#dcdcdc",
+            button: "#464646",
+            buttonText: "#dcdcdc",
+            highlight: "#6a9fb5",
+            highlightedText: "#232323",
+            link: "#519aba",
+            linkVisited: "#b294bb",
+            toolTipBase: "#232323",
+            toolTipText: "#dcdcdc",
+            placeholderText: "#888888",
+            accent: "#b5bd68",
+            mid: "#888888",
+            shadow: "#00000080",
+            brightText: "#ffffff",
+            light: "#464646",
+            dark: "#232323"
+        },
+        xcode_light: { // Xcode Light
+            window: "#ffffff",
+            windowText: "#000000",
+            base: "#f7f7f7",
+            alternateBase: "#e9e9e9",
+            text: "#000000",
+            button: "#e9e9e9",
+            buttonText: "#000000",
+            highlight: "#007aff",
+            highlightedText: "#ffffff",
+            link: "#007aff",
+            linkVisited: "#5856d6",
+            toolTipBase: "#f7f7f7",
+            toolTipText: "#000000",
+            placeholderText: "#b0b0b0",
+            accent: "#34c759",
+            mid: "#cccccc",
+            shadow: "#00000020",
+            brightText: "#000000",
+            light: "#e9e9e9",
+            dark: "#cccccc"
+        },
+        xcode_dark: { // Xcode Dark
+            window: "#1e1e1e",
+            windowText: "#d4d4d4",
+            base: "#202124",
+            alternateBase: "#232326",
+            text: "#d4d4d4",
+            button: "#232326",
+            buttonText: "#d4d4d4",
+            highlight: "#0a84ff",
+            highlightedText: "#ffffff",
+            link: "#0a84ff",
+            linkVisited: "#5e5ce6",
+            toolTipBase: "#232326",
+            toolTipText: "#d4d4d4",
+            placeholderText: "#6e6e6e",
+            accent: "#30d158",
+            mid: "#333333",
+            shadow: "#00000080",
+            brightText: "#ffffff",
+            light: "#232326",
+            dark: "#1e1e1e"
+        },
+        notepadpp: { // Notepad++
+            window: "#ffffff",
+            windowText: "#000000",
+            base: "#f5f5f5",
+            alternateBase: "#e0e0e0",
+            text: "#000000",
+            button: "#e0e0e0",
+            buttonText: "#000000",
+            highlight: "#3399ff",
+            highlightedText: "#ffffff",
+            link: "#3399ff",
+            linkVisited: "#cc99cc",
+            toolTipBase: "#f5f5f5",
+            toolTipText: "#000000",
+            placeholderText: "#888888",
+            accent: "#66cc66",
+            mid: "#cccccc",
+            shadow: "#00000020",
+            brightText: "#000000",
+            light: "#e0e0e0",
+            dark: "#cccccc"
+        },
+        highcontrast_dark: { // Windows High Contrast Black
+            window: "#000000",
+            windowText: "#ffffff",
+            base: "#000000",
+            alternateBase: "#1a1a1a",
+            text: "#ffffff",
+            button: "#000000",
+            buttonText: "#ffffff",
+            highlight: "#ffff00",
+            highlightedText: "#000000",
+            link: "#00ffff",
+            linkVisited: "#ff00ff",
+            toolTipBase: "#000000",
+            toolTipText: "#ffffff",
+            placeholderText: "#ffffff",
+            accent: "#ffff00",
+            mid: "#333333",
+            shadow: "#00000080",
+            brightText: "#ffffff",
+            light: "#1a1a1a",
+            dark: "#000000"
+        },
+        highcontrast_light: { // Windows High Contrast White
+            window: "#ffffff",
+            windowText: "#000000",
+            base: "#ffffff",
+            alternateBase: "#e5e5e5",
+            text: "#000000",
+            button: "#ffffff",
+            buttonText: "#000000",
+            highlight: "#0000ff",
+            highlightedText: "#ffffff",
+            link: "#0000ff",
+            linkVisited: "#ff00ff",
+            toolTipBase: "#ffffff",
+            toolTipText: "#000000",
+            placeholderText: "#000000",
+            accent: "#0000ff",
+            mid: "#cccccc",
+            shadow: "#00000020",
+            brightText: "#000000",
+            light: "#e5e5e5",
+            dark: "#cccccc"
+        },
+        nord_contrast: { // Nord Contrast
+            window: "#2e3440",
+            windowText: "#eceff4",
+            base: "#3b4252",
+            alternateBase: "#434c5e",
+            text: "#eceff4",
+            button: "#4c566a",
+            buttonText: "#eceff4",
+            highlight: "#88c0d0",
+            highlightedText: "#2e3440",
+            link: "#8fbcbb",
+            linkVisited: "#b48ead",
+            toolTipBase: "#434c5e",
+            toolTipText: "#eceff4",
+            placeholderText: "#d8dee9",
+            accent: "#a3be8c",
+            mid: "#4c566a",
+            shadow: "#00000080",
+            brightText: "#eceff4",
+            light: "#434c5e",
+            dark: "#2e3440"
+        },
+        solarized_highcontrast: { // Solarized High Contrast
+            window: "#002b36",
+            windowText: "#ffffff",
+            base: "#073642",
+            alternateBase: "#002b36",
+            text: "#ffffff",
+            button: "#073642",
+            buttonText: "#ffffff",
+            highlight: "#ffb700",
+            highlightedText: "#002b36",
+            link: "#268bd2",
+            linkVisited: "#d33682",
+            toolTipBase: "#073642",
+            toolTipText: "#ffffff",
+            placeholderText: "#b58900",
+            accent: "#ffb700",
+            mid: "#586e75",
+            shadow: "#00000080",
+            brightText: "#ffffff",
+            light: "#586e75",
+            dark: "#002b36"
+        }
+    })
+
+    function applyPalette(theme) {
+        var p = palettes[theme];
+        if (!p) return;
+        mainWindow.palette.window = p.window
+        mainWindow.palette.windowText = p.windowText
+        mainWindow.palette.base = p.base
+        mainWindow.palette.alternateBase = p.alternateBase
+        mainWindow.palette.text = p.text
+        mainWindow.palette.button = p.button
+        mainWindow.palette.buttonText = p.buttonText
+        mainWindow.palette.highlight = p.highlight
+        mainWindow.palette.highlightedText = p.highlightedText
+        mainWindow.palette.link = p.link
+        mainWindow.palette.linkVisited = p.linkVisited
+        mainWindow.palette.toolTipBase = p.toolTipBase
+        mainWindow.palette.toolTipText = p.toolTipText
+        mainWindow.palette.placeholderText = p.placeholderText
+        mainWindow.palette.accent = p.accent
+        mainWindow.palette.mid = p.mid
+        mainWindow.palette.shadow = p.shadow
+        mainWindow.palette.brightText = p.brightText
+        mainWindow.palette.light = p.light
+        mainWindow.palette.dark = p.dark
+    }
+
+    palette: Palette {
+        // initial palette
+        window: palettes[currentTheme].window
+        windowText: palettes[currentTheme].windowText
+        base: palettes[currentTheme].base
+        alternateBase: palettes[currentTheme].alternateBase
+        text: palettes[currentTheme].text
+        button: palettes[currentTheme].button
+        buttonText: palettes[currentTheme].buttonText
+        highlight: palettes[currentTheme].highlight
+        highlightedText: palettes[currentTheme].highlightedText
+        link: palettes[currentTheme].link
+        linkVisited: palettes[currentTheme].linkVisited
+        toolTipBase: palettes[currentTheme].toolTipBase
+        toolTipText: palettes[currentTheme].toolTipText
+        placeholderText: palettes[currentTheme].placeholderText
+        accent: palettes[currentTheme].accent
+        mid: palettes[currentTheme].mid
+        shadow: palettes[currentTheme].shadow
+        brightText: palettes[currentTheme].brightText
+        light: palettes[currentTheme].light
+        dark: palettes[currentTheme].dark
+    }
+
+    onCurrentThemeChanged: {
+        applyPalette(currentTheme)
+        appSettings.savedTheme = currentTheme
+    }
+    Component.onCompleted: {
+        // ensure palette is applied on startup
+        applyPalette(currentTheme)
+    }
+
     // icon: "qrc:/resources/icon/logo.png"
 
     visible: true
@@ -72,6 +517,105 @@ ApplicationWindow {
             MenuItem {
                 text: qsTr("Exit")
                 onTriggered: Qt.quit()
+            }
+        }
+        Menu {
+            title: qsTr("Theme")
+            MenuItem {
+                text: qsTr("VSCode Dark+")
+                checkable: true
+                checked: currentTheme === "darkplus"
+                onTriggered: currentTheme = "darkplus"
+            }
+            MenuItem {
+                text: qsTr("VSCode Light+")
+                checkable: true
+                checked: currentTheme === "lightplus"
+                onTriggered: currentTheme = "lightplus"
+            }
+            MenuItem {
+                text: qsTr("Solarized Dark")
+                checkable: true
+                checked: currentTheme === "solarized_dark"
+                onTriggered: currentTheme = "solarized_dark"
+            }
+            MenuItem {
+                text: qsTr("Solarized Light")
+                checkable: true
+                checked: currentTheme === "solarized_light"
+                onTriggered: currentTheme = "solarized_light"
+            }
+            MenuItem {
+                text: qsTr("Monokai")
+                checkable: true
+                checked: currentTheme === "monokai"
+                onTriggered: currentTheme = "monokai"
+            }
+            MenuItem {
+                text: qsTr("Dracula")
+                checkable: true
+                checked: currentTheme === "dracula"
+                onTriggered: currentTheme = "dracula"
+            }
+            MenuItem {
+                text: qsTr("Darcula (JetBrains)")
+                checkable: true
+                checked: currentTheme === "darcula"
+                onTriggered: currentTheme = "darcula"
+            }
+            MenuItem {
+                text: qsTr("Atom One Dark")
+                checkable: true
+                checked: currentTheme === "atomonedark"
+                onTriggered: currentTheme = "atomonedark"
+            }
+            MenuItem {
+                text: qsTr("Sublime Text")
+                checkable: true
+                checked: currentTheme === "sublime"
+                onTriggered: currentTheme = "sublime"
+            }
+            MenuItem {
+                text: qsTr("Xcode Light")
+                checkable: true
+                checked: currentTheme === "xcode_light"
+                onTriggered: currentTheme = "xcode_light"
+            }
+            MenuItem {
+                text: qsTr("Xcode Dark")
+                checkable: true
+                checked: currentTheme === "xcode_dark"
+                onTriggered: currentTheme = "xcode_dark"
+            }
+            MenuItem {
+                text: qsTr("Notepad++")
+                checkable: true
+                checked: currentTheme === "notepadpp"
+                onTriggered: currentTheme = "notepadpp"
+            }
+            MenuItem {
+                text: qsTr("High Contrast Dark")
+                checkable: true
+                checked: currentTheme === "highcontrast_dark"
+                onTriggered: currentTheme = "highcontrast_dark"
+            }
+            MenuItem {
+                text: qsTr("High Contrast Light")
+                checkable: true
+                checked: currentTheme === "highcontrast_light"
+                onTriggered: currentTheme = "highcontrast_light"
+            }
+            MenuItem {
+                text: qsTr("Nord Contrast")
+                checkable: true
+                checked: currentTheme === "nord_contrast"
+                onTriggered: currentTheme = "nord_contrast"
+            }
+            MenuItem {
+                text: qsTr("Solarized High Contrast")
+                checkable: true
+                checked: currentTheme === "solarized_highcontrast"
+                onTriggered: currentTheme = "solarized_highcontrast"
             }
         }
     }
@@ -430,8 +974,9 @@ ApplicationWindow {
                         text: "Cooler Boost"
                         property var sb : proxy.getProxyParameter(Msi.Parametr.CoolerBoostEc)
                         visible: sb.isValid
-                            checked: scollerBoost.sb.value || checked
-                            onCheckedChanged: {
+                        checked: scollerBoost.sb.value || checked
+                        onCheckedChanged: {
+                            if (scollerBoost.sb.availableValues && scollerBoost.sb.availableValues.length > 1)
                                 scollerBoost.sb.value = scollerBoost.sb.availableValues[checked ? 1 : 0];
                         }
                     }
@@ -443,7 +988,8 @@ ApplicationWindow {
                         visible: ps.isValid
                         checked: usbPowerShare.ps.value || checked
                         onCheckedChanged: {
-                            usbPowerShare.ps.value = usbPowerShare.ps.availableValues[checked ? 1 : 0];
+                            if (usbPowerShare.ps.availableValues && usbPowerShare.ps.availableValues.length > 1)
+                                usbPowerShare.ps.value = usbPowerShare.ps.availableValues[checked ? 1 : 0];
                         }
                     }
                     Switch {
@@ -454,7 +1000,8 @@ ApplicationWindow {
                         visible: wc.isValid
                         checked: webCam.wc.value || checked
                         onCheckedChanged: {
-                            webCam.wc.value = webCam.wc.availableValues[checked ? 1 : 0];
+                            if (webCam.wc.availableValues && webCam.wc.availableValues.length > 1)
+                                webCam.wc.value = webCam.wc.availableValues[checked ? 1 : 0];
                         }
                     }
                     Switch {
@@ -465,7 +1012,8 @@ ApplicationWindow {
                         visible: fss.isValid
                         checked: fnSuperSwap.fss.value || checked
                         onCheckedChanged: {
-                            fnSuperSwap.fss.value = fnSuperSwap.fss.availableValues[checked ? 1 : 0];
+                            if (fnSuperSwap.fss.availableValues && fnSuperSwap.fss.availableValues.length > 1)
+                                fnSuperSwap.fss.value = fnSuperSwap.fss.availableValues[checked ? 1 : 0];
                         }
                     }
                     Switch {
@@ -476,7 +1024,8 @@ ApplicationWindow {
                         visible: wcb.isValid
                         checked: webCamBlock.wcb.value || checked
                         onCheckedChanged: {
-                            webCamBlock.wcb.value = webCamBlock.wcb.availableValues[checked ? 1 : 0];
+                            if (webCamBlock.wcb.availableValues && webCamBlock.wcb.availableValues.length > 1)
+                                webCamBlock.wcb.value = webCamBlock.wcb.availableValues[checked ? 1 : 0];
                         }
                     }
                     Switch {
@@ -487,7 +1036,8 @@ ApplicationWindow {
                         visible: sb.isValid
                         checked: superBattery.sb.value || checked
                         onCheckedChanged: {
-                            superBattery.sb.value = superBattery.sb.availableValues[checked ? 1 : 0];
+                            if (superBattery.sb.availableValues && superBattery.sb.availableValues.length > 1)
+                                superBattery.sb.value = superBattery.sb.availableValues[checked ? 1 : 0];
                         }
                     }
                     Switch {
@@ -948,4 +1498,4 @@ ApplicationWindow {
             }   
         }
     }
-}       
+}
