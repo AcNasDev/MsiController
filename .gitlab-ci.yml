@@ -40,6 +40,6 @@ clazy_check:
     - cd build
     - cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy
     - cmake --build .
-    - clazy-standalone --qt=6 ../
+    - clazy-standalone ../
   only:
     - main
