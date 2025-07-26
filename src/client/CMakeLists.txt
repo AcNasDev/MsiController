@@ -81,6 +81,17 @@ install(
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps
 )
 
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/msi-control-center-autostart.desktop.in
+    ${CMAKE_CURRENT_BINARY_DIR}/msi-control-center-autostart.desktop
+    @ONLY
+)
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/msi-control-center-autostart.desktop
+    DESTINATION /etc/xdg/autostart
+)
+
 if(NOT TARGET uninstall_client)
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Exec=@CMAKE_INSTALL_FULL_BINDIR@/MsiControlCenterClient
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=MSI Control Center
+Comment=Start MSI Control Center on login
+Icon=msi-control-center
