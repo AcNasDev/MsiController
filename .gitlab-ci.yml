@@ -40,6 +40,7 @@ clazy_check:
     - cd build
     - cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
     - cmake --build .
-    - clazy-standalone compile_commands.json
+    - cd ..
+    - clazy-standalone build/compile_commands.json
   only:
     - main
