@@ -1,4 +1,7 @@
 #include "iobuffer.h"
+#include <QFile>
+#include <QIODevice>
+#include <QDebug>
 
 inline QByteArray doHeavyRead(QString fileName, QMap<uint, QByteArray> dataCache) 
 {

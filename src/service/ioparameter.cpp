@@ -1,4 +1,5 @@
 #include "ioparameter.h"
+#include <QtConcurrent/QtConcurrentRun>
 
 IOParameterString::IOParameterString(IOBuffer* buffer, quint16 address, const QVariant& name, const QVariant& available, bool isReadOnly, quint16 length, QObject* parent)
     : Parameter(name, available, isReadOnly, parent)

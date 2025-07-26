@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     app.setOrganizationDomain("acnas.net");
     app.setWindowIcon(QIcon(":/resources/icon/logo.svg"));
     qmlRegisterUncreatableMetaObject(Msi::staticMetaObject, "Msi", 1, 0, "Msi", "Enums only");
-    qmlRegisterType<Msi::Range>("Msi", 1, 0, "range");
+    qmlRegisterType<Msi::Range>("Msi", 1, 0, "Range");
     qmlRegisterType<EsProxy>("MsiController", 1, 0, "EsProxy");
     qmlRegisterType<CurveUtils>("CurveUtils", 1, 0, "CurveUtils");
     qmlRegisterSingletonType<EnumHelper>(
@@ -72,7 +72,8 @@ int main(int argc, char *argv[])
             client->waitForReadyRead(100);
             QByteArray msg = client->readAll();
             if (msg == "raise") {
-                for (auto obj : engine.rootObjects()) {
+                auto rootObjs = engine.rootObjects();
+                for (auto obj : std::as_const(rootObjs)) {
                     if (auto window = qobject_cast<QWindow*>(obj)) {
                         if (window->visibility() != QWindow::Windowed) {
                             window->showNormal();

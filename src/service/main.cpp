@@ -5,6 +5,7 @@
 #include <QDebug>
 
 #include <bitset>
+#include <QtConcurrent/QtConcurrentRun>
 
 #include "ecadaptor.h"
 #include "ioparameter.h"
@@ -59,7 +60,7 @@ QMap<QString, QVariant> getConfig(const QString &firmavareVersion) {
                 settings.endGroup();
                 break;
             } else if(allowedFw.canConvert<QStringList>() && allowedFw.toStringList().contains(firmavareVersion)) {
-                auto allowedFwList = allowedFw.toStringList();
+                const auto allowedFwList = allowedFw.toStringList();
                 configSelect = g;
                 settings.endGroup();
                 break;
@@ -83,7 +84,8 @@ QMap<QString, QVariant> getConfig(const QString &firmavareVersion) {
         }
         settings.endGroup();
         qDebug() << "Config loaded:";
-        for(auto &key : config.keys()) {
+        auto keys = config.keys();
+        for(const auto &key : std::as_const(keys)) {
             qDebug() << key + ": " + config.value(key).toString();
         }
         return config;
@@ -112,7 +114,7 @@ void registerEsSys(EcService &service)
         service.registerParameter(new IOParameterString(ioBuffer, 0xA0, QVariant::fromValue(Msi::Parametr::FirmwareVersionEc), QVariant(QString("")), true, 12));
         service.registerParameter(new IOParameterString(ioBuffer, 0xAC, QVariant::fromValue(Msi::Parametr::FirmwareReleaseDateEc), QVariant(QString("")), true, 8));
         service.registerParameter(new IOParameterString(ioBuffer, 0xAC + 8, QVariant::fromValue(Msi::Parametr::FirmwareReleaseTimeEc), QVariant(QString("")), true, 8));
-        ioBuffer->bufferChanged(ioBuffer->buffer());
+        emit ioBuffer->bufferChanged(ioBuffer->buffer());
 
         QString currentFw{ service.parameter(QVariant::fromValue(Msi::Parametr::FirmwareVersionEc))->value().toString() };
         qDebug() << "Current firmware version:" << currentFw;

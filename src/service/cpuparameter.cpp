@@ -8,16 +8,16 @@
 #include "struct.h"
 
 namespace {
-    static const QString rootPath{ "/sys/devices/system/cpu/" };
-    static const QString scalingCurFreqPath{ "/cpufreq/scaling_cur_freq" };
-    static const QString scalingFreqMinPath{ "/cpufreq/scaling_min_freq" };
-    static const QString scalingFreqMaxPath{ "/cpufreq/scaling_max_freq" };
-    static const QString cpuinfoFreqMaxPath{ "/cpufreq/cpuinfo_max_freq" };
-    static const QString cpuinfoFreqMinPath{ "/cpufreq/cpuinfo_min_freq" };
-    static const QString scalingGovernorPath{ "/cpufreq/scaling_governor" };
-    static const QString availableGovernorsPath{ "/cpufreq/scaling_available_governors" };
-    static const QString scalingDriverPath{ "/cpufreq/scaling_driver" };
-    static const QString statPath{ "/proc/stat" };
+    static const char* rootPath = "/sys/devices/system/cpu/";
+    static const char* scalingCurFreqPath = "/cpufreq/scaling_cur_freq";
+    static const char* scalingFreqMinPath = "/cpufreq/scaling_min_freq";
+    static const char* scalingFreqMaxPath = "/cpufreq/scaling_max_freq";
+    static const char* cpuinfoFreqMaxPath = "/cpufreq/cpuinfo_max_freq";
+    static const char* cpuinfoFreqMinPath = "/cpufreq/cpuinfo_min_freq";
+    static const char* scalingGovernorPath = "/cpufreq/scaling_governor";
+    static const char* availableGovernorsPath = "/cpufreq/scaling_available_governors";
+    static const char* scalingDriverPath = "/cpufreq/scaling_driver";
+    static const char* statPath = "/proc/stat";
 }
 CpuParameter::CpuParameter(const QVariant &name, QObject *parent)
     : Parameter(name, QVariant(), false, parent) 
@@ -56,11 +56,11 @@ QVector<CpuParameter::CpuCoreStat> CpuParameter::readCoreStats() const
 {
     QVector<CpuCoreStat> stats;
     QFile file(statPath);
-    QRegularExpression rx("^cpu([0-9]+)\\b");
+    QRegularExpression rx("^cpu([0-9]+)\\s+");
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QString content = QString::fromUtf8(file.readAll());
         QStringList lines = content.split('\n', Qt::SkipEmptyParts);
-        for (const QString &strLine : lines) {
+        for (const QString &strLine : std::as_const(lines)) {
             QRegularExpressionMatch match = rx.match(strLine.trimmed());
             if (match.hasMatch()) {
                 QStringList parts = strLine.simplified().split(' ');
@@ -88,7 +88,7 @@ QVector<CpuParameter::CpuCoreStat> CpuParameter::readCoreStats() const
 void CpuParameter::updateConfig() 
 {
     Msi::CpuConfig cpuConfig;
-    for (const QString &cpuDir : mCpuDirs) {
+    for (const QString &cpuDir : std::as_const(mCpuDirs)) {
         Msi::Cpu cpu;
         QString fullScalingCurFreqPath = rootPath + cpuDir + scalingCurFreqPath;
         QString fullScalingFreqMinPath = rootPath + cpuDir + scalingFreqMinPath;

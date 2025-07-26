@@ -38,7 +38,7 @@ clazy_check:
     - git submodule update --init --recursive
     - mkdir -p build
     - cd build
-    - cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy
+    - cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
     - cmake --build .
     - clazy-standalone ../
   only:

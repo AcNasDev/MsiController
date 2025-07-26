@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QThread>
-#include <QtConcurrent>
+#include <QtConcurrent/QtConcurrentRun>
 #include <QFuture>
 #include <QFutureWatcher>
 
