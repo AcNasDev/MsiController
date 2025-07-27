@@ -38,10 +38,18 @@ clazy_check:
     - git submodule update --init --recursive
     - mkdir -p build
     - export CLAZY_CHECKS=level2
+    - export CLAZY_EXPORT_FIXES=ON
+    - export CLAZY_IGNORE_DIRS=.*build.*
     - cd build
     - cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-    - cmake --build . --parallel
-    - clazy-standalone -checks=level2 -export-fixes=fixes.yaml -p compile_commands.json
-    - clang-apply-replacements .
+    - find .. \( -name "*.cpp" -o -name "*.h" \) | xargs clazy-standalone -export-fixes=fixes.yaml -p ./compile_commands.json
+    - cat fixes.yaml || echo "No fixes.yaml generated"
+    # - clang-apply-replacements .
+  artifacts:
+    when: always
+    paths:
+      - build/fixes.yaml
+    reports:
+      junit: build/fixes.yaml
   only:
     - main
