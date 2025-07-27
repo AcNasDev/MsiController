@@ -33,17 +33,16 @@ clazy_check:
   image: ubuntu:25.04
   before_script:
     - apt-get update
-    - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config git qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools qt6-charts-dev qt6-qmltooling-plugins libdbus-1-dev libsystemd-dev linux-headers-$(uname -r) clang-tools clang-tidy
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config git qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools qt6-charts-dev qt6-qmltooling-plugins libdbus-1-dev libsystemd-dev linux-headers-$(uname -r) clang-tools clang-tidy clazy
   script:
     - git submodule update --init --recursive
     - mkdir -p build
     - export CLAZY_CHECKS=level2
-    - export CLAZY_IGNORE_DIRS=.*build.*
     - cd build
     - cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
     - cmake --build . --parallel
     #- clazy-standalone -checks=level2 -export-fixes=fixes.yaml -p compile_commands.json
-    - find .. -path "../build" -prune -o \( -name "*.cpp" -o -name "*.h" \) -print | xargs clazy-standalone -export-fixes=fixes.yaml -p ./compile_commands.json
+    - find .. -name "*cpp" | xargs clazy-standalone -export-fixes=fixes.yaml -p ./compile_commands.json
     - cat fixes.yaml || echo "No fixes.yaml generated"
     # - clang-apply-replacements .
   artifacts:
