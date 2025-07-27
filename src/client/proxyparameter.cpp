@@ -1,9 +1,6 @@
 #include "proxyparameter.h"
 
-ProxyParameter::ProxyParameter(QObject *parent)
-    : QObject(parent)
-{
-}
+ProxyParameter::ProxyParameter(QObject* parent) : QObject(parent) {}
 
 Msi::Parametr ProxyParameter::parameter() const {
     return mParameter;
@@ -20,11 +17,11 @@ QVariant ProxyParameter::value() const {
     return mValue;
 }
 
-void ProxyParameter::setValue(const QVariant &value) {
+void ProxyParameter::setValue(const QVariant& value) {
     if (mValue != value) {
         mValue = value;
         emit valueChanged();
-        if(!mBlockSignalsForEsProxy) {
+        if (!mBlockSignalsForEsProxy) {
             emit valueChangedForEsProxy();
         }
     }
@@ -34,7 +31,7 @@ QVariant ProxyParameter::availableValues() const {
     return mAvailableValues;
 }
 
-void ProxyParameter::setAvailableValues(const QVariant &values) {
+void ProxyParameter::setAvailableValues(const QVariant& values) {
     if (mAvailableValues != values) {
         mAvailableValues = values;
         emit availableValuesChanged();

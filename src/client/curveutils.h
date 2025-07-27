@@ -1,12 +1,12 @@
 #pragma once
 
 #include <QObject>
-#include <QVector>
 #include <QPointF>
 #include <QVariant>
+#include <QVector>
 
 class CurveUtils : public QObject {
     Q_OBJECT
 public:
-    Q_INVOKABLE QVariantList catmullRomSpline(const QVariantList &xValues, const QVariantList &yValues, int segments);
+    Q_INVOKABLE QVariantList catmullRomSpline(const QVariantList& xValues, const QVariantList& yValues, int segments);
 };

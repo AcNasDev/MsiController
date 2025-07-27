@@ -1,19 +1,18 @@
 #pragma once
-#include <QObject>
-#include <QMap>
-#include <QString>
-#include <QVariant>
 #include <QDBusContext>
 #include <QDBusVariant>
-#include <QTimer>
 #include <QFileSystemWatcher>
 #include <QHash>
+#include <QMap>
+#include <QObject>
+#include <QString>
+#include <QTimer>
+#include <QVariant>
 
-#include "parameter.h"
 #include "ecserviceabstract.h"
+#include "parameter.h"
 
-inline uint qHash(const QVariant &v, uint seed = 0)
-{
+inline uint qHash(const QVariant& v, uint seed = 0) {
     return qHashMulti(seed, v.toString(), v.typeId());
 }
 
@@ -24,7 +23,7 @@ public:
     explicit EcService(QObject* parent = nullptr);
     ~EcService();
     void registerParameter(Parameter* param);
-    Parameter *parameter(const QVariant &name) const;
+    Parameter* parameter(const QVariant& name) const;
 
     QDBusVariant availableParameters() const override;
     QDBusVariant readParameter(const QDBusVariant& name) const override;

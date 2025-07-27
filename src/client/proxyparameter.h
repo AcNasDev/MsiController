@@ -13,16 +13,16 @@ class ProxyParameter : public QObject {
     Q_PROPERTY(bool isValid READ isValid NOTIFY isValidChanged)
 
 public:
-    explicit ProxyParameter(QObject *parent = nullptr);
+    explicit ProxyParameter(QObject* parent = nullptr);
 
     Msi::Parametr parameter() const;
     void setParameter(Msi::Parametr param);
 
     QVariant value() const;
-    void setValue(const QVariant &value);
+    void setValue(const QVariant& value);
 
     QVariant availableValues() const;
-    void setAvailableValues(const QVariant &values);
+    void setAvailableValues(const QVariant& values);
 
     bool isValid() const;
     void setIsValid(bool valid);
@@ -41,7 +41,6 @@ private:
     Msi::Parametr mParameter;
     QVariant mValue;
     QVariant mAvailableValues;
-    bool mIsValid{ false };
-    bool mBlockSignalsForEsProxy{ false };
+    bool mIsValid{false};
+    bool mBlockSignalsForEsProxy{false};
 };
-

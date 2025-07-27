@@ -1,26 +1,24 @@
 #include "cpuparameter.h"
 
-#include <QDir>
 #include <QDebug>
+#include <QDir>
 #include <QRegularExpression>
 #include <QThread>
 
 #include "struct.h"
 
 namespace {
-    static const char* rootPath = "/sys/devices/system/cpu/";
-    static const char* scalingCurFreqPath = "/cpufreq/scaling_cur_freq";
-    static const char* scalingFreqMinPath = "/cpufreq/scaling_min_freq";
-    static const char* scalingFreqMaxPath = "/cpufreq/scaling_max_freq";
-    static const char* cpuinfoFreqMaxPath = "/cpufreq/cpuinfo_max_freq";
-    static const char* cpuinfoFreqMinPath = "/cpufreq/cpuinfo_min_freq";
-    static const char* scalingGovernorPath = "/cpufreq/scaling_governor";
-    static const char* availableGovernorsPath = "/cpufreq/scaling_available_governors";
-    static const char* statPath = "/proc/stat";
-}
-CpuParameter::CpuParameter(const QVariant &name, QObject *parent)
-    : Parameter(name, QVariant(), false, parent) 
-{
+static const char* rootPath = "/sys/devices/system/cpu/";
+static const char* scalingCurFreqPath = "/cpufreq/scaling_cur_freq";
+static const char* scalingFreqMinPath = "/cpufreq/scaling_min_freq";
+static const char* scalingFreqMaxPath = "/cpufreq/scaling_max_freq";
+static const char* cpuinfoFreqMaxPath = "/cpufreq/cpuinfo_max_freq";
+static const char* cpuinfoFreqMinPath = "/cpufreq/cpuinfo_min_freq";
+static const char* scalingGovernorPath = "/cpufreq/scaling_governor";
+static const char* availableGovernorsPath = "/cpufreq/scaling_available_governors";
+static const char* statPath = "/proc/stat";
+} // namespace
+CpuParameter::CpuParameter(const QVariant& name, QObject* parent) : Parameter(name, QVariant(), false, parent) {
     QDir dir(rootPath);
     if (!dir.exists()) {
         qWarning() << "CPU directory does not exist:" << rootPath;
@@ -29,20 +27,19 @@ CpuParameter::CpuParameter(const QVariant &name, QObject *parent)
     static const QRegularExpression cpuRegex("^cpu[0-9]+$");
     QStringList cpuDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     cpuDirs = cpuDirs.filter(cpuRegex);
-    std::sort(cpuDirs.begin(), cpuDirs.end(), [&](const QString &a, const QString &b) {
+    std::sort(cpuDirs.begin(), cpuDirs.end(), [&](const QString& a, const QString& b) {
         int numA = QStringView{a}.mid(3).toInt();
         int numB = QStringView{b}.mid(3).toInt();
         return numA < numB;
     });
     mCpuDirs = cpuDirs;
-    
+
     mTimer.start(1000);
     connect(&mTimer, &QTimer::timeout, this, &CpuParameter::updateConfig);
     connect(&mTimer, &QTimer::timeout, this, &CpuParameter::update);
 }
 
-QString readFile(const QString &filePath) 
-{
+QString readFile(const QString& filePath) {
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning() << "Failed to open file:" << filePath;
@@ -51,8 +48,7 @@ QString readFile(const QString &filePath)
     return QString::fromUtf8(file.readAll().trimmed());
 }
 
-QVector<CpuParameter::CpuCoreStat> CpuParameter::readCoreStats() const
-{
+QVector<CpuParameter::CpuCoreStat> CpuParameter::readCoreStats() const {
     QVector<CpuCoreStat> stats;
     static const QRegularExpression rx("^cpu([0-9]+)\\s+");
     QFile file(statPath);
@@ -60,11 +56,12 @@ QVector<CpuParameter::CpuCoreStat> CpuParameter::readCoreStats() const
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QString content = QString::fromUtf8(file.readAll());
         QStringList lines = content.split('\n', Qt::SkipEmptyParts);
-        for (const QString &strLine : std::as_const(lines)) {
+        for (const QString& strLine : std::as_const(lines)) {
             match = rx.match(strLine.trimmed());
             if (match.hasMatch()) {
                 QStringList parts = strLine.simplified().split(' ');
-                if (parts.size() < 5) continue;
+                if (parts.size() < 5)
+                    continue;
                 quint64 user = parts[1].toULongLong();
                 quint64 nice = parts[2].toULongLong();
                 quint64 system = parts[3].toULongLong();
@@ -85,10 +82,9 @@ QVector<CpuParameter::CpuCoreStat> CpuParameter::readCoreStats() const
     return stats;
 }
 
-void CpuParameter::updateConfig() 
-{
+void CpuParameter::updateConfig() {
     Msi::CpuConfig cpuConfig;
-    for (const QString &cpuDir : std::as_const(mCpuDirs)) {
+    for (const QString& cpuDir : std::as_const(mCpuDirs)) {
         Msi::Cpu cpu;
         QString fullScalingCurFreqPath = rootPath + cpuDir + scalingCurFreqPath;
         QString fullScalingFreqMinPath = rootPath + cpuDir + scalingFreqMinPath;
@@ -104,7 +100,8 @@ void CpuParameter::updateConfig()
         uint scalingMaxFreq = readFile(fullScalingFreqMaxPath).toUInt();
         uint currentFreq = readFile(fullScalingCurFreqPath).toUInt();
         QString currentGovernor = readFile(fullScalingGovernorPath);
-        QStringList availableGovernors = readFile(fullAvailableGovernorsPath).split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        QStringList availableGovernors =
+            readFile(fullAvailableGovernorsPath).split(QLatin1Char(' '), Qt::SkipEmptyParts);
         cpu.scalingMinFreq = scalingMinFreq;
         cpu.scalingMaxFreq = scalingMaxFreq;
         cpu.minFreq = cpuinfoMinFreq;
@@ -120,20 +117,18 @@ void CpuParameter::updateConfig()
         quint64 idleDiff = mCpuCoreStatsCur[i].idle - mCpuCoreStatsPrev[i].idle;
         quint64 totalDiff = mCpuCoreStatsCur[i].total - mCpuCoreStatsPrev[i].total;
         double usage = totalDiff ? 100 * (1.0 - (double)idleDiff / totalDiff) : 0.0;
-        if(i < cpuConfig.cpus.size()) {
+        if (i < cpuConfig.cpus.size()) {
             cpuConfig.cpus[i].usage = usage;
         }
     }
     mValue = QVariant::fromValue(cpuConfig);
 }
 
-QVariant CpuParameter::readValue() const 
-{
+QVariant CpuParameter::readValue() const {
     return mValue;
 }
 
-void CpuParameter::writeToFile(const QString &fileName, const QString &value) 
-{
+void CpuParameter::writeToFile(const QString& fileName, const QString& value) {
     QFile file(fileName);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         qWarning() << "Failed to open file for writing:" << fileName;
@@ -144,16 +139,15 @@ void CpuParameter::writeToFile(const QString &fileName, const QString &value)
     }
 }
 
-bool CpuParameter::writeValue(const QVariant &value) 
-{
+bool CpuParameter::writeValue(const QVariant& value) {
     Msi::CpuConfig cpuConfig = value.value<Msi::CpuConfig>();
-    for(int i = 0; i < cpuConfig.cpus.size() && i < mCpuDirs.size(); ++i) {
-        const Msi::Cpu &cpu = cpuConfig.cpus[i];
+    for (int i = 0; i < cpuConfig.cpus.size() && i < mCpuDirs.size(); ++i) {
+        const Msi::Cpu& cpu = cpuConfig.cpus[i];
         QString cpuDir = mCpuDirs[i];
         QString fullScalingFreqMinPath = rootPath + cpuDir + scalingFreqMinPath;
         QString fullScalingFreqMaxPath = rootPath + cpuDir + scalingFreqMaxPath;
         QString fullScalingGovernorPath = rootPath + cpuDir + scalingGovernorPath;
-                
+
         writeToFile(fullScalingFreqMinPath, QByteArray::number(cpu.scalingMinFreq));
         writeToFile(fullScalingFreqMaxPath, QByteArray::number(cpu.scalingMaxFreq));
         writeToFile(fullScalingGovernorPath, cpu.availableGovernor);

@@ -1,7 +1,7 @@
 #pragma once
-#include <QObject>
 #include <QDBusContext>
 #include <QDBusVariant>
+#include <QObject>
 
 class EcServiceAbstract : public QObject {
     Q_OBJECT

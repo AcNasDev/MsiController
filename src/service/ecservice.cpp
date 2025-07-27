@@ -1,23 +1,20 @@
 #include "ecservice.h"
-#include <QFile>
-#include <QDir>
+
+#include <QDBusArgument>
 #include <QDBusConnection>
 #include <QDBusError>
-#include <QDBusArgument>
+#include <QDir>
+#include <QFile>
 
 #include "struct.h"
 
-EcService::EcService(QObject* parent) : EcServiceAbstract(parent) 
-{
-}
+EcService::EcService(QObject* parent) : EcServiceAbstract(parent) {}
 
-EcService::~EcService() 
-{
+EcService::~EcService() {
     qDeleteAll(mParameters);
 }
 
-void EcService::registerParameter(Parameter* param) 
-{
+void EcService::registerParameter(Parameter* param) {
     if (mParameters.contains(param->name())) {
         qWarning() << "Duplicate parameter name:" << param->name();
         delete param;
@@ -26,21 +23,18 @@ void EcService::registerParameter(Parameter* param)
 
     mParameters.insert(param->name(), param);
     param->setParent(this);
-    
+
     connect(param, &Parameter::valueChanged, this, [this, param](const QVariant& value) {
-        emit parameterChanged(
-            QDBusVariant(QVariant::fromValue(Msi::Msg(param->name()))), 
-            QDBusVariant(QVariant::fromValue(Msi::Msg(value))));
+        emit parameterChanged(QDBusVariant(QVariant::fromValue(Msi::Msg(param->name()))),
+                              QDBusVariant(QVariant::fromValue(Msi::Msg(value))));
     });
 }
 
-QDBusVariant EcService::availableParameters() const 
-{
+QDBusVariant EcService::availableParameters() const {
     return QDBusVariant(QVariant::fromValue(Msi::Msg(mParameters.keys())));
 }
 
-QDBusVariant EcService::readParameter(const QDBusVariant& name) const 
-{
+QDBusVariant EcService::readParameter(const QDBusVariant& name) const {
     QVariant arg = qdbus_cast<Msi::Msg>(name.variant()).variant;
     if (mParameters.contains(arg)) {
         return QDBusVariant(QVariant::fromValue(Msi::Msg(mParameters[arg]->value())));
@@ -48,8 +42,7 @@ QDBusVariant EcService::readParameter(const QDBusVariant& name) const
     return {};
 }
 
-bool EcService::writeParameter(const QDBusVariant& name, const QDBusVariant& value) 
-{
+bool EcService::writeParameter(const QDBusVariant& name, const QDBusVariant& value) {
     auto vName = qdbus_cast<Msi::Msg>(name.variant()).variant;
     auto vValue = qdbus_cast<Msi::Msg>(value.variant()).variant;
     if (mParameters.contains(vName) && !mParameters[vName]->isReadOnly()) {
@@ -59,8 +52,7 @@ bool EcService::writeParameter(const QDBusVariant& name, const QDBusVariant& val
     return false;
 }
 
-QDBusVariant EcService::availableValues(const QDBusVariant& name) const 
-{
+QDBusVariant EcService::availableValues(const QDBusVariant& name) const {
     QVariant arg = qdbus_cast<Msi::Msg>(name.variant()).variant;
     if (mParameters.contains(arg)) {
         return QDBusVariant(QVariant::fromValue(Msi::Msg(mParameters[arg]->available())));
@@ -68,7 +60,6 @@ QDBusVariant EcService::availableValues(const QDBusVariant& name) const
     return {};
 }
 
-Parameter *EcService::parameter(const QVariant &name) const 
-{
+Parameter* EcService::parameter(const QVariant& name) const {
     return mParameters.value(name, nullptr);
 }

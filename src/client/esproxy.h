@@ -1,13 +1,13 @@
 #pragma once
 
-#include <QObject>
-#include <QMap>
-#include <QVariant>
-#include <QStringList>
 #include <QAbstractListModel>
+#include <QMap>
+#include <QObject>
+#include <QStringList>
+#include <QVariant>
 
-#include "struct.h"
 #include "proxyparameter.h"
+#include "struct.h"
 
 class ComMsiEcInterface;
 class EsProxy : public QObject {
@@ -24,10 +24,9 @@ signals:
     void connectionChanged(bool isConnected);
 
 private:
-    ComMsiEcInterface* mEcInterface{ nullptr };
-    bool mIsConnected{ false };
+    ComMsiEcInterface* mEcInterface{nullptr};
+    bool mIsConnected{false};
     QMap<Msi::Parametr, ProxyParameter*> mProxyParameters;
 
     void init();
-
 };
