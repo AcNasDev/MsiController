@@ -42,7 +42,8 @@ clazy_check:
     - cd build
     - cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
     - cmake --build . --parallel
-    - clazy-standalone -checks=level2 -export-fixes=fixes.yaml -p compile_commands.json
+    #- clazy-standalone -checks=level2 -export-fixes=fixes.yaml -p compile_commands.json
+    - find .. \( -name "*.cpp" -o -name "*.h" \) | xargs clazy-standalone -export-fixes=fixes.yaml -p ./compile_commands.json
     - cat fixes.yaml || echo "No fixes.yaml generated"
     # - clang-apply-replacements .
   artifacts:
