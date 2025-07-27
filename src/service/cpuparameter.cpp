@@ -16,7 +16,6 @@ namespace {
     static const char* cpuinfoFreqMinPath = "/cpufreq/cpuinfo_min_freq";
     static const char* scalingGovernorPath = "/cpufreq/scaling_governor";
     static const char* availableGovernorsPath = "/cpufreq/scaling_available_governors";
-    static const char* scalingDriverPath = "/cpufreq/scaling_driver";
     static const char* statPath = "/proc/stat";
 }
 CpuParameter::CpuParameter(const QVariant &name, QObject *parent)
@@ -31,8 +30,8 @@ CpuParameter::CpuParameter(const QVariant &name, QObject *parent)
     QStringList cpuDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     cpuDirs = cpuDirs.filter(cpuRegex);
     std::sort(cpuDirs.begin(), cpuDirs.end(), [&](const QString &a, const QString &b) {
-        int numA = a.mid(3).toInt();
-        int numB = b.mid(3).toInt();
+        int numA = QStringView{a}.mid(3).toInt();
+        int numB = QStringView{b}.mid(3).toInt();
         return numA < numB;
     });
     mCpuDirs = cpuDirs;

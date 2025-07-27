@@ -37,19 +37,14 @@ clazy_check:
   script:
     - git submodule update --init --recursive
     - mkdir -p build
-    - export CLAZY_CHECKS=level2
+    - export CLAZY_CHECKS=level1
+    - export CXX_FLAGS="-Werror -Wall -Wextra"
     - cd build
-    - cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    - cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra"
     - cmake --build . --parallel
     #- clazy-standalone -checks=level2 -export-fixes=fixes.yaml -p compile_commands.json
-    - find .. -name "*cpp" | xargs clazy-standalone -export-fixes=fixes.yaml -p ./compile_commands.json
-    - cat fixes.yaml || echo "No fixes.yaml generated"
+    # - find .. -name "*cpp" | xargs clazy-standalone -export-fixes=fixes.yaml -p ./compile_commands.json
+    # - cat fixes.yaml || echo "No fixes.yaml generated"
     # - clang-apply-replacements .
-  artifacts:
-    when: always
-    paths:
-      - build/fixes.yaml
-    reports:
-      junit: build/fixes.yaml
   only:
     - main

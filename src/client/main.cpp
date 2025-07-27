@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
         Qt::QueuedConnection);
     engine.loadFromModule("client", "Main");
 
-    QObject::connect(&server, &QLocalServer::newConnection, [&engine, &server]() {
+    QObject::connect(&server, &QLocalServer::newConnection, &server, [&engine, &server]() {
         QLocalSocket* client = server.nextPendingConnection();
         if (client) {
             client->waitForReadyRead(100);
