@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
     app.setOrganizationDomain("acnas.net");
     app.setWindowIcon(QIcon(":/resources/icon/logo.svg"));
     qmlRegisterUncreatableMetaObject(Msi::staticMetaObject, "Msi", 1, 0, "Msi", "Enums only");
-    qmlRegisterType<Msi::Range>("Msi", 1, 0, "range");
+    qmlRegisterType<Msi::Range>("Msi", 1, 0, "Range");
     qmlRegisterType<EsProxy>("MsiController", 1, 0, "EsProxy");
     qmlRegisterType<CurveUtils>("CurveUtils", 1, 0, "CurveUtils");
     qmlRegisterSingletonType<EnumHelper>("MSI.Helpers",
