@@ -1,0 +1,47 @@
+Checks: >
+    -*,
+    clang-analyzer-*,
+    bugprone-*,
+    performance-*,
+    modernize-*,
+    readability-*,
+    cppcoreguidelines-*,
+    -bugprone-easily-swappable-parameters,
+    -modernize-use-trailing-return-type,
+    -readability-identifier-length,
+    -cppcoreguidelines-avoid-magic-numbers,
+    -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+    -cppcoreguidelines-pro-type-vararg,
+    -modernize-pass-by-value,
+    -modernize-use-auto,
+    -modernize-use-using,
+    -readability-magic-numbers,
+    -readability-function-cognitive-complexity
+
+WarningsAsErrors: '*'
+HeaderFilterRegex: '^(src|include|tests)/.*'
+FormatStyle: file  # Использует .clang-format из проекта
+
+CheckOptions:
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.VariableCase
+    value: camelCase
+  - key: readability-identifier-naming.MemberCase
+    value: camelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelCase
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: camelCase
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: m  # Требует префикс 'm' для приватных полей
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: ''  # Запрещает суффиксы
+  - key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions
+    value: 'true'
+  - key: modernize-use-nodiscard.AllowForVoid
+    value: 'false'

@@ -433,27 +433,27 @@ ApplicationWindow {
     }
 
     palette: Palette {
-        // initial palette
-        window: palettes[currentTheme].window
-        windowText: palettes[currentTheme].windowText
-        base: palettes[currentTheme].base
-        alternateBase: palettes[currentTheme].alternateBase
-        text: palettes[currentTheme].text
-        button: palettes[currentTheme].button
-        buttonText: palettes[currentTheme].buttonText
-        highlight: palettes[currentTheme].highlight
-        highlightedText: palettes[currentTheme].highlightedText
-        link: palettes[currentTheme].link
-        linkVisited: palettes[currentTheme].linkVisited
-        toolTipBase: palettes[currentTheme].toolTipBase
-        toolTipText: palettes[currentTheme].toolTipText
-        placeholderText: palettes[currentTheme].placeholderText
-        accent: palettes[currentTheme].accent
-        mid: palettes[currentTheme].mid
-        shadow: palettes[currentTheme].shadow
-        brightText: palettes[currentTheme].brightText
-        light: palettes[currentTheme].light
-        dark: palettes[currentTheme].dark
+        property var themePalette: palettes[currentTheme] ? palettes[currentTheme] : palettes["darkplus"]
+        window: themePalette.window
+        windowText: themePalette.windowText
+        base: themePalette.base
+        alternateBase: themePalette.alternateBase
+        text: themePalette.text
+        button: themePalette.button
+        buttonText: themePalette.buttonText
+        highlight: themePalette.highlight
+        highlightedText: themePalette.highlightedText
+        link: themePalette.link
+        linkVisited: themePalette.linkVisited
+        toolTipBase: themePalette.toolTipBase
+        toolTipText: themePalette.toolTipText
+        placeholderText: themePalette.placeholderText
+        accent: themePalette.accent
+        mid: themePalette.mid
+        shadow: themePalette.shadow
+        brightText: themePalette.brightText
+        light: themePalette.light
+        dark: themePalette.dark
     }
 
     onCurrentThemeChanged: {
@@ -974,10 +974,11 @@ ApplicationWindow {
                         text: "Cooler Boost"
                         property var sb : proxy.getProxyParameter(Msi.Parametr.CoolerBoostEc)
                         visible: sb.isValid
-                        checked: scollerBoost.sb.value || checked
+                        checked: sb.value != undefined ? sb.value : false
                         onCheckedChanged: {
-                            if (scollerBoost.sb.availableValues && scollerBoost.sb.availableValues.length > 1)
+                            if (scollerBoost.sb.availableValues != undefined && scollerBoost.sb.availableValues.length > 1) {
                                 scollerBoost.sb.value = scollerBoost.sb.availableValues[checked ? 1 : 0];
+                            }
                         }
                     }
                     Switch {
@@ -986,9 +987,9 @@ ApplicationWindow {
                         text: "USB Power"
                         property var ps : proxy.getProxyParameter(Msi.Parametr.UsbPowerShareEc)
                         visible: ps.isValid
-                        checked: usbPowerShare.ps.value || checked
+                        checked: ps.value != undefined ? ps.value : false
                         onCheckedChanged: {
-                            if (usbPowerShare.ps.availableValues && usbPowerShare.ps.availableValues.length > 1)
+                            if (usbPowerShare.ps.availableValues != undefined && usbPowerShare.ps.availableValues.length > 1)
                                 usbPowerShare.ps.value = usbPowerShare.ps.availableValues[checked ? 1 : 0];
                         }
                     }
@@ -998,9 +999,9 @@ ApplicationWindow {
                         text: "WebCam"
                         property var wc : proxy.getProxyParameter(Msi.Parametr.WebCamEc)
                         visible: wc.isValid
-                        checked: webCam.wc.value || checked
+                        checked: wc.value != undefined ? wc.value : false
                         onCheckedChanged: {
-                            if (webCam.wc.availableValues && webCam.wc.availableValues.length > 1)
+                            if (webCam.wc.availableValues != undefined && webCam.wc.availableValues.length > 1)
                                 webCam.wc.value = webCam.wc.availableValues[checked ? 1 : 0];
                         }
                     }
@@ -1010,9 +1011,9 @@ ApplicationWindow {
                         text: "FN ⇄ Meta"
                         property var fss : proxy.getProxyParameter(Msi.Parametr.FnSuperSwapEc)
                         visible: fss.isValid
-                        checked: fnSuperSwap.fss.value || checked
+                        checked: fss.value != undefined ? fss.value : false
                         onCheckedChanged: {
-                            if (fnSuperSwap.fss.availableValues && fnSuperSwap.fss.availableValues.length > 1)
+                            if (fnSuperSwap.fss.availableValues != undefined && fnSuperSwap.fss.availableValues.length > 1)
                                 fnSuperSwap.fss.value = fnSuperSwap.fss.availableValues[checked ? 1 : 0];
                         }
                     }
@@ -1022,9 +1023,9 @@ ApplicationWindow {
                         text: "WebCam Block"
                         property var wcb : proxy.getProxyParameter(Msi.Parametr.WebCamBlockEc)
                         visible: wcb.isValid
-                        checked: webCamBlock.wcb.value || checked
+                        checked: wcb.value != undefined ? wcb.value : false
                         onCheckedChanged: {
-                            if (webCamBlock.wcb.availableValues && webCamBlock.wcb.availableValues.length > 1)
+                            if (webCamBlock.wcb.availableValues != undefined && webCamBlock.wcb.availableValues.length > 1)
                                 webCamBlock.wcb.value = webCamBlock.wcb.availableValues[checked ? 1 : 0];
                         }
                     }
@@ -1034,9 +1035,9 @@ ApplicationWindow {
                         text: "Super Battery"
                         property var sb : proxy.getProxyParameter(Msi.Parametr.SuperBatteryEc)
                         visible: sb.isValid
-                        checked: superBattery.sb.value || checked
+                        checked: sb.value != undefined ? sb.value : false
                         onCheckedChanged: {
-                            if (superBattery.sb.availableValues && superBattery.sb.availableValues.length > 1)
+                            if (superBattery.sb.availableValues != undefined && superBattery.sb.availableValues.length > 1)
                                 superBattery.sb.value = superBattery.sb.availableValues[checked ? 1 : 0];
                         }
                     }
@@ -1046,9 +1047,10 @@ ApplicationWindow {
                         text: "Mic Mute"
                         property var mm : proxy.getProxyParameter(Msi.Parametr.MicMuteEc)
                         visible: mm.isValid
-                        checked: micMute.mm.value || checked
+                        checked: mm.value != undefined ? mm.value : false
                         onCheckedChanged: {
-                            micMute.mm.value = micMute.mm.availableValues[checked ? 1 : 0];
+                            if (micMute.mm.availableValues != undefined && micMute.mm.availableValues.length > 1)
+                                micMute.mm.value = micMute.mm.availableValues[checked ? 1 : 0];
                         }
                     }
                     Switch {
@@ -1057,9 +1059,10 @@ ApplicationWindow {
                         text: "Mute LED"
                         property var ml : proxy.getProxyParameter(Msi.Parametr.MuteLedEc)
                         visible: ml.isValid
-                        checked: muteLed.ml.value || checked
+                        checked: ml.value != undefined ? ml.value : false
                         onCheckedChanged: {
-                            muteLed.ml.value = muteLed.ml.availableValues[checked ? 1 : 0];
+                            if (muteLed.ml.availableValues != undefined && muteLed.ml.availableValues.length > 1)
+                                muteLed.ml.value = muteLed.ml.availableValues[checked ? 1 : 0];
                         }
                     }
                     Switch {
@@ -1068,9 +1071,10 @@ ApplicationWindow {
                         text: "Key Mode"
                         property var kbm : proxy.getProxyParameter(Msi.Parametr.KeyboardBacklightModeEc)
                         visible: kbm.isValid
-                        checked: keyboardBacklightMode.kbm.value || checked
+                        checked: kbm.value != undefined ? kbm.value : false
                         onCheckedChanged: {
-                            keyboardBacklightMode.kbm.value = keyboardBacklightMode.kbm.availableValues[checked ? 1 : 0];
+                            if (keyboardBacklightMode.kbm.availableValues != undefined && keyboardBacklightMode.kbm.availableValues.length > 1)
+                                keyboardBacklightMode.kbm.value = keyboardBacklightMode.kbm.availableValues[checked ? 1 : 0];
                         }
                     }
 
