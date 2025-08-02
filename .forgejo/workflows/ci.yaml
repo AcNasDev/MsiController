@@ -9,29 +9,32 @@ env:
   GIT_DEPTH: 0
 
 jobs:
-  build:
+  all-in-one:
     runs-on: docker
     container:
       image: ubuntu:25.04
     steps:
-      - name: Install Node.js
+      - name: Install Node.js and git
         run: |
           apt-get update
           apt-get install -y curl ca-certificates
           curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
           apt-get install -y nodejs git
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
-      - name: Install dependencies
+
+      - name: Install build dependencies
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            build-essential cmake ninja-build pkg-config git \
+            build-essential cmake ninja-build pkg-config \
             qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools \
             qt6-charts-dev qt6-qmltooling-plugins libdbus-1-dev libsystemd-dev \
-            linux-headers-$(uname -r)
+            linux-headers-$(uname -r) clang-tools clang-tidy clazy
+
       - name: Build project
         run: |
           mkdir -p build
@@ -39,29 +42,6 @@ jobs:
           cmake .. -G Ninja
           cmake --build .
 
-  clazy_check:
-    runs-on: docker
-    container:
-      image: ubuntu:25.04
-    steps:
-      - name: Install Node.js
-        run: |
-          apt-get update
-          apt-get install -y curl ca-certificates
-          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-          apt-get install -y nodejs git
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
-      - name: Install dependencies
-        run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            build-essential cmake ninja-build pkg-config git \
-            qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools \
-            qt6-charts-dev qt6-qmltooling-plugins libdbus-1-dev libsystemd-dev \
-            linux-headers-$(uname -r) clang-tools clang-tidy clazy
       - name: Clazy check
         run: |
           mkdir -p build
@@ -71,26 +51,11 @@ jobs:
           cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra"
           cmake --build . --parallel
 
-  sync_to_github:
-    runs-on: docker
-    container:
-      image: ubuntu:25.04
-    steps:
-      - name: Install Node.js
-        run: |
-          apt-get update
-          apt-get install -y curl ca-certificates
-          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-          apt-get install -y nodejs git
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
       - name: Sync to GitHub
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git checkout main
-          git branch --set-upstream-to=origin/main main
+          git branch --set-upstream-to=origin/main main || true
           git pull --rebase origin main
           git push https://$GITHUBTOKEN@github.com/AcNasDev/MsiController.git
