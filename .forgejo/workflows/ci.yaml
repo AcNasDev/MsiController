@@ -76,11 +76,16 @@ jobs:
     container:
       image: docker:20.10
     steps:
+      - name: Install Node.js
+        run: |
+          apt-get update
+          apt-get install -y curl ca-certificates
+          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          apt-get install -y nodejs git
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Install git
-        run: apk add --no-cache git
+          submodules: recursive
       - name: Sync to GitHub
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
