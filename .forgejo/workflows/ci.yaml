@@ -5,13 +5,25 @@ on:
     branches:
       - main
 
+env:
+  GIT_DEPTH: 0
+
 jobs:
   build:
     runs-on: docker
     container:
-      image: node:20-bullseye
+      image: ubuntu:25.04
     steps:
+      - name: Install Node.js
+        run: |
+          apt-get update
+          apt-get install -y curl ca-certificates
+          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          apt-get install -y nodejs
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
       - name: Install dependencies
         run: |
           apt-get update
@@ -30,9 +42,18 @@ jobs:
   clazy_check:
     runs-on: docker
     container:
-      image: node:20-bullseye
+      image: ubuntu:25.04
     steps:
+      - name: Install Node.js
+        run: |
+          apt-get update
+          apt-get install -y curl ca-certificates
+          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          apt-get install -y nodejs
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
       - name: Install dependencies
         run: |
           apt-get update
@@ -53,13 +74,13 @@ jobs:
   sync_to_github:
     runs-on: docker
     container:
-      image: node:20-bullseye
+      image: docker:20.10
     steps:
       - uses: actions/checkout@v4
-      - name: Install git and curl
-        run: |
-          apt-get update
-          apt-get install -y git curl
+        with:
+          fetch-depth: 0
+      - name: Install git
+        run: apk add --no-cache git
       - name: Sync to GitHub
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
