@@ -10,7 +10,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: docker
     container:
       image: ubuntu:25.04
     steps:
@@ -34,7 +34,7 @@ jobs:
           cmake --build .
 
   clazy_check:
-    runs-on: ubuntu-latest
+    runs-on: docker
     container:
       image: ubuntu:25.04
     steps:
@@ -64,7 +64,7 @@ jobs:
           # clang-apply-replacements .
 
   sync_to_github:
-    runs-on: ubuntu-latest
+    runs-on: docker
     container:
       image: docker:20.10
     steps:
