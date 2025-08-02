@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  GIT_DEPTH: 0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:25.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config git \
+            qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools \
+            qt6-charts-dev qt6-qmltooling-plugins libdbus-1-dev libsystemd-dev \
+            linux-headers-$(uname -r)
+      - name: Build project
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -G Ninja
+          cmake --build .
+
+  clazy_check:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:25.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config git \
+            qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools \
+            qt6-charts-dev qt6-qmltooling-plugins libdbus-1-dev libsystemd-dev \
+            linux-headers-$(uname -r) clang-tools clang-tidy clazy
+      - name: Clazy check
+        run: |
+          mkdir -p build
+          export CLAZY_CHECKS=level1
+          export CXX_FLAGS="-Werror -Wall -Wextra"
+          cd build
+          cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra"
+          cmake --build . --parallel
+          # clazy-standalone -checks=level2 -export-fixes=fixes.yaml -p compile_commands.json
+          # find .. -name "*cpp" | xargs clazy-standalone -export-fixes=fixes.yaml -p ./compile_commands.json
+          # cat fixes.yaml || echo "No fixes.yaml generated"
+          # clang-apply-replacements .
+
+  sync_to_github:
+    runs-on: ubuntu-latest
+    container:
+      image: docker:20.10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install git
+        run: apk add --no-cache git
+      - name: Sync to GitHub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git checkout main
+          git branch --set-upstream-to=origin/main main
+          git pull --rebase origin main
+          git push https://$GITHUB_TOKEN@github.com/AcNasDev/MsiController.git
