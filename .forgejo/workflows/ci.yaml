@@ -74,7 +74,7 @@ jobs:
   sync_to_github:
     runs-on: docker
     container:
-      image: docker:20.10
+      image: ubuntu:25.04
     steps:
       - name: Install Node.js
         run: |
