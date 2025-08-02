@@ -5,19 +5,13 @@ on:
     branches:
       - main
 
-env:
-  GIT_DEPTH: 0
-
 jobs:
   build:
     runs-on: docker
     container:
-      image: ubuntu:25.04
+      image: node:20-bullseye
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
       - name: Install dependencies
         run: |
           apt-get update
@@ -36,12 +30,9 @@ jobs:
   clazy_check:
     runs-on: docker
     container:
-      image: ubuntu:25.04
+      image: node:20-bullseye
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: recursive
       - name: Install dependencies
         run: |
           apt-get update
@@ -58,21 +49,17 @@ jobs:
           cd build
           cmake .. -G Ninja -DCMAKE_CXX_COMPILER=clazy -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra"
           cmake --build . --parallel
-          # clazy-standalone -checks=level2 -export-fixes=fixes.yaml -p compile_commands.json
-          # find .. -name "*cpp" | xargs clazy-standalone -export-fixes=fixes.yaml -p ./compile_commands.json
-          # cat fixes.yaml || echo "No fixes.yaml generated"
-          # clang-apply-replacements .
 
   sync_to_github:
     runs-on: docker
     container:
-      image: docker:20.10
+      image: node:20-bullseye
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install git
-        run: apk add --no-cache git
+      - name: Install git and curl
+        run: |
+          apt-get update
+          apt-get install -y git curl
       - name: Sync to GitHub
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
