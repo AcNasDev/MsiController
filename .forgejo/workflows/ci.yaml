@@ -19,7 +19,7 @@ jobs:
           apt-get update
           apt-get install -y curl ca-certificates
           curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-          apt-get install -y nodejs
+          apt-get install -y nodejs git
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -49,7 +49,7 @@ jobs:
           apt-get update
           apt-get install -y curl ca-certificates
           curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-          apt-get install -y nodejs
+          apt-get install -y nodejs git
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -88,4 +88,4 @@ jobs:
           git checkout main
           git branch --set-upstream-to=origin/main main
           git pull --rebase origin main
-          git push https://$GITHUB_TOKEN@github.com/AcNasDev/MsiController.git
+          git push https://$GITHUBTOKEN@github.com/AcNasDev/MsiController.git
