@@ -53,7 +53,7 @@ jobs:
 
       - name: Sync to GitHub
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUBTOKEN: ${{ secrets.GITHUBTOKEN }}
         run: |
           git checkout main
           git branch --set-upstream-to=origin/main main || true
