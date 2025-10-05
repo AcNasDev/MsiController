@@ -30,10 +30,10 @@ sync_to_github:
 
 clazy_check:
   stage: test
-  image: ubuntu:25.04
+  image: ubuntu:25.10
   before_script:
     - apt-get update
-    - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config git qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools qt6-charts-dev qt6-qmltooling-plugins libdbus-1-dev libsystemd-dev linux-headers-$(uname -r) clang-tools clang-tidy clazy
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential cmake ninja-build pkg-config git qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools qt6-charts-dev qt6-qmltooling-plugins libdbus-1-dev libsystemd-dev linux-headers-generic clang-tools clang-tidy clazy
   script:
     - git submodule update --init --recursive
     - mkdir -p build

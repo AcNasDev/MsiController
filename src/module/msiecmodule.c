@@ -5,6 +5,14 @@
 #include <linux/platform_device.h>
 #include <linux/sysfs.h>
 #include <linux/types.h>
+#include <linux/version.h>
+
+/* Совместимость с разными версиями ядра */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 17, 0)
+#define BIN_ATTR_CONST const
+#else
+#define BIN_ATTR_CONST
+#endif
 
 extern int ec_read(u8 addr, u8* value);
 extern int ec_write(u8 addr, u8 value);
@@ -13,7 +21,7 @@ static DEFINE_MUTEX(ec_mutex);
 
 static ssize_t ec_raw_bin_read(struct file* filp,
                                struct kobject* kobj,
-                               struct bin_attribute* attr,
+                               BIN_ATTR_CONST struct bin_attribute* attr,
                                char* buf,
                                loff_t off,
                                size_t count) {
@@ -37,7 +45,7 @@ static ssize_t ec_raw_bin_read(struct file* filp,
 
 static ssize_t ec_raw_bin_write(struct file* filp,
                                 struct kobject* kobj,
-                                struct bin_attribute* attr,
+                                BIN_ATTR_CONST struct bin_attribute* attr,
                                 char* buf,
                                 loff_t off,
                                 size_t count) {
