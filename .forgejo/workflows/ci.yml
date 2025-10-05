@@ -34,11 +34,19 @@ jobs:
             qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools \
             qt6-charts-dev qt6-qmltooling-plugins libdbus-1-dev libsystemd-dev \
             linux-headers-generic clang-tools clang-tidy clazy
+          
+          # Находим установленную версию kernel headers для передачи в CMake
+          INSTALLED_KERNEL=$(ls /lib/modules/ | grep generic | head -1)
+          echo "Found kernel headers: $INSTALLED_KERNEL"
+          echo "KERNEL_VERSION=$INSTALLED_KERNEL" >> $GITHUB_ENV
 
       - name: Build project
         run: |
           mkdir -p build
           cd build
+          # Передаем найденную версию ядра в CMake
+          echo "Building with KERNEL_VERSION=$KERNEL_VERSION"
+          export KERNEL_VERSION=$KERNEL_VERSION
           cmake .. -G Ninja
           cmake --build .
 
