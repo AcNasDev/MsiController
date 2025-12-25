@@ -75,6 +75,10 @@ install(
 
 install(CODE "file(WRITE \"\$ENV{DESTDIR}/etc/modules-load.d/msiecmodule.conf\" \"msiecmodule\n\")")
 
+# Make the installed module immediately available and loaded.
+# Skip when using DESTDIR (packaging/image builds).
+install(CODE "if(\"$ENV{DESTDIR}\" STREQUAL \"\")\n  execute_process(COMMAND depmod -a ${KERNEL_VERSION})\n  execute_process(COMMAND modprobe msiecmodule)\nendif()")
+
 if(NOT TARGET uninstall_module)
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
