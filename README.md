@@ -1,4 +1,3 @@
-[![GitLab CI](https://gitlab.acnas.net/app/msicontroller/badges/main/pipeline.svg)](https://gitlab.acnas.net/app/msicontroller/-/pipelines)
 [![Forgejo CI](https://forgejo.acnas.net/app/msicontroller/actions/workflows/ci.yml/badge.svg?branch=main)](https://forgejo.acnas.net/app/msicontroller/actions/workflows/ci.yml/badge.svg?branch=main)
 
 # MsiController
