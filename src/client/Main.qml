@@ -1375,7 +1375,7 @@ ApplicationWindow {
                                 Rectangle {
                                     x: index * (freqGraph.barWidth + freqGraph.margin) + freqGraph.margin / 2 
                                     width: freqGraph.barWidth 
-                                    height: freqGraph.height * cpuContent.valueUsage[index]
+                                    height: freqGraph.height * cpuContent.valueUsage[index] * cpuContent.valueFregs[index]
                                     y: freqGraph.height - height
                                     color: Qt.lighter(Fusion.highlight(palette), 1.5)
                                     radius: 1
