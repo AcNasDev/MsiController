@@ -1464,6 +1464,110 @@ ApplicationWindow {
                             }
                         }
 
+                        GroupBox {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 80
+                            title: qsTr("Global Frequency Limit")
+                            
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 15
+                                
+                                Label {
+                                    text: qsTr("All Cores:")
+                                    color: palette.text
+                                    font.pixelSize: 13
+                                }
+                                
+                                Slider {
+                                    id: globalFreqSlider
+                                    Layout.fillWidth: true
+                                    from: cpuContent.cpuConfig && cpuContent.cpuConfig.cpus.length > 0 
+                                          ? cpuContent.cpuConfig.cpus[0].minFreq / 1000000.0 
+                                          : 0
+                                    to: cpuContent.cpuConfig && cpuContent.cpuConfig.cpus.length > 0 
+                                        ? cpuContent.cpuConfig.cpus[0].maxFreq / 1000000.0 
+                                        : 100
+                                    stepSize: 0.1
+                                    
+                                    value: cpuContent.cpuConfig && cpuContent.prevMaxFreqScaling.length > 0
+                                           ? cpuContent.prevMaxFreqScaling[0] / 1000000.0
+                                           : to
+                                    
+                                    property bool isUpdating: false
+                                    
+                                    onValueChanged: {
+                                        if (!isUpdating && cpuContent.cpuConfig) {
+                                            isUpdating = true;
+                                            var config = cpuContent.cpuConfig;
+                                            var newFreq = value * 1000000;
+                                            for (var i = 0; i < config.cpus.length; i++) {
+                                                config.cpus[i].scalingMaxFreq = newFreq;
+                                                cpuContent.prevMaxFreqScaling[i] = newFreq;
+                                            }
+                                            proxy.getProxyParameter(Msi.Parametr.CpuConfig).value = config;
+                                            isUpdating = false;
+                                        }
+                                    }
+                                    
+                                    background: Rectangle {
+                                        x: globalFreqSlider.leftPadding
+                                        y: globalFreqSlider.topPadding + globalFreqSlider.availableHeight / 2 - height / 2
+                                        implicitWidth: 200
+                                        implicitHeight: 6
+                                        width: globalFreqSlider.availableWidth
+                                        height: implicitHeight
+                                        radius: 3
+                                        color: palette.mid
+                                        
+                                        Rectangle {
+                                            width: globalFreqSlider.visualPosition * parent.width
+                                            height: parent.height
+                                            color: Fusion.highlight(palette)
+                                            radius: 3
+                                        }
+                                    }
+                                    
+                                    handle: Rectangle {
+                                        x: globalFreqSlider.leftPadding + globalFreqSlider.visualPosition * (globalFreqSlider.availableWidth - width)
+                                        y: globalFreqSlider.topPadding + globalFreqSlider.availableHeight / 2 - height / 2
+                                        implicitWidth: 20
+                                        implicitHeight: 20
+                                        radius: 10
+                                        color: globalFreqSlider.pressed ? Qt.lighter(Fusion.highlight(palette), 1.2) : Fusion.highlight(palette)
+                                        border.color: palette.base
+                                        border.width: 2
+                                        
+                                        layer.enabled: true
+                                        layer.effect: MultiEffect {
+                                            shadowEnabled: true
+                                            shadowOpacity: 0.3
+                                            shadowBlur: 0.5
+                                            shadowVerticalOffset: 2
+                                        }
+                                    }
+                                }
+                                
+                                Rectangle {
+                                    Layout.preferredWidth: 90
+                                    Layout.preferredHeight: 36
+                                    color: palette.base
+                                    border.color: palette.mid
+                                    border.width: 1
+                                    radius: 4
+                                    
+                                    Label {
+                                        anchors.centerIn: parent
+                                        text: globalFreqSlider.value.toFixed(2) + " GHz"
+                                        color: Fusion.highlight(palette)
+                                        font.pixelSize: 14
+                                        font.bold: true
+                                    }
+                                }
+                            }
+                        }
+
                         GridLayout {
                             id: cpuGrid
                             Layout.fillWidth: true
