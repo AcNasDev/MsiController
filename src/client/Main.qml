@@ -1228,7 +1228,7 @@ ApplicationWindow {
                         return;
                     }
                     
-                    if(cpuContent.rawFregs.length !== cpuConfig.cpus.length && cpuContent.rawUsage !== cpuConfig.cpus.length) {
+                    if(cpuContent.rawFregs.length !== cpuConfig.cpus.length && cpuContent.rawUsage.length !== cpuConfig.cpus.length) {
                         cpuContent.rawFregs = Array(cpuConfig.cpus.length).fill(0);
                         cpuContent.rawUsage = Array(cpuConfig.cpus.length).fill(0);
                     }
@@ -1267,10 +1267,10 @@ ApplicationWindow {
                             cpuContent.valueUsage[i] = filteredUsage;
                             cpuContent.prevUsage[i] = filteredUsage;
                         }
-                        cpuContent.valueUsage = cpuContent.valueUsage
-                        cpuContent.prevUsage = cpuContent.prevUsage
-                        cpuContent.valueFregs = cpuContent.valueFregs;
-                        cpuContent.prevFregs = cpuContent.prevFregs;
+                        cpuContent.valueUsage = cpuContent.valueUsage.slice()
+                        cpuContent.prevUsage = cpuContent.prevUsage.slice()
+                        cpuContent.valueFregs = cpuContent.valueFregs.slice()
+                        cpuContent.prevFregs = cpuContent.prevFregs.slice()
                     
                     }
                 }
