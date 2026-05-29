@@ -72,9 +72,13 @@ install(
     DESTINATION /lib/systemd/system
 )
 
-install(CODE "execute_process(COMMAND systemctl enable msi-ec-service.service)")
-install(CODE "execute_process(COMMAND systemctl daemon-reload)")
-install(CODE "execute_process(COMMAND systemctl restart msi-ec-service.service)")
+install(CODE "
+if(\"\$ENV{DESTDIR}\" STREQUAL \"\")
+  execute_process(COMMAND systemctl daemon-reload)
+  execute_process(COMMAND systemctl enable msi-ec-service.service)
+  execute_process(COMMAND systemctl restart msi-ec-service.service)
+endif()
+")
 
 if(NOT TARGET uninstall_service)
     configure_file(

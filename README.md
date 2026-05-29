@@ -70,7 +70,7 @@ cd MsiController
 mkdir build
 cd build
 cmake ..
-cmake --build . -G Ninja
+cmake --build .
 ```
 
 ### Installation
@@ -80,6 +80,44 @@ sudo cmake --install .
 ```
 
 This will install all components to standard directories (`/usr/local/bin`, `/usr/local/lib`, `/lib/modules`, etc.), and will also configure the systemd service and D-Bus.
+
+### Build Bundled DEB/RPM Packages
+
+Packages are built with DKMS support, so the kernel module is compiled during package installation and rebuilt automatically by DKMS when a new kernel is installed. Release packages also bundle Qt 6.11.1 runtime libraries, plugins, and QML modules under `/opt/msicontroller/qt`, so the client does not depend on the system Qt packages.
+
+```sh
+export MSICONTROLLER_QT_VERSION=6.11.1
+export MSICONTROLLER_QT_HOST_DIR=/opt/Qt/6.11.1/gcc_64
+cmake -S . -B build-package -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/opt/msicontroller \
+  -DCMAKE_PREFIX_PATH="${MSICONTROLLER_QT_HOST_DIR}" \
+  -DMSICONTROLLER_BUNDLE_QT_RUNTIME=ON \
+  -DMSICONTROLLER_BUILD_KERNEL_MODULE=OFF \
+  -DMSICONTROLLER_INSTALL_DKMS=ON
+cmake --build build-package
+cd build-package
+cpack -G DEB
+cpack -G RPM
+```
+
+Or build them in Docker:
+
+```sh
+./scripts/build-packages-docker.sh
+```
+
+Docker-built packages are written to `packages/`.
+
+If the build environment requires a proxy, set it outside the repository before running the script:
+
+```sh
+export MSICONTROLLER_HTTP_PROXY="http://user:password@proxy.example:3128"
+./scripts/build-packages-docker.sh
+```
+
+The package install host must have DKMS and matching kernel headers available for the running kernel.
+The application binaries, private library, and bundled Qt runtime are installed into `/opt/msicontroller`; systemd, D-Bus, desktop, autostart, modules-load, and DKMS integration files are installed into their standard system locations.
 
 ### Uninstallation
 

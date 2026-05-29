@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStartPre=/sbin/modprobe msiecmodule
-ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/MsiControlCenterService
+ExecStart=@MSICONTROLLER_SERVICE_EXEC@
 Restart=on-failure
 User=root
 

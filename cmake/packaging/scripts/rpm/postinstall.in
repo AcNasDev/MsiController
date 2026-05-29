@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+
+DKMS_NAME="@MSICONTROLLER_DKMS_MODULE_NAME@"
+DKMS_VERSION="@MSICONTROLLER_DKMS_VERSION@"
+SERVICE_NAME="msi-ec-service.service"
+
+if command -v dkms >/dev/null 2>&1; then
+    dkms add -m "$DKMS_NAME" -v "$DKMS_VERSION" >/dev/null 2>&1 || true
+    KERNEL_VERSION="$(uname -r)"
+    if ! dkms status -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$KERNEL_VERSION" 2>/dev/null | grep -q "installed"; then
+        dkms build -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$KERNEL_VERSION"
+        dkms install -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$KERNEL_VERSION" --force
+    fi
+fi
+
+depmod -a >/dev/null 2>&1 || true
+modprobe "$DKMS_NAME" >/dev/null 2>&1 || true
+
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
+    systemctl restart "$SERVICE_NAME" >/dev/null 2>&1 || true
+fi
+
+exit 0

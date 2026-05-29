@@ -4,6 +4,7 @@ endif()
 
 file(REMOVE_RECURSE
     "@CMAKE_INSTALL_FULL_BINDIR@/MsiControlCenterService"
+    "@CMAKE_INSTALL_FULL_BINDIR@/msicontroller-service"
     "/etc/dbus-1/system.d/msi-ec-service.conf"
     "/lib/systemd/system/msi-ec-service.service"
 )

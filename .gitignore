@@ -28,6 +28,7 @@ Thumbs.db
 # --- Qt build directories ---
 build-*/
 build/
+packages/
 _build*/
 out/
 out-build*/
@@ -45,6 +46,7 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
+!cmake/packaging/dkms/Makefile
 CTestTestfile.cmake
 install_manifest.txt
 
@@ -68,6 +70,8 @@ install_manifest.txt
 *.out
 *.app
 *.elf
+*.deb
+*.rpm
 
 # --- Qt resource files ---
 *.qm

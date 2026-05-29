@@ -1,0 +1,10 @@
+.git/
+build/
+build-*/
+build-*
+out/
+packages/
+*.deb
+*.rpm
+*.tar.gz
+*.zip

@@ -73,12 +73,12 @@ configure_file(
 
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/msi-control-center.desktop
-    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications
+    DESTINATION /usr/share/applications
 )
 
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/msi-control-center.svg
-    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps
+    DESTINATION /usr/share/icons/hicolor/scalable/apps
 )
 
 configure_file(

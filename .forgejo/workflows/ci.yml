@@ -33,7 +33,8 @@ jobs:
             build-essential cmake ninja-build pkg-config \
             qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools \
             qt6-charts-dev qt6-qmltooling-plugins libdbus-1-dev libsystemd-dev \
-            linux-headers-generic clang-tools clang-tidy clazy
+            linux-headers-generic clang-tools clang-tidy clazy \
+            dpkg-dev file rpm
           
           # Находим установленную версию kernel headers для передачи в CMake
           INSTALLED_KERNEL=$(ls /lib/modules/ | grep generic | head -1)
@@ -67,3 +68,57 @@ jobs:
           git branch --set-upstream-to=origin/main main || true
           git pull --rebase origin main
           git push https://$GITHUBTOKEN@github.com/AcNasDev/MsiController.git
+
+  packages:
+    runs-on: docker
+    container:
+      image: ubuntu:22.04
+    env:
+      GIT_DEPTH: 0
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      MSICONTROLLER_QT_VERSION: 6.11.1
+      MSICONTROLLER_HTTP_PROXY: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
+      http_proxy: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
+      https_proxy: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
+      HTTP_PROXY: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
+      HTTPS_PROXY: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
+    steps:
+      - name: Install Node.js and git
+        run: |
+          apt-get update
+          apt-get install -y curl ca-certificates
+          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          apt-get install -y nodejs git
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install package build dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential cmake dpkg-dev file libdbus-1-dev libegl1-mesa-dev \
+            libfontconfig1-dev libfreetype-dev libgl1-mesa-dev libsystemd-dev \
+            libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-util1 \
+            libxkbcommon-dev libxkbcommon-x11-0 ninja-build pkg-config \
+            python3 python3-pip rpm
+
+      - name: Install Qt with aqtinstall
+        run: |
+          chmod +x scripts/install-qt-aqt.sh
+          scripts/install-qt-aqt.sh
+
+      - name: Build bundled DEB/RPM packages
+        run: |
+          chmod +x scripts/build-packages.sh
+          scripts/build-packages.sh
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: msicontroller-packages
+          path: packages/*

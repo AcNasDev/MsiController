@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Exec=@CMAKE_INSTALL_FULL_BINDIR@/MsiControlCenterClient
+Exec=@MSICONTROLLER_CLIENT_EXEC@
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true

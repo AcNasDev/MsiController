@@ -1,4 +1,7 @@
-file(REMOVE "@CMAKE_INSTALL_FULL_BINDIR@/MsiControlCenterClient")
-file(REMOVE "@CMAKE_INSTALL_DATAROOTDIR@/applications/msi-control-center.desktop")
-file(REMOVE "@CMAKE_INSTALL_DATAROOTDIR@/icons/hicolor/scalable/apps/msi-control-center.svg")
-file(REMOVE "@CMAKE_INSTALL_SYSCONFDIR@/xdg/autostart/msi-control-center-autostart.desktop")
+file(REMOVE
+    "@CMAKE_INSTALL_FULL_BINDIR@/MsiControlCenterClient"
+    "@CMAKE_INSTALL_FULL_BINDIR@/msicontroller-client"
+    "/usr/share/applications/msi-control-center.desktop"
+    "/usr/share/icons/hicolor/scalable/apps/msi-control-center.svg"
+    "/etc/xdg/autostart/msi-control-center-autostart.desktop"
+)

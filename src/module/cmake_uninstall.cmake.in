@@ -1,2 +1,3 @@
 file(REMOVE "/lib/modules/@KERNEL_VERSION@/extra/msiecmodule.ko")
 file(REMOVE "/etc/modules-load.d/msiecmodule.conf")
+file(REMOVE_RECURSE "/usr/src/@MSICONTROLLER_DKMS_MODULE_NAME@-@MSICONTROLLER_DKMS_VERSION@")
