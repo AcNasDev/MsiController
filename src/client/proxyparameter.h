@@ -11,6 +11,7 @@ class ProxyParameter : public QObject {
     Q_PROPERTY(QVariant value READ value WRITE setValue NOTIFY valueChanged)
     Q_PROPERTY(QVariant availableValues READ availableValues NOTIFY availableValuesChanged)
     Q_PROPERTY(bool isValid READ isValid NOTIFY isValidChanged)
+    Q_PROPERTY(bool isPending READ isPending NOTIFY isPendingChanged)
 
 public:
     explicit ProxyParameter(QObject* parent = nullptr);
@@ -27,6 +28,9 @@ public:
     bool isValid() const;
     void setIsValid(bool valid);
 
+    bool isPending() const;
+    void setIsPending(bool pending);
+
     void setBlockSignalsForEsProxy(bool block) { mBlockSignalsForEsProxy = block; }
     bool blockSignalsForEsProxy() const { return mBlockSignalsForEsProxy; }
 
@@ -35,12 +39,14 @@ signals:
     void valueChanged();
     void availableValuesChanged();
     void isValidChanged();
+    void isPendingChanged();
     void valueChangedForEsProxy();
 
 private:
-    Msi::Parametr mParameter;
+    Msi::Parametr mParameter{Msi::Parametr::CountEs};
     QVariant mValue;
     QVariant mAvailableValues;
     bool mIsValid{false};
+    bool mIsPending{false};
     bool mBlockSignalsForEsProxy{false};
 };

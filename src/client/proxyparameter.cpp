@@ -48,3 +48,14 @@ void ProxyParameter::setIsValid(bool valid) {
         emit isValidChanged();
     }
 }
+
+bool ProxyParameter::isPending() const {
+    return mIsPending;
+}
+
+void ProxyParameter::setIsPending(bool pending) {
+    if (mIsPending != pending) {
+        mIsPending = pending;
+        emit isPendingChanged();
+    }
+}

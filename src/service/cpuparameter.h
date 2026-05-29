@@ -27,5 +27,5 @@ private:
 
     QVector<CpuCoreStat> readCoreStats() const;
     void updateConfig();
-    void writeToFile(const QString& fileName, const QString& value);
+    bool writeToFile(const QString& fileName, const QString& value);
 };

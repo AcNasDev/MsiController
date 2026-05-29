@@ -29,6 +29,7 @@ public:
     QDBusVariant readParameter(const QDBusVariant& name) const override;
     QDBusVariant availableValues(const QDBusVariant& name) const override;
     bool writeParameter(const QDBusVariant& name, const QDBusVariant& value) override;
+    QDBusVariant writeParameters(const QDBusVariant& updates) override;
 
 private:
     QHash<QVariant, Parameter*> mParameters;

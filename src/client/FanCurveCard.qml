@@ -1,292 +1,402 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtCharts
-import QtQuick.Controls.Fusion
-import CurveUtils 1.0
 
-GroupBox {
-    Control{
-        id: control
-    }
+Pane {
     id: root
-    // property color accentColor: palette.accentColor
-    // property color backgroundColor: palette.backgroundColor
-    // property color secondaryTextColor: palette.secondaryTextColor
 
+    property string title: ""
+    property string subtitle: qsTr("Drag points to tune the curve")
     property string unit: "%"
     property string tempUnit: "°C"
-    property var minTemp: 0
-    property var maxTemp: 100
-    property var minSpeed: 0
-    property var maxSpeed: 150
+    property real minTemp: 0
+    property real maxTemp: 100
+    property real minSpeed: 0
+    property real maxSpeed: 150
+    property color surfaceColor: "#20242d"
+    property color borderColor: "#303642"
+    property color textColor: "#f3f6fb"
+    property color mutedTextColor: "#9aa6b6"
+    property color gridColor: "#323946"
+    property color accentColor: "#3fa7ff"
+    property color fillColor: Qt.rgba(accentColor.r, accentColor.g, accentColor.b, 0.18)
     signal curveChanged()
+    signal pointEdited(int pointIndex, real temperature, real speed)
 
-    // Properties for curve points
-    property int temp1: 0
-    property int speed1: 30
-    property int temp2: 15
-    property int speed2: 40
-    property int temp3: 30
-    property int speed3: 50
-    property int temp4: 45
-    property int speed4: 60
-    property int temp5: 60
-    property int speed5: 70
-    property int temp6: 75
-    property int speed6: 80
-    property int temp7: 90
-    property int speed7: 100
+    property real temp1: 0
+    property real speed1: 30
+    property real temp2: 15
+    property real speed2: 40
+    property real temp3: 30
+    property real speed3: 50
+    property real temp4: 45
+    property real speed4: 60
+    property real temp5: 60
+    property real speed5: 70
+    property real temp6: 75
+    property real speed6: 80
+    property real temp7: 90
+    property real speed7: 100
 
-    onTemp1Changed: updateSeries()
-    onSpeed1Changed: updateSeries()
-    onTemp2Changed: updateSeries()
-    onSpeed2Changed: updateSeries()
-    onTemp3Changed: updateSeries()
-    onSpeed3Changed: updateSeries()
-    onTemp4Changed: updateSeries()
-    onSpeed4Changed: updateSeries()
-    onTemp5Changed: updateSeries()
-    onSpeed5Changed: updateSeries()
-    onTemp6Changed: updateSeries()
-    onSpeed6Changed: updateSeries()
-    onTemp7Changed: updateSeries()
-    onSpeed7Changed: updateSeries()
-
-    // Drag state variables
     property int dragIndex: -1
     property bool isDragging: false
+    property string hoverText: ""
+    property point hoverPoint: Qt.point(0, 0)
+    property var draftTemps: []
+    property var draftSpeeds: []
 
-CurveUtils {
-    id: curveHelper
-}
+    padding: 0
+    implicitHeight: 260
 
-function fillSplineSeries(series, xValues, yValues) {
-    series.clear();
-    var segments = 8;
-    var n = xValues.length;
-    for (var i = 0; i < n - 1; i++) {
-        var x0 = i > 0 ? xValues[i - 1] : xValues[i];
-        var x1 = xValues[i];
-        var x2 = xValues[i + 1];
-        var x3 = (i < n - 2) ? xValues[i + 2] : xValues[i + 1];
-
-        var y0 = i > 0 ? yValues[i - 1] : yValues[i];
-        var y1 = yValues[i];
-        var y2 = yValues[i + 1];
-        var y3 = (i < n - 2) ? yValues[i + 2] : yValues[i + 1];
-
-        for (var t = 0; t < segments; t++) {
-            var s = t / segments;
-            // Catmull-Rom interpolation for X and Y
-            var x = 0.5 * (
-                (2 * x1) +
-                (-x0 + x2) * s +
-                (2*x0 - 5*x1 + 4*x2 - x3) * s * s +
-                (-x0 + 3*x1 - 3*x2 + x3) * s * s * s
-            );
-            var y = 0.5 * (
-                (2 * y1) +
-                (-y0 + y2) * s +
-                (2*y0 - 5*y1 + 4*y2 - y3) * s * s +
-                (-y0 + 3*y1 - 3*y2 + y3) * s * s * s
-            );
-            series.append(x, y);
-        }
-    }
-    // Добавить последнюю точку
-    series.append(xValues[n - 1], yValues[n - 1]);
-}
-    // Function to update chart series
-    function updateSeries() {
-        var xValues = [root.minTemp - (root.maxTemp - root.minTemp) * 0.1, temp1, temp2, temp3, temp4, temp5, temp6, temp7, root.maxTemp + (root.maxTemp - root.minTemp) * 0.1];
-        var yValues = [speed1, speed1, speed2, speed3, speed4, speed5, speed6, speed7, speed7];
-        // fillSplineSeries(lineSeries, xValues, yValues);
-        // fillSplineSeries(areaSeries, xValues, yValues);
-        var splinePoints = curveHelper.catmullRomSpline(xValues, yValues, 1);
-        lineSeries.clear();
-        areaSeries.clear();
-
-        for (var i = 0; i < splinePoints.length; ++i) {
-            lineSeries.append(splinePoints[i].x, splinePoints[i].y);
-            areaSeries.append(splinePoints[i].x, splinePoints[i].y);
-        }
-
-        // lineSeries.clear();
-        scatterSeries.clear();
-
-        // Add points in fixed order
-        // lineSeries.append(minTemp - maxTemp * 0.1, speed1);
-        // lineSeries.append(temp1, speed1);
-        // lineSeries.append(temp2, speed2);
-        // lineSeries.append(temp3, speed3);
-        // lineSeries.append(temp4, speed4);
-        // lineSeries.append(temp5, speed5);
-        // lineSeries.append(temp6, speed6);
-        // lineSeries.append(temp7, speed7);
-        // lineSeries.append(maxTemp + maxTemp * 0.1, speed7);
-
-        scatterSeries.append(temp1, speed1);
-        scatterSeries.append(temp2, speed2);
-        scatterSeries.append(temp3, speed3);
-        scatterSeries.append(temp4, speed4);
-        scatterSeries.append(temp5, speed5);
-        scatterSeries.append(temp6, speed6);
-        scatterSeries.append(temp7, speed7);
+    background: Rectangle {
+        color: root.surfaceColor
+        radius: 8
+        border.color: root.borderColor
+        border.width: 1
     }
 
-    // Find the closest point to mouse position
-    function findClosestPoint(mouseX, mouseY) {
-        var points = [
-            {x: temp1, y: speed1},
-            {x: temp2, y: speed2},
-            {x: temp3, y: speed3},
-            {x: temp4, y: speed4},
-            {x: temp5, y: speed5},
-            {x: temp6, y: speed6},
-            {x: temp7, y: speed7}
-        ];
+    onTemp1Changed: syncDraft(false)
+    onSpeed1Changed: syncDraft(false)
+    onTemp2Changed: syncDraft(false)
+    onSpeed2Changed: syncDraft(false)
+    onTemp3Changed: syncDraft(false)
+    onSpeed3Changed: syncDraft(false)
+    onTemp4Changed: syncDraft(false)
+    onSpeed4Changed: syncDraft(false)
+    onTemp5Changed: syncDraft(false)
+    onSpeed5Changed: syncDraft(false)
+    onTemp6Changed: syncDraft(false)
+    onSpeed6Changed: syncDraft(false)
+    onTemp7Changed: syncDraft(false)
+    onSpeed7Changed: syncDraft(false)
 
-        var minDist = Number.MAX_VALUE;
-        var closestIndex = -1;
+    Component.onCompleted: syncDraft(true)
+    onDraftTempsChanged: if (chartCanvas) chartCanvas.requestPaint()
+    onDraftSpeedsChanged: if (chartCanvas) chartCanvas.requestPaint()
 
-        for (var i = 0; i < points.length; i++) {
-            var point = points[i];
-            var pixelPoint = chartView.mapToPosition(Qt.point(point.x, point.y), scatterSeries);
-            var dx = mouseX - pixelPoint.x;
-            var dy = mouseY - pixelPoint.y;
-            var dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < minDist && dist < 20) {
-                minDist = dist;
-                closestIndex = i;
-            }
-        }
-
-        return closestIndex;
+    function sourceTemps() {
+        return normalizeTemps([temp1, temp2, temp3, temp4, temp5, temp6, temp7])
     }
 
-    // Initialize chart
-    Component.onCompleted: updateSeries()
+    function sourceSpeeds() {
+        return normalizeSpeeds([speed1, speed2, speed3, speed4, speed5, speed6, speed7])
+    }
 
-    ChartView {
-        id: chartView
+    function syncDraft(force) {
+        if (root.isDragging && !force)
+            return
+
+        root.draftTemps = sourceTemps()
+        root.draftSpeeds = sourceSpeeds()
+    }
+
+    function pointTemp(index) {
+        return root.draftTemps.length > index ? root.draftTemps[index] : sourceTemps()[index]
+    }
+
+    function pointSpeed(index) {
+        return root.draftSpeeds.length > index ? root.draftSpeeds[index] : sourceSpeeds()[index]
+    }
+
+    function boundedNumber(value, minValue, maxValue, fallback) {
+        var n = Number(value)
+        if (isNaN(n))
+            n = fallback
+        return Math.max(minValue, Math.min(maxValue, n))
+    }
+
+    function normalizeTemps(values) {
+        var result = []
+        var prev = root.minTemp
+        for (var i = 0; i < 7; ++i) {
+            var fallback = i === 0 ? root.minTemp : prev
+            var value = boundedNumber(values[i], root.minTemp, root.maxTemp, fallback)
+            if (i === 0)
+                value = root.minTemp
+            else
+                value = Math.max(prev, value)
+            result.push(value)
+            prev = value
+        }
+        return result
+    }
+
+    function normalizeSpeeds(values) {
+        var result = []
+        for (var i = 0; i < 7; ++i)
+            result.push(boundedNumber(values[i], root.minSpeed, root.maxSpeed, root.minSpeed))
+        return result
+    }
+
+    function pointList() {
+        var points = []
+        for (var i = 0; i < 7; ++i)
+            points.push({temperature: pointTemp(i), speed: pointSpeed(i)})
+        return points
+    }
+
+    function setPoint(index, temperature, speed) {
+        var temps = root.draftTemps.length === 7 ? root.draftTemps.slice() : sourceTemps()
+        var speeds = root.draftSpeeds.length === 7 ? root.draftSpeeds.slice() : sourceSpeeds()
+        temps[index] = index === 0 ? root.minTemp : temperature
+        speeds[index] = speed
+        root.draftTemps = temps
+        root.draftSpeeds = speeds
+    }
+
+    function movePoint(index, item, mouseX, mouseY) {
+        var localPoint = item.mapToItem(chartArea, mouseX, mouseY)
+        var newTemp = Math.round(chartArea.xToTemp(localPoint.x))
+        var newSpeed = Math.round(chartArea.yToSpeed(localPoint.y))
+
+        if (index === 0)
+            newTemp = root.minTemp
+        var minAllowedTemp = index > 0 ? root.pointTemp(index - 1) : root.minTemp
+        var maxAllowedTemp = index < 6 ? root.pointTemp(index + 1) : root.maxTemp
+        if (maxAllowedTemp - minAllowedTemp > 1) {
+            minAllowedTemp += index > 0 ? 1 : 0
+            maxAllowedTemp -= index < 6 ? 1 : 0
+        }
+        if (maxAllowedTemp < minAllowedTemp)
+            maxAllowedTemp = minAllowedTemp
+        newTemp = Math.max(minAllowedTemp, Math.min(maxAllowedTemp, newTemp))
+        newTemp = Math.max(root.minTemp, Math.min(root.maxTemp, newTemp))
+        newSpeed = Math.max(root.minSpeed, Math.min(root.maxSpeed, newSpeed))
+
+        root.setPoint(index, newTemp, newSpeed)
+        root.hoverPoint = localPoint
+        root.hoverText = newSpeed + root.unit + " / " + newTemp + root.tempUnit
+        root.curveChanged()
+    }
+
+    ColumnLayout {
         anchors.fill: parent
-        plotArea: Qt.rect(x, y, width, height)
-        
-        backgroundColor: "transparent"
-        plotAreaColor: "transparent"
-        legend.visible: false
-        antialiasing: true
-        margins { left: 0; top: 0; right: 0; bottom: 0 }
-        
-        // Mouse interaction
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-         onPressed: {
-                var closest = findClosestPoint(mouseX, mouseY);
-                if (closest >= 0) {
-                    dragIndex = closest;
-                    isDragging = true;
+        anchors.margins: 12
+        spacing: 8
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+
+                Label {
+                    Layout.fillWidth: true
+                    text: root.title
+                    color: root.textColor
+                    font.pixelSize: 15
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    text: root.subtitle
+                    color: root.mutedTextColor
+                    font.pixelSize: 12
+                    elide: Text.ElideRight
+                    visible: root.subtitle.length > 0
                 }
             }
-         onPositionChanged: {
-                if (isDragging && dragIndex >= 0) {
-                    var valuePoint = chartView.mapToValue(Qt.point(mouseX, mouseY), scatterSeries);
-                 // Constrain values within axes limits
-                    var newTemp = Math.min(Math.max(Math.max(axisX.min, Math.min(axisX.max, valuePoint.x)), minTemp), maxTemp);
-                    var newSpeed = Math.min(Math.max(Math.max(axisY.min, Math.min(axisY.max, valuePoint.y)), minSpeed), maxSpeed);
-                    if(dragIndex === 0) {
-                        newTemp = minTemp;
-                    }
-                 // Round to integers
-                    newTemp = newTemp;
-                    newSpeed = newSpeed;
-                 // Constrain temperature by adjacent points
-                    if (dragIndex > 0) {
-                        var prevTemp = root["temp" + dragIndex];
-                        newTemp = Math.max(newTemp, prevTemp);
-                    }
-                 if (dragIndex < 6) {
-                        var nextTemp = root["temp" + (dragIndex + 2)];
-                        newTemp = Math.min(newTemp, nextTemp);
-                    }
-                 // Update the point
-                    switch(dragIndex) {
-                    case 0: temp1 = newTemp; speed1 = newSpeed; break;
-                    case 1: temp2 = newTemp; speed2 = newSpeed; break;
-                    case 2: temp3 = newTemp; speed3 = newSpeed; break;
-                    case 3: temp4 = newTemp; speed4 = newSpeed; break;
-                    case 4: temp5 = newTemp; speed5 = newSpeed; break;
-                    case 5: temp6 = newTemp; speed6 = newSpeed; break;
-                    case 6: temp7 = newTemp; speed7 = newSpeed; break;
-                    }
-                 updateSeries();
-                    root.curveChanged();
+
+            Rectangle {
+                Layout.preferredWidth: valueLabel.implicitWidth + 22
+                Layout.preferredHeight: 32
+                radius: 8
+                color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.14)
+                border.color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.45)
+
+                Label {
+                    id: valueLabel
+                    anchors.centerIn: parent
+                    text: Math.round(pointSpeed(6)) + root.unit
+                    color: root.accentColor
+                    font.pixelSize: 13
+                    font.bold: true
                 }
             }
-         onReleased: {
-                isDragging = false;
-                dragIndex = -1;
+        }
+
+        Rectangle {
+            id: chartArea
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.minimumHeight: 170
+            color: "transparent"
+            clip: true
+
+            property real leftPadding: 14
+            property real rightPadding: 14
+            property real topPadding: 12
+            property real bottomPadding: 24
+            readonly property real plotX: leftPadding
+            readonly property real plotY: topPadding
+            readonly property real plotWidth: Math.max(1, width - leftPadding - rightPadding)
+            readonly property real plotHeight: Math.max(1, height - topPadding - bottomPadding)
+
+            function tempSpan() {
+                return Math.max(1, root.maxTemp - root.minTemp)
+            }
+
+            function speedSpan() {
+                return Math.max(1, root.maxSpeed - root.minSpeed)
+            }
+
+            function tempToX(value) {
+                return plotX + (Math.max(root.minTemp, Math.min(root.maxTemp, value)) - root.minTemp) / tempSpan() * plotWidth
+            }
+
+            function speedToY(value) {
+                return plotY + (1 - (Math.max(root.minSpeed, Math.min(root.maxSpeed, value)) - root.minSpeed) / speedSpan()) * plotHeight
+            }
+
+            function xToTemp(value) {
+                return root.minTemp + Math.max(0, Math.min(plotWidth, value - plotX)) / plotWidth * tempSpan()
+            }
+
+            function yToSpeed(value) {
+                return root.minSpeed + (1 - Math.max(0, Math.min(plotHeight, value - plotY)) / plotHeight) * speedSpan()
+            }
+
+            onWidthChanged: chartCanvas.requestPaint()
+            onHeightChanged: chartCanvas.requestPaint()
+
+            Canvas {
+                id: chartCanvas
+                anchors.fill: parent
+                antialiasing: true
+
+                onPaint: {
+                    var ctx = getContext("2d")
+                    ctx.setTransform(1, 0, 0, 1, 0, 0)
+                    ctx.globalAlpha = 1.0
+                    ctx.clearRect(0, 0, width, height)
+
+                    var points = root.pointList()
+                    var plotBottom = chartArea.plotY + chartArea.plotHeight
+                    var plotRight = chartArea.plotX + chartArea.plotWidth
+
+                    ctx.lineWidth = 1
+                    ctx.strokeStyle = root.gridColor
+                    ctx.globalAlpha = 1.0
+                    for (var gx = 0; gx <= 5; ++gx) {
+                        var x = chartArea.plotX + chartArea.plotWidth * gx / 5
+                        ctx.beginPath()
+                        ctx.moveTo(x, chartArea.plotY)
+                        ctx.lineTo(x, plotBottom)
+                        ctx.stroke()
+                    }
+                    for (var gy = 0; gy <= 4; ++gy) {
+                        var y = chartArea.plotY + chartArea.plotHeight * gy / 4
+                        ctx.beginPath()
+                        ctx.moveTo(chartArea.plotX, y)
+                        ctx.lineTo(plotRight, y)
+                        ctx.stroke()
+                    }
+
+                    if (points.length === 0)
+                        return
+
+                    ctx.beginPath()
+                    ctx.moveTo(chartArea.tempToX(points[0].temperature), plotBottom)
+                    for (var i = 0; i < points.length; ++i)
+                        ctx.lineTo(chartArea.tempToX(points[i].temperature), chartArea.speedToY(points[i].speed))
+                    ctx.lineTo(chartArea.tempToX(points[points.length - 1].temperature), plotBottom)
+                    ctx.closePath()
+                    ctx.fillStyle = root.fillColor
+                    ctx.fill()
+
+                    ctx.beginPath()
+                    for (var p = 0; p < points.length; ++p) {
+                        var px = chartArea.tempToX(points[p].temperature)
+                        var py = chartArea.speedToY(points[p].speed)
+                        if (p === 0)
+                            ctx.moveTo(px, py)
+                        else
+                            ctx.lineTo(px, py)
+                    }
+                    ctx.lineWidth = 3
+                    ctx.lineCap = "round"
+                    ctx.lineJoin = "round"
+                    ctx.strokeStyle = root.accentColor
+                    ctx.stroke()
+
+                    ctx.font = "11px sans-serif"
+                    ctx.fillStyle = root.mutedTextColor
+                    ctx.textBaseline = "middle"
+                    ctx.fillText(Math.round(root.maxSpeed) + root.unit, chartArea.plotX + 2, chartArea.plotY + 9)
+                    ctx.fillText(Math.round(root.minSpeed) + root.unit, chartArea.plotX + 2, plotBottom - 9)
+                    ctx.textBaseline = "alphabetic"
+                    ctx.fillText(Math.round(root.minTemp) + root.tempUnit, chartArea.plotX + 2, height - 5)
+                    var maxTempText = Math.round(root.maxTemp) + root.tempUnit
+                    ctx.fillText(maxTempText, plotRight - ctx.measureText(maxTempText).width - 2, height - 5)
+                }
+            }
+
+            Label {
+                visible: root.hoverText.length > 0
+                text: root.hoverText
+                x: Math.max(0, Math.min(root.hoverPoint.x - width / 2, chartArea.width - width))
+                y: Math.max(0, root.hoverPoint.y - height - 10)
+                z: 4
+                color: root.textColor
+                font.pixelSize: 12
+                padding: 7
+                background: Rectangle {
+                    color: "#10141c"
+                    radius: 6
+                    border.color: root.borderColor
+                }
+            }
+
+            Repeater {
+                model: 7
+
+                Rectangle {
+                    id: pointHandle
+                    z: 10
+                    width: 22
+                    height: 22
+                    radius: 11
+                    color: root.surfaceColor
+                    border.color: root.accentColor
+                    border.width: 3
+
+                    property point chartPoint: Qt.point(chartArea.tempToX(root.pointTemp(index)), chartArea.speedToY(root.pointSpeed(index)))
+                    x: chartPoint.x - width / 2
+                    y: chartPoint.y - height / 2
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+
+                        onEntered: pointHandle.color = Qt.lighter(root.surfaceColor, 1.25)
+                        onExited: {
+                            if (!pressed)
+                                pointHandle.color = root.surfaceColor
+                        }
+                        onPressed: function(mouse) {
+                            root.dragIndex = index
+                            root.isDragging = true
+                            root.movePoint(index, pointHandle, mouse.x, mouse.y)
+                        }
+                        onPositionChanged: function(mouse) {
+                            if (pressed)
+                                root.movePoint(index, pointHandle, mouse.x, mouse.y)
+                        }
+                        onReleased: {
+                            root.pointEdited(index, root.pointTemp(index), root.pointSpeed(index))
+                            root.isDragging = false
+                            root.dragIndex = -1
+                            root.hoverText = ""
+                            pointHandle.color = root.surfaceColor
+                        }
+                    }
+                }
             }
         }
-     ValueAxis {
-            id: axisX
-            min: root.minTemp - (root.maxTemp - root.minTemp) * 0.1
-            max: root.maxTemp + (root.maxTemp - root.minTemp) * 0.1
-            labelsVisible: false
-            lineVisible: false
-            gridVisible: false
-        }
-     ValueAxis {
-            id: axisY
-            min: root.minSpeed - (root.maxSpeed - root.minSpeed) * 0.1
-            max: root.maxSpeed + (root.maxSpeed - root.minSpeed) * 0.1
-            labelsVisible: false
-            lineVisible: false
-            gridVisible: false
-        }
-     LineSeries {
-            id: lineSeries
-            axisX: axisX
-            axisY: axisY
-            color: Fusion.highlight(control.palette) 
-            width: 2
-        }
-     ScatterSeries {
-            id: scatterSeries
-            axisX: axisX
-            axisY: axisY
-            color:  control.palette.base
-            borderColor: Fusion.highlight(control.palette) 
-            borderWidth: 2
-            markerSize: 10
-            pointLabelsFormat: "@yPoint" + unit + " @xPoint" + tempUnit
-            pointLabelsVisible: true
-            pointLabelsColor: control.palette.text
-        }
-        AreaSeries {
-            axisX: axisX
-            axisY: axisY
-            color: Qt.rgba(scatterSeries.borderColor.r, scatterSeries.borderColor.g, scatterSeries.borderColor.b, 0.2)
-            borderColor: "transparent"
-            upperSeries: LineSeries {
-                id: areaSeries
-                axisX: axisX
-                axisY: axisY
-                // color: palette.mid
-                width: 2
-            }
-        }
-    }
-
-    // Functions to get current values
-    function getTemperatures() {
-        return [temp1, temp2, temp3, temp4, temp5, temp6, temp7];
-    }
-
-    function getFanSpeeds() {
-        return [speed1, speed2, speed3, speed4, speed5, speed6, speed7];
     }
 }

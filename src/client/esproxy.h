@@ -3,7 +3,9 @@
 #include <QAbstractListModel>
 #include <QMap>
 #include <QObject>
+#include <QSet>
 #include <QStringList>
+#include <QTimer>
 #include <QVariant>
 
 #include "proxyparameter.h"
@@ -27,6 +29,16 @@ private:
     ComMsiEcInterface* mEcInterface{nullptr};
     bool mIsConnected{false};
     QMap<Msi::Parametr, ProxyParameter*> mProxyParameters;
+    QMap<Msi::Parametr, QVariant> mPendingWrites;
+    QMap<Msi::Parametr, QVariant> mInFlightWrites;
+    QSet<Msi::Parametr> mConfirmingWrites;
+    QTimer mWriteFlushTimer;
 
     void init();
+    void applyRemoteValue(Msi::Parametr param, const QVariant& value, bool markValid = false);
+    void queueWrite(Msi::Parametr param, const QVariant& value);
+    void flushPendingWrites();
+    void refreshParameter(Msi::Parametr param);
+    bool hasQueuedWrite(Msi::Parametr param) const;
+    bool hasWriteInProgress(Msi::Parametr param) const;
 };

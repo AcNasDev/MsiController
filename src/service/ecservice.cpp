@@ -5,6 +5,10 @@
 #include <QDBusError>
 #include <QDir>
 #include <QFile>
+#include <QPair>
+#include <QVector>
+
+#include <utility>
 
 #include "struct.h"
 
@@ -50,6 +54,39 @@ bool EcService::writeParameter(const QDBusVariant& name, const QDBusVariant& val
         return true;
     }
     return false;
+}
+
+QDBusVariant EcService::writeParameters(const QDBusVariant& updates) {
+    const auto values = qdbus_cast<Msi::Msg>(updates.variant()).variant.toList();
+    QVariantList result;
+    if (values.size() % 2 != 0) {
+        qWarning() << "Invalid batch write payload size:" << values.size();
+        return QDBusVariant(QVariant::fromValue(Msi::Msg(result)));
+    }
+
+    QVector<QPair<QVariant, QVariant>> requests;
+    requests.reserve(values.size() / 2);
+    for (qsizetype i = 0; i < values.size(); i += 2) {
+        const QVariant name = values.at(i);
+        const QVariant value = values.at(i + 1);
+        if (!mParameters.contains(name) || mParameters[name]->isReadOnly()) {
+            qWarning() << "Skipping invalid batch write parameter:" << name;
+            continue;
+        }
+        requests.append(qMakePair(name, value));
+    }
+
+    for (const auto& request : std::as_const(requests)) {
+        mParameters[request.first]->setValue(request.second);
+    }
+
+    for (const auto& request : std::as_const(requests)) {
+        if (Parameter* parameter = mParameters.value(request.first, nullptr)) {
+            result << request.first << parameter->value();
+        }
+    }
+
+    return QDBusVariant(QVariant::fromValue(Msi::Msg(result)));
 }
 
 QDBusVariant EcService::availableValues(const QDBusVariant& name) const {

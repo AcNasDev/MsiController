@@ -1,4 +1,7 @@
 #include <QApplication>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QIcon>
 #include <QLocalServer>
 #include <QLocalSocket>
@@ -13,10 +16,46 @@
 
 const char* UNIQUE_KEY = "MsiControlCenterUniqueKey";
 
+namespace {
+QString executableDir(const char* argv0) {
+    QFileInfo executable(QString::fromLocal8Bit(argv0 ? argv0 : ""));
+    if (executable.isSymLink()) {
+        const QString target = executable.symLinkTarget();
+        const QFileInfo targetInfo(target);
+        executable.setFile(targetInfo.isAbsolute() ? target : executable.dir().absoluteFilePath(target));
+    }
+    if (executable.isAbsolute()) {
+        return executable.absolutePath();
+    }
+    return QString();
+}
+
+void prependEnvPath(const char* name, const QString& path) {
+    if (path.isEmpty() || !QDir(path).exists()) {
+        return;
+    }
+
+    const QByteArray current = qgetenv(name);
+    QByteArray updated = QFile::encodeName(path);
+    if (!current.isEmpty()) {
+        updated += ':';
+        updated += current;
+    }
+    qputenv(name, updated);
+}
+} // namespace
+
 int main(int argc, char* argv[]) {
     if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
         qputenv("QT_QPA_PLATFORM", QByteArray("xcb"));
     }
+
+    const QString appDir = argc > 0 ? executableDir(argv[0]) : QString();
+    const QString bundledPluginPath = QDir(appDir).absoluteFilePath("../qt/plugins");
+    const QString bundledQmlPath = QDir(appDir).absoluteFilePath("../qt/qml");
+    prependEnvPath("QT_PLUGIN_PATH", bundledPluginPath);
+    prependEnvPath("QML_IMPORT_PATH", bundledQmlPath);
+    prependEnvPath("QML2_IMPORT_PATH", bundledQmlPath);
 
     QApplication app(argc, argv);
     QLocalSocket socket;
@@ -39,7 +78,6 @@ int main(int argc, char* argv[]) {
     app.setOrganizationDomain("acnas.net");
     app.setWindowIcon(QIcon(":/resources/icon/logo.svg"));
     qmlRegisterUncreatableMetaObject(Msi::staticMetaObject, "Msi", 1, 0, "Msi", "Enums only");
-    qmlRegisterType<Msi::Range>("Msi", 1, 0, "Range");
     qmlRegisterType<EsProxy>("MsiController", 1, 0, "EsProxy");
     qmlRegisterType<CurveUtils>("CurveUtils", 1, 0, "CurveUtils");
     qmlRegisterSingletonType<EnumHelper>("MSI.Helpers",
@@ -53,6 +91,9 @@ int main(int argc, char* argv[]) {
                                          });
 
     QQmlApplicationEngine engine;
+    if (QDir(bundledQmlPath).exists()) {
+        engine.addImportPath(bundledQmlPath);
+    }
     engine.rootContext()->setContextProperty("qtversion", QString(qVersion()));
     engine.rootContext()->setContextProperty("appversion",
                                              QString(CMAKE_TOOLS_GIT_TAG_MAJOR) + "." +

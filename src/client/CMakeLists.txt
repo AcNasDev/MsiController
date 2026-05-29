@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Charts Core Gui Qml Quick DBus)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Qml Quick DBus Widgets)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -29,6 +29,11 @@ qt_add_qml_module(MsiControlCenterClient
     VERSION 1.0
     QML_FILES
         Main.qml
+        AppCard.qml
+        MetricTile.qml
+        ToggleTile.qml
+        OptionGroup.qml
+        CpuPage.qml
         GraphCard.qml
         FanCurveCard.qml
         Sensor.qml
@@ -45,10 +50,10 @@ set_target_properties(MsiControlCenterClient PROPERTIES
 target_link_libraries(MsiControlCenterClient PUBLIC
     Qt${QT_VERSION_MAJOR}::Quick
     Qt${QT_VERSION_MAJOR}::DBus
-    Qt${QT_VERSION_MAJOR}::Charts
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Gui
     Qt${QT_VERSION_MAJOR}::Qml
+    Qt${QT_VERSION_MAJOR}::Widgets
     helper
 )
 

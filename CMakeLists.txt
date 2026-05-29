@@ -30,25 +30,12 @@ add_subdirectory(src/service)
 add_subdirectory(src/client)
 
 if(MSICONTROLLER_BUNDLE_QT_RUNTIME)
-    set(MSICONTROLLER_WRAPPED_BINARY "MsiControlCenterClient")
-    configure_file(
-        "${CMAKE_SOURCE_DIR}/cmake/packaging/wrappers/msicontroller-run.in"
-        "${CMAKE_BINARY_DIR}/packaging/wrappers/msicontroller-client"
-        @ONLY
-    )
-
-    set(MSICONTROLLER_WRAPPED_BINARY "MsiControlCenterService")
-    configure_file(
-        "${CMAKE_SOURCE_DIR}/cmake/packaging/wrappers/msicontroller-run.in"
-        "${CMAKE_BINARY_DIR}/packaging/wrappers/msicontroller-service"
-        @ONLY
-    )
-
-    install(PROGRAMS
-        "${CMAKE_BINARY_DIR}/packaging/wrappers/msicontroller-client"
-        "${CMAKE_BINARY_DIR}/packaging/wrappers/msicontroller-service"
-        DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    )
+    install(CODE "
+        file(REMOVE \"\$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/msicontroller-client\")
+        file(REMOVE \"\$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/msicontroller-service\")
+        file(CREATE_LINK \"MsiControlCenterClient\" \"\$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/msicontroller-client\" SYMBOLIC)
+        file(CREATE_LINK \"MsiControlCenterService\" \"\$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/msicontroller-service\" SYMBOLIC)
+    ")
 endif()
 
 add_custom_target(uninstall

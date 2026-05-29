@@ -2,6 +2,7 @@
 
 #include <QDebug>
 #include <QDir>
+#include <QFile>
 #include <QRegularExpression>
 
 #include <algorithm>
@@ -35,9 +36,9 @@ CpuParameter::CpuParameter(const QVariant& name, QObject* parent) : Parameter(na
     });
     mCpuDirs = cpuDirs;
 
+    updateConfig();
     mTimer.start(1000);
     connect(&mTimer, &QTimer::timeout, this, &CpuParameter::updateConfig);
-    connect(&mTimer, &QTimer::timeout, this, &CpuParameter::update);
 }
 
 QString readFile(const QString& filePath) {
@@ -122,36 +123,57 @@ void CpuParameter::updateConfig() {
             cpuConfig.cpus[i].usage = usage;
         }
     }
-    mValue = QVariant::fromValue(cpuConfig);
+    QVariant newValue = QVariant::fromValue(cpuConfig);
+    if (newValue != mValue) {
+        mValue = newValue;
+        emit valueChanged(mValue);
+    }
 }
 
 QVariant CpuParameter::readValue() const {
     return mValue;
 }
 
-void CpuParameter::writeToFile(const QString& fileName, const QString& value) {
+bool CpuParameter::writeToFile(const QString& fileName, const QString& value) {
     QFile file(fileName);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         qWarning() << "Failed to open file for writing:" << fileName;
-        return;
+        return false;
     }
     if (file.write(value.toUtf8()) == -1) {
         qWarning() << "Failed to write to file:" << fileName;
+        return false;
     }
+    return true;
 }
 
 bool CpuParameter::writeValue(const QVariant& value) {
     Msi::CpuConfig cpuConfig = value.value<Msi::CpuConfig>();
+    Msi::CpuConfig currentConfig = mValue.value<Msi::CpuConfig>();
+    bool success = true;
+
     for (int i = 0; i < cpuConfig.cpus.size() && i < mCpuDirs.size(); ++i) {
         const Msi::Cpu& cpu = cpuConfig.cpus[i];
+        const bool hasCurrent = i < currentConfig.cpus.size();
+        const Msi::Cpu* currentCpu = hasCurrent ? &currentConfig.cpus[i] : nullptr;
         QString cpuDir = mCpuDirs[i];
         QString fullScalingFreqMinPath = rootPath + cpuDir + scalingFreqMinPath;
         QString fullScalingFreqMaxPath = rootPath + cpuDir + scalingFreqMaxPath;
         QString fullScalingGovernorPath = rootPath + cpuDir + scalingGovernorPath;
 
-        writeToFile(fullScalingFreqMinPath, QByteArray::number(cpu.scalingMinFreq));
-        writeToFile(fullScalingFreqMaxPath, QByteArray::number(cpu.scalingMaxFreq));
-        writeToFile(fullScalingGovernorPath, cpu.availableGovernor);
+        if (!currentCpu || currentCpu->scalingMinFreq != cpu.scalingMinFreq) {
+            success = writeToFile(fullScalingFreqMinPath, QByteArray::number(cpu.scalingMinFreq)) && success;
+        }
+        if (!currentCpu || currentCpu->scalingMaxFreq != cpu.scalingMaxFreq) {
+            success = writeToFile(fullScalingFreqMaxPath, QByteArray::number(cpu.scalingMaxFreq)) && success;
+        }
+        if (!currentCpu || currentCpu->availableGovernor != cpu.availableGovernor) {
+            success = writeToFile(fullScalingGovernorPath, cpu.availableGovernor) && success;
+        }
     }
-    return true;
+
+    if (success) {
+        updateConfig();
+    }
+    return success;
 }
