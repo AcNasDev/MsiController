@@ -4,7 +4,8 @@
 #include <QFile>
 #include <QIODevice>
 
-inline QByteArray doHeavyRead(QString fileName, QMap<uint, QByteArray> dataCache) {
+namespace {
+QByteArray readEcBuffer(QString fileName, QMap<uint, QByteArray> dataCache) {
     QFile file(fileName);
     if (!file.open(QIODevice::ReadWrite)) {
         qWarning() << "Failed to open file:" << fileName;
@@ -19,9 +20,10 @@ inline QByteArray doHeavyRead(QString fileName, QMap<uint, QByteArray> dataCache
     file.close();
     return result;
 }
+} // namespace
 
 IOBuffer::IOBuffer(const QString& fileName, QObject* parent) : QObject(parent), mFileName(fileName) {
-    mBuffer = doHeavyRead(mFileName, mDataCache);
+    mBuffer = readEcBuffer(mFileName, mDataCache);
     mWatcher = new QFutureWatcher<QByteArray>(this);
     connect(mWatcher, &QFutureWatcher<QByteArray>::finished, this, [this]() {
         if (mDataCache.isEmpty()) {
@@ -33,12 +35,12 @@ IOBuffer::IOBuffer(const QString& fileName, QObject* parent) : QObject(parent), 
     resetThread();
 }
 
-QByteArray IOBuffer::buffer() const {
+const QByteArray& IOBuffer::buffer() const {
     return mBuffer;
 }
 
 void IOBuffer::resetThread() {
-    QFuture<QByteArray> future = QtConcurrent::run(doHeavyRead, mFileName, mDataCache);
+    QFuture<QByteArray> future = QtConcurrent::run(readEcBuffer, mFileName, mDataCache);
     mWatcher->setFuture(future);
     mDataCache.clear();
 }

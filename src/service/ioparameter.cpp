@@ -1,7 +1,5 @@
 #include "ioparameter.h"
 
-#include <QtConcurrent/QtConcurrentRun>
-
 IOParameterString::IOParameterString(IOBuffer* buffer,
                                      quint16 address,
                                      const QVariant& name,

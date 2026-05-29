@@ -3,7 +3,8 @@
 #include <QDebug>
 #include <QDir>
 #include <QRegularExpression>
-#include <QThread>
+
+#include <algorithm>
 
 #include "struct.h"
 
@@ -116,7 +117,7 @@ void CpuParameter::updateConfig() {
     for (int i = 0; i < mCpuCoreStatsCur.size() && i < mCpuCoreStatsPrev.size(); ++i) {
         quint64 idleDiff = mCpuCoreStatsCur[i].idle - mCpuCoreStatsPrev[i].idle;
         quint64 totalDiff = mCpuCoreStatsCur[i].total - mCpuCoreStatsPrev[i].total;
-        double usage = totalDiff ? 100 * (1.0 - (double)idleDiff / totalDiff) : 0.0;
+        double usage = totalDiff ? 100.0 * (1.0 - static_cast<double>(idleDiff) / static_cast<double>(totalDiff)) : 0.0;
         if (i < cpuConfig.cpus.size()) {
             cpuConfig.cpus[i].usage = usage;
         }

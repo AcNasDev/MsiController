@@ -4,7 +4,7 @@
 #include <QSettings>
 #include <QTimer>
 
-Parameter::Parameter(const QVariant& name, const QVariant& available, const bool& isReadOnly, QObject* parent)
+Parameter::Parameter(const QVariant& name, const QVariant& available, bool isReadOnly, QObject* parent)
     : QObject(parent), mName(name), mAvailable(available), mIsReadOnly(isReadOnly) {
     QTimer::singleShot(0, this, [this]() {
         QSettings settings("/etc/MsiController/settings.ini", QSettings::IniFormat);
@@ -22,15 +22,15 @@ void Parameter::setValue(const QVariant& value) {
     if (mIsReadOnly)
         return;
 
-    QSettings settings("/etc/MsiController/settings.ini", QSettings::IniFormat);
-    settings.beginGroup("Parameters");
     qDebug() << "Setting value for parameter:" << mName << "to" << value;
-    settings.setValue(mName.toString(), value);
-    settings.endGroup();
-    qDebug() << "Value set for parameter:" << mName;
 
     bool success{writeValue(value)};
     if (success) {
+        QSettings settings("/etc/MsiController/settings.ini", QSettings::IniFormat);
+        settings.beginGroup("Parameters");
+        settings.setValue(mName.toString(), value);
+        settings.endGroup();
+        qDebug() << "Value set for parameter:" << mName;
         update();
     } else {
         qWarning() << "Failed to set value for parameter:" << mName;

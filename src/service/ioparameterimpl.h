@@ -22,7 +22,7 @@ T IOParameter<T>::rawRead() const {
         qCritical() << "Buffer overflow at address:" << mAddress;
         return T{};
     }
-    BaseType value;
+    BaseType value{};
     std::memcpy(&value, data.constData() + mAddress, typeSize);
     return static_cast<T>(value);
 }
@@ -35,13 +35,13 @@ void IOParameter<T>::setEnumHash(const QHash<T, BaseType>& hash) {
 template <typename T>
 bool IOParameter<T>::writeValue(const QVariant& value) {
     qDebug() << "Writing value:" << value << "to address:" << mAddress;
-    BaseType current = static_cast<BaseType>(rawRead());
-    BaseType new_val = static_cast<BaseType>(value.value<T>());
-    if (mEnumHash.contains(value.value<T>())) {
-        new_val = mEnumHash.value(value.value<T>());
+    const BaseType current = static_cast<BaseType>(rawRead());
+    const T typedValue = value.value<T>();
+    BaseType newValue = static_cast<BaseType>(typedValue);
+    if (mEnumHash.contains(typedValue)) {
+        newValue = mEnumHash.value(typedValue);
     }
-    qDebug() << "Writing value:" << value << "to address:" << mAddress;
-    BaseType updated = (current & ~mMask) | (new_val & mMask);
+    BaseType updated = (current & ~mMask) | (newValue & mMask);
     if (mByteOrder == QDataStream::BigEndian) {
         updated = qToBigEndian(updated);
     } else {

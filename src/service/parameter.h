@@ -8,9 +8,9 @@ class Parameter : public QObject {
 public:
     explicit Parameter(const QVariant& name,
                        const QVariant& available,
-                       const bool& isReadOnly,
+                       bool isReadOnly,
                        QObject* parent = nullptr);
-    ~Parameter() = default;
+    ~Parameter() override = default;
 
     virtual QVariant value() const;
     virtual void setValue(const QVariant& value);

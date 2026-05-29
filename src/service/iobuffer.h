@@ -1,8 +1,11 @@
 #pragma once
 
+#include <QByteArray>
 #include <QFuture>
 #include <QFutureWatcher>
-#include <QThread>
+#include <QMap>
+#include <QObject>
+#include <QString>
 #include <QtConcurrent/QtConcurrentRun>
 
 class IOBuffer : public QObject {
@@ -11,9 +14,9 @@ public:
     IOBuffer(const QString& fileName, QObject* parent = nullptr);
     ~IOBuffer() = default;
 
-    QByteArray buffer() const;
+    const QByteArray& buffer() const;
     template <typename T>
-    bool write(const T& value, const uint& address = 0) {
+    bool write(const T& value, uint address = 0) {
         mDataCache[address] = QByteArray(reinterpret_cast<const char*>(&value), sizeof(T));
         return true;
     }

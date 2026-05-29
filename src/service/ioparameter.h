@@ -1,8 +1,13 @@
 #pragma once
 
-#include <QFile>
-#include <QFileSystemWatcher>
-#include <QTimer>
+#include <QDataStream>
+#include <QHash>
+#include <QVariant>
+#include <QtEndian>
+
+#include <cstring>
+#include <limits>
+#include <type_traits>
 
 #include "iobuffer.h"
 #include "parameter.h"

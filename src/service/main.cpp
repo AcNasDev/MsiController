@@ -3,6 +3,9 @@
 #include <QDebug>
 #include <QtConcurrent/QtConcurrentRun>
 #include <bitset>
+#include <limits>
+#include <optional>
+#include <type_traits>
 
 #include "cpuparameter.h"
 #include "ecadaptor.h"
@@ -12,6 +15,30 @@
 
 bool loadEcSysModule();
 void registerEsSys(EcService& service);
+
+namespace {
+template <typename T>
+std::optional<T> parseHexValue(const QString& rawValue, const QString& key) {
+    static_assert(std::is_integral_v<T> && std::is_unsigned_v<T>);
+
+    bool ok = false;
+    const qulonglong parsedValue = rawValue.trimmed().toULongLong(&ok, 16);
+    if (!ok || parsedValue > std::numeric_limits<T>::max()) {
+        qWarning() << "Invalid config value for" << key << ":" << rawValue;
+        return std::nullopt;
+    }
+    return static_cast<T>(parsedValue);
+}
+
+template <typename T>
+std::optional<T> configHexValue(const QMap<QString, QVariant>& config, const QString& key) {
+    const auto it = config.constFind(key);
+    if (it == config.cend()) {
+        return std::nullopt;
+    }
+    return parseHexValue<T>(it.value().toString(), key);
+}
+} // namespace
 
 int main(int argc, char* argv[]) {
     QCoreApplication app(argc, argv);
@@ -130,44 +157,39 @@ void registerEsSys(EcService& service) {
             return;
         }
 
-        if (config.contains("CpuTempEc")) {
-            uint address{config.value("CpuTempEc").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "CpuTempEc")) {
             service.registerParameter(new IOParameter<quint8>(ioBuffer,
-                                                              address,
+                                                              *address,
                                                               QVariant::fromValue(Msi::Parametr::CpuTempEc),
                                                               QVariant::fromValue(Msi::Range{0, 100}),
                                                               true));
         }
-        if (config.contains("GpuTempEc")) {
-            uint address{config.value("GpuTempEc").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "GpuTempEc")) {
             service.registerParameter(new IOParameter<quint8>(ioBuffer,
-                                                              address,
+                                                              *address,
                                                               QVariant::fromValue(Msi::Parametr::GpuTempEc),
                                                               QVariant::fromValue(Msi::Range{0, 100}),
                                                               true));
         }
-        if (config.contains("BatteryChargeEc")) {
-            uint address{config.value("BatteryChargeEc").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "BatteryChargeEc")) {
             service.registerParameter(new IOParameter<quint8>(ioBuffer,
-                                                              address,
+                                                              *address,
                                                               QVariant::fromValue(Msi::Parametr::BatteryChargeEc),
                                                               QVariant::fromValue(Msi::Range{0, 100}),
                                                               true));
         }
-        if (config.contains("BatteryThresholdEc")) {
-            uint address{config.value("BatteryThresholdEc").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "BatteryThresholdEc")) {
             service.registerParameter(new IOParameter<quint8>(ioBuffer,
-                                                              address,
+                                                              *address,
                                                               QVariant::fromValue(Msi::Parametr::BatteryThresholdEc),
                                                               QVariant::fromValue(QVector<int>{50, 70, 90}),
                                                               false,
                                                               0x7f));
         }
-        if (config.contains("BatteryChargingStatusEc")) {
-            uint address{config.value("BatteryChargingStatusEc").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "BatteryChargingStatusEc")) {
             auto p{new IOParameter<Msi::ChargingStatus>(
                 ioBuffer,
-                address,
+                *address,
                 QVariant::fromValue(Msi::Parametr::BatteryChargingStatusEc),
                 QVariant::fromValue(QVector<Msi::ChargingStatus>{Msi::ChargingStatus::BatteryCharging,
                                                                  Msi::ChargingStatus::BatteryDischarging,
@@ -182,10 +204,9 @@ void registerEsSys(EcService& service) {
                             {Msi::ChargingStatus::BatteryFullyChargedNoPower, 0x0D}});
             service.registerParameter(p);
         }
-        if (config.contains("KeyboardBacklightModeEc")) {
-            uint address{config.value("KeyboardBacklightModeEc").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "KeyboardBacklightModeEc")) {
             auto p{new IOParameter<Msi::Enable>(ioBuffer,
-                                                address,
+                                                *address,
                                                 QVariant::fromValue(Msi::Parametr::KeyboardBacklightModeEc),
                                                 QVariant(QString("")),
                                                 false)};
@@ -193,18 +214,20 @@ void registerEsSys(EcService& service) {
             if (config.contains("KeyboardBacklightMode")) {
                 QStringList modes = config.value("KeyboardBacklightMode").toStringList();
                 if (modes.size() == 2) {
-                    p->setEnumHash({{Msi::Enable::Off, modes[0].toUInt(nullptr, 16)},
-                                    {Msi::Enable::On, modes[1].toUInt(nullptr, 16)}});
+                    const auto offValue = parseHexValue<quint8>(modes[0], "KeyboardBacklightMode");
+                    const auto onValue = parseHexValue<quint8>(modes[1], "KeyboardBacklightMode");
+                    if (offValue && onValue) {
+                        p->setEnumHash({{Msi::Enable::Off, *offValue}, {Msi::Enable::On, *onValue}});
+                    }
                 }
             }
             service.registerParameter(p);
         }
-        if (config.contains("KeyboardBacklightEc")) {
-            uint address{config.value("KeyboardBacklightEc").toString().toUInt(nullptr, 16)};
-            uint startState{config.value("KeyboardBacklightStartState").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "KeyboardBacklightEc")) {
+            const auto startState = configHexValue<quint8>(config, "KeyboardBacklightStartState").value_or(0);
             auto p{new IOParameter<Msi::KeyboardBacklight>(
                 ioBuffer,
-                address,
+                *address,
                 QVariant::fromValue(Msi::Parametr::KeyboardBacklightEc),
                 QVariant::fromValue(QVector<Msi::KeyboardBacklight>{Msi::KeyboardBacklight::Off,
                                                                     Msi::KeyboardBacklight::Low,
@@ -212,28 +235,26 @@ void registerEsSys(EcService& service) {
                                                                     Msi::KeyboardBacklight::High}),
                 false)};
             p->setEnumHash({{Msi::KeyboardBacklight::Off, startState},
-                            {Msi::KeyboardBacklight::Low, startState + 0x01},
-                            {Msi::KeyboardBacklight::Mid, startState + 0x02},
-                            {Msi::KeyboardBacklight::High, startState + 0x03}});
+                            {Msi::KeyboardBacklight::Low, static_cast<quint8>(startState + 0x01)},
+                            {Msi::KeyboardBacklight::Mid, static_cast<quint8>(startState + 0x02)},
+                            {Msi::KeyboardBacklight::High, static_cast<quint8>(startState + 0x03)}});
             service.registerParameter(p);
         }
-        if (config.contains("UsbPowerShareEc")) {
-            uint address{config.value("UsbPowerShareEc").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "UsbPowerShareEc")) {
             auto p{new IOParameter<Msi::Enable>(
                 ioBuffer,
-                address,
+                *address,
                 QVariant::fromValue(Msi::Parametr::UsbPowerShareEc),
                 QVariant::fromValue(QVector<Msi::Enable>{Msi::Enable::Off, Msi::Enable::On}),
                 false)};
             p->setEnumHash({{Msi::Enable::Off, 0x08}, {Msi::Enable::On, 0x28}});
             service.registerParameter(p);
         }
-        if (config.contains("CoolerBoostEc")) {
-            uint address{config.value("CoolerBoostEc").toString().toUInt(nullptr, 16)};
-            uint mask{config.value("CoolerBoostMask").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "CoolerBoostEc")) {
+            const auto mask = configHexValue<quint8>(config, "CoolerBoostMask").value_or(0xff);
             auto p{new IOParameter<Msi::Enable>(
                 ioBuffer,
-                address,
+                *address,
                 QVariant::fromValue(Msi::Parametr::CoolerBoostEc),
                 QVariant::fromValue(QVector<Msi::Enable>{Msi::Enable::Off, Msi::Enable::On}),
                 false,
@@ -241,12 +262,11 @@ void registerEsSys(EcService& service) {
             p->setEnumHash({{Msi::Enable::Off, 0x00}, {Msi::Enable::On, 0x80}});
             service.registerParameter(p);
         }
-        if (config.contains("WebCamEc")) {
-            uint address{config.value("WebCamEc").toString().toUInt(nullptr, 16)};
-            uint mask{config.value("WebCamMask").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "WebCamEc")) {
+            const auto mask = configHexValue<quint8>(config, "WebCamMask").value_or(0xff);
             auto p{new IOParameter<Msi::Enable>(
                 ioBuffer,
-                address,
+                *address,
                 QVariant::fromValue(Msi::Parametr::WebCamEc),
                 QVariant::fromValue(QVector<Msi::Enable>{Msi::Enable::Off, Msi::Enable::On}),
                 false,
@@ -254,12 +274,11 @@ void registerEsSys(EcService& service) {
             p->setEnumHash({{Msi::Enable::Off, 0x00}, {Msi::Enable::On, mask}});
             service.registerParameter(p);
         }
-        if (config.contains("WebCamBlockEc")) {
-            uint address{config.value("WebCamBlockEc").toString().toUInt(nullptr, 16)};
-            uint mask{config.value("WebCamMask").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "WebCamBlockEc")) {
+            const auto mask = configHexValue<quint8>(config, "WebCamMask").value_or(0xff);
             auto p{new IOParameter<Msi::Enable>(
                 ioBuffer,
-                address,
+                *address,
                 QVariant::fromValue(Msi::Parametr::WebCamBlockEc),
                 QVariant::fromValue(QVector<Msi::Enable>{Msi::Enable::Off, Msi::Enable::On}),
                 false,
@@ -267,13 +286,12 @@ void registerEsSys(EcService& service) {
             p->setEnumHash({{Msi::Enable::Off, 0x00}, {Msi::Enable::On, mask}});
             service.registerParameter(p);
         }
-        if (config.contains("FnSuperSwapEc")) {
-            uint address{config.value("FnSuperSwapEc").toString().toUInt(nullptr, 16)};
-            uint mask{config.value("FnSuperSwapMask").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "FnSuperSwapEc")) {
+            const auto mask = configHexValue<quint8>(config, "FnSuperSwapMask").value_or(0xff);
             bool fnWinSwapInvert{config.value("FnWinSwapInvert", false).toBool()};
             auto p{new IOParameter<Msi::FnSuperSwap>(
                 ioBuffer,
-                address,
+                *address,
                 QVariant::fromValue(Msi::Parametr::FnSuperSwapEc),
                 QVariant::fromValue(QVector<Msi::FnSuperSwap>{Msi::FnSuperSwap::Right, Msi::FnSuperSwap::Left}),
                 false,
@@ -300,10 +318,9 @@ void registerEsSys(EcService& service) {
         // service.registerParameter(new IOParameter<quint16>(ioBuffer, 0xCA,
         // QVariant::fromValue(Msi::Parametr::FanGpuEc), QVariant(), true, 0xFFFF, QDataStream::BigEndian));
 
-        if (config.contains("FanCpuEc")) {
-            uint address{config.value("FanCpuEc").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "FanCpuEc")) {
             service.registerParameter(new IOParameter<quint8>(ioBuffer,
-                                                              address,
+                                                              *address,
                                                               QVariant::fromValue(Msi::Parametr::FanCpuEc),
                                                               QVariant::fromValue(Msi::Range{0, 100}),
                                                               true));
@@ -316,24 +333,25 @@ void registerEsSys(EcService& service) {
                 QStringList parts = mode.split(':');
                 if (parts.size() == 2) {
                     Msi::FanMode fanMode = QVariant("Msi::FanMode::" + parts[0]).value<Msi::FanMode>();
-                    uint value{parts[1].toUInt(nullptr, 16)};
-                    fanModeMap.insert(fanMode, value);
-                    fanModeVector.append(fanMode);
+                    if (const auto value = parseHexValue<quint8>(parts[1], "FanModeAvailable")) {
+                        fanModeMap.insert(fanMode, *value);
+                        fanModeVector.append(fanMode);
+                    }
                 }
             }
-            uint address{config.value("FanModeEc").toString().toUInt(nullptr, 16)};
-            auto p{new IOParameter<Msi::FanMode>(ioBuffer,
-                                                 address,
-                                                 QVariant::fromValue(Msi::Parametr::FanModeEc),
-                                                 QVariant::fromValue(fanModeVector),
-                                                 false)};
-            p->setEnumHash(fanModeMap);
-            service.registerParameter(p);
+            if (const auto address = configHexValue<quint16>(config, "FanModeEc")) {
+                auto p{new IOParameter<Msi::FanMode>(ioBuffer,
+                                                     *address,
+                                                     QVariant::fromValue(Msi::Parametr::FanModeEc),
+                                                     QVariant::fromValue(fanModeVector),
+                                                     false)};
+                p->setEnumHash(fanModeMap);
+                service.registerParameter(p);
+            }
         }
-        if (config.contains("FanGpuEc")) {
-            uint address{config.value("FanGpuEc").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "FanGpuEc")) {
             service.registerParameter(new IOParameter<quint8>(ioBuffer,
-                                                              address,
+                                                              *address,
                                                               QVariant::fromValue(Msi::Parametr::FanGpuEc),
                                                               QVariant::fromValue(Msi::Range{0, 100}),
                                                               true));
@@ -342,13 +360,13 @@ void registerEsSys(EcService& service) {
         for (int i{0}; i < 7; ++i) {
             service.registerParameter(new IOParameter<quint8>(
                 ioBuffer,
-                0x72 + i,
+                static_cast<quint16>(0x72 + i),
                 QVariant::fromValue(static_cast<Msi::Parametr>(static_cast<int>(Msi::Parametr::FanSetSpeedCpu1Ec) + i)),
                 QVariant::fromValue(Msi::Range{0, 150}),
                 false));
             service.registerParameter(new IOParameter<quint8>(
                 ioBuffer,
-                0x8A + i,
+                static_cast<quint16>(0x8A + i),
                 QVariant::fromValue(static_cast<Msi::Parametr>(static_cast<int>(Msi::Parametr::FanSetSpeedGpu1Ec) + i)),
                 QVariant::fromValue(Msi::Range{0, 150}),
                 false));
@@ -357,13 +375,13 @@ void registerEsSys(EcService& service) {
         for (int i{0}; i < 6; ++i) {
             service.registerParameter(new IOParameter<quint8>(
                 ioBuffer,
-                0x6A + i,
+                static_cast<quint16>(0x6A + i),
                 QVariant::fromValue(static_cast<Msi::Parametr>(static_cast<int>(Msi::Parametr::FanSetTempCpu1Ec) + i)),
                 QVariant::fromValue(Msi::Range{0, 100}),
                 false));
             service.registerParameter(new IOParameter<quint8>(
                 ioBuffer,
-                0x82 + i,
+                static_cast<quint16>(0x82 + i),
                 QVariant::fromValue(static_cast<Msi::Parametr>(static_cast<int>(Msi::Parametr::FanSetTempGpu1Ec) + i)),
                 QVariant::fromValue(Msi::Range{0, 100}),
                 false));
@@ -377,27 +395,28 @@ void registerEsSys(EcService& service) {
                 QStringList parts = mode.split(':');
                 if (parts.size() == 2) {
                     Msi::ShiftMode shiftMode = QVariant("Msi::ShiftMode::" + parts[0]).value<Msi::ShiftMode>();
-                    uint value{parts[1].toUInt(nullptr, 16)};
-                    shiftModeMap.insert(shiftMode, value);
-                    shiftModeVector.append(shiftMode);
+                    if (const auto value = parseHexValue<quint8>(parts[1], "ShiftModeAvailable")) {
+                        shiftModeMap.insert(shiftMode, *value);
+                        shiftModeVector.append(shiftMode);
+                    }
                 }
             }
-            uint address{config.value("ShiftModeEc").toString().toUInt(nullptr, 16)};
-            auto p{new IOParameter<Msi::ShiftMode>(ioBuffer,
-                                                   address,
-                                                   QVariant::fromValue(Msi::Parametr::ShiftModeEc),
-                                                   QVariant::fromValue(shiftModeVector),
-                                                   false)};
-            p->setEnumHash(shiftModeMap);
-            service.registerParameter(p);
+            if (const auto address = configHexValue<quint16>(config, "ShiftModeEc")) {
+                auto p{new IOParameter<Msi::ShiftMode>(ioBuffer,
+                                                       *address,
+                                                       QVariant::fromValue(Msi::Parametr::ShiftModeEc),
+                                                       QVariant::fromValue(shiftModeVector),
+                                                       false)};
+                p->setEnumHash(shiftModeMap);
+                service.registerParameter(p);
+            }
         }
 
-        if (config.contains("SuperBatteryEc")) {
-            uint address{config.value("SuperBatteryEc").toString().toUInt(nullptr, 16)};
-            uint mask{config.value("SuperBatteryMask").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "SuperBatteryEc")) {
+            const auto mask = configHexValue<quint8>(config, "SuperBatteryMask").value_or(0xff);
             auto p{new IOParameter<Msi::Enable>(
                 ioBuffer,
-                address,
+                *address,
                 QVariant::fromValue(Msi::Parametr::SuperBatteryEc),
                 QVariant::fromValue(QVector<Msi::Enable>{Msi::Enable::Off, Msi::Enable::On}),
                 false,
@@ -406,12 +425,11 @@ void registerEsSys(EcService& service) {
             service.registerParameter(p);
         }
 
-        if (config.contains("MicMuteEc")) {
-            uint address{config.value("MicMuteEc").toString().toUInt(nullptr, 16)};
-            uint mask{config.value("LedsMask").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "MicMuteEc")) {
+            const auto mask = configHexValue<quint8>(config, "LedsMask").value_or(0xff);
             auto p{new IOParameter<Msi::Enable>(
                 ioBuffer,
-                address,
+                *address,
                 QVariant::fromValue(Msi::Parametr::MicMuteEc),
                 QVariant::fromValue(QVector<Msi::Enable>{Msi::Enable::Off, Msi::Enable::On}),
                 false,
@@ -419,12 +437,11 @@ void registerEsSys(EcService& service) {
             p->setEnumHash({{Msi::Enable::Off, 0x00}, {Msi::Enable::On, mask}});
             service.registerParameter(p);
         }
-        if (config.contains("MuteLedEc")) {
-            uint address{config.value("MuteLedEc").toString().toUInt(nullptr, 16)};
-            uint mask{config.value("LedsMask").toString().toUInt(nullptr, 16)};
+        if (const auto address = configHexValue<quint16>(config, "MuteLedEc")) {
+            const auto mask = configHexValue<quint8>(config, "LedsMask").value_or(0xff);
             auto p{new IOParameter<Msi::Enable>(
                 ioBuffer,
-                address,
+                *address,
                 QVariant::fromValue(Msi::Parametr::MuteLedEc),
                 QVariant::fromValue(QVector<Msi::Enable>{Msi::Enable::Off, Msi::Enable::On}),
                 false,

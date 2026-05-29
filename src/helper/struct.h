@@ -253,23 +253,16 @@ public:
     explicit EnumHelper(QObject* parent = nullptr) : QObject(parent) {}
 
     Q_INVOKABLE QString enumToString(int value, const QString& typeName) const {
-        // Получаем QMetaObject пространства имён Msi
         const QMetaObject* metaObj = &Msi::staticMetaObject;
         int enumIndex = metaObj->indexOfEnumerator(typeName.toUtf8().constData());
         if (enumIndex != -1) {
             QMetaEnum metaEnum = metaObj->enumerator(enumIndex);
-            const char* key = metaEnum.valueToKey(value);
+            if (value < 0) {
+                return "Unknown";
+            }
+            const char* key = metaEnum.valueToKey(static_cast<quint64>(value));
             return key ? QString::fromUtf8(key) : "Unknown";
         }
         return "Unknown";
-    }
-
-private:
-    // Шаблонная функция для преобразования enum в строку
-    template <typename T>
-    QString enumToString(int value) const {
-        QMetaEnum metaEnum = QMetaEnum::fromType<T>();
-        const char* key = metaEnum.valueToKey(value);
-        return key ? QString::fromUtf8(key) : "Unknown";
     }
 };

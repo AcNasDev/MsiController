@@ -12,7 +12,7 @@
 #include "ecserviceabstract.h"
 #include "parameter.h"
 
-inline uint qHash(const QVariant& v, uint seed = 0) {
+inline size_t qHash(const QVariant& v, size_t seed = 0) noexcept {
     return qHashMulti(seed, v.toString(), v.typeId());
 }
 

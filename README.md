@@ -88,15 +88,15 @@ Packages are built with DKMS support, so the kernel module is compiled during pa
 ```sh
 export MSICONTROLLER_QT_VERSION=6.11.1
 export MSICONTROLLER_QT_HOST_DIR=/opt/Qt/6.11.1/gcc_64
-cmake -S . -B build-package -G Ninja \
+cmake -S . -B /tmp/msicontroller-build-package -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=/opt/msicontroller \
   -DCMAKE_PREFIX_PATH="${MSICONTROLLER_QT_HOST_DIR}" \
   -DMSICONTROLLER_BUNDLE_QT_RUNTIME=ON \
   -DMSICONTROLLER_BUILD_KERNEL_MODULE=OFF \
   -DMSICONTROLLER_INSTALL_DKMS=ON
-cmake --build build-package
-cd build-package
+cmake --build /tmp/msicontroller-build-package
+cd /tmp/msicontroller-build-package
 cpack -G DEB
 cpack -G RPM
 ```
@@ -108,6 +108,7 @@ Or build them in Docker:
 ```
 
 Docker-built packages are written to `packages/`.
+The helper script uses a temporary build directory outside the repository by default.
 
 If the build environment requires a proxy, set it outside the repository before running the script:
 
