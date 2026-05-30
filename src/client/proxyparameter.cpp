@@ -18,12 +18,13 @@ QVariant ProxyParameter::value() const {
 }
 
 void ProxyParameter::setValue(const QVariant& value) {
-    if (mValue != value) {
-        mValue = value;
+    const bool changed = mValue != value;
+    mValue = value;
+    if (changed) {
         emit valueChanged();
-        if (!mBlockSignalsForEsProxy) {
-            emit valueChangedForEsProxy();
-        }
+    }
+    if (!mBlockSignalsForEsProxy) {
+        emit valueChangedForEsProxy();
     }
 }
 

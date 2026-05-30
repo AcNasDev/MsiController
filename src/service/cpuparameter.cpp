@@ -1,55 +1,22 @@
 #include "cpuparameter.h"
 
 #include <QDebug>
-#include <QDir>
 #include <QFile>
 #include <QRegularExpression>
 
-#include <algorithm>
-
+#include "cpufiles.h"
 #include "struct.h"
 
 namespace {
-static const char* rootPath = "/sys/devices/system/cpu/";
-static const char* scalingCurFreqPath = "/cpufreq/scaling_cur_freq";
-static const char* scalingFreqMinPath = "/cpufreq/scaling_min_freq";
-static const char* scalingFreqMaxPath = "/cpufreq/scaling_max_freq";
-static const char* cpuinfoFreqMaxPath = "/cpufreq/cpuinfo_max_freq";
-static const char* cpuinfoFreqMinPath = "/cpufreq/cpuinfo_min_freq";
-static const char* scalingGovernorPath = "/cpufreq/scaling_governor";
-static const char* availableGovernorsPath = "/cpufreq/scaling_available_governors";
 static const char* statPath = "/proc/stat";
 static constexpr int cpuTelemetryIntervalMs = 1000;
-static constexpr int controlRefreshIntervalTicks = 5;
+static constexpr int controlRefreshIntervalTicks = 30;
 } // namespace
 CpuParameter::CpuParameter(const QVariant& name, QObject* parent) : Parameter(name, QVariant(), false, parent) {
-    QDir dir(rootPath);
-    if (!dir.exists()) {
-        qWarning() << "CPU directory does not exist:" << rootPath;
-        return;
-    }
-    static const QRegularExpression cpuRegex("^cpu[0-9]+$");
-    QStringList cpuDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-    cpuDirs = cpuDirs.filter(cpuRegex);
-    std::sort(cpuDirs.begin(), cpuDirs.end(), [&](const QString& a, const QString& b) {
-        int numA = QStringView{a}.mid(3).toInt();
-        int numB = QStringView{b}.mid(3).toInt();
-        return numA < numB;
-    });
-    mCpuDirs = cpuDirs;
-
+    mCpuDirs = CpuFiles::discoverCpuDirs();
     updateConfig();
     mTimer.start(cpuTelemetryIntervalMs);
     connect(&mTimer, &QTimer::timeout, this, &CpuParameter::updateConfig);
-}
-
-QString readFile(const QString& filePath) {
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "Failed to open file:" << filePath;
-        return QString();
-    }
-    return QString::fromUtf8(file.readAll().trimmed());
 }
 
 QVector<CpuParameter::CpuCoreStat> CpuParameter::readCoreStats() const {
@@ -102,23 +69,10 @@ void CpuParameter::updateConfig() {
     for (int i = 0; i < mCpuDirs.size(); ++i) {
         const QString& cpuDir = mCpuDirs[i];
         Msi::Cpu cpu = hasPreviousConfig ? previousConfig.cpus[i] : Msi::Cpu{};
-        QString fullScalingCurFreqPath = rootPath + cpuDir + scalingCurFreqPath;
-        cpu.currentFreq = readFile(fullScalingCurFreqPath).toUInt();
+        cpu.currentFreq = CpuFiles::readCurrentFreq(cpuDir);
 
         if (refreshControls) {
-            QString fullScalingFreqMinPath = rootPath + cpuDir + scalingFreqMinPath;
-            QString fullScalingFreqMaxPath = rootPath + cpuDir + scalingFreqMaxPath;
-            QString fullScalingGovernorPath = rootPath + cpuDir + scalingGovernorPath;
-            QString fullAvailableGovernorsPath = rootPath + cpuDir + availableGovernorsPath;
-            QString fullCpuinfoFreqMaxPath = rootPath + cpuDir + cpuinfoFreqMaxPath;
-            QString fullCpuinfoFreqMinPath = rootPath + cpuDir + cpuinfoFreqMinPath;
-
-            cpu.minFreq = readFile(fullCpuinfoFreqMinPath).toUInt();
-            cpu.maxFreq = readFile(fullCpuinfoFreqMaxPath).toUInt();
-            cpu.scalingMinFreq = readFile(fullScalingFreqMinPath).toUInt();
-            cpu.scalingMaxFreq = readFile(fullScalingFreqMaxPath).toUInt();
-            cpu.availableGovernor = readFile(fullScalingGovernorPath);
-            cpu.availableGovernors = readFile(fullAvailableGovernorsPath).split(QLatin1Char(' '), Qt::SkipEmptyParts);
+            cpu = CpuFiles::readControl(cpuDir, &cpu);
         }
         cpuConfig.cpus.append(cpu);
     }
@@ -135,7 +89,7 @@ void CpuParameter::updateConfig() {
     QVariant newValue = QVariant::fromValue(cpuConfig);
     if (newValue != mValue) {
         mValue = newValue;
-        emit valueChanged(mValue);
+        publishValue(mValue);
     }
 }
 
@@ -143,43 +97,10 @@ QVariant CpuParameter::readValue() const {
     return mValue;
 }
 
-bool CpuParameter::writeToFile(const QString& fileName, const QString& value) {
-    QFile file(fileName);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "Failed to open file for writing:" << fileName;
-        return false;
-    }
-    if (file.write(value.toUtf8()) == -1) {
-        qWarning() << "Failed to write to file:" << fileName;
-        return false;
-    }
-    return true;
-}
-
 bool CpuParameter::writeValue(const QVariant& value) {
     Msi::CpuConfig cpuConfig = value.value<Msi::CpuConfig>();
     Msi::CpuConfig currentConfig = mValue.value<Msi::CpuConfig>();
-    bool success = true;
-
-    for (int i = 0; i < cpuConfig.cpus.size() && i < mCpuDirs.size(); ++i) {
-        const Msi::Cpu& cpu = cpuConfig.cpus[i];
-        const bool hasCurrent = i < currentConfig.cpus.size();
-        const Msi::Cpu* currentCpu = hasCurrent ? &currentConfig.cpus[i] : nullptr;
-        QString cpuDir = mCpuDirs[i];
-        QString fullScalingFreqMinPath = rootPath + cpuDir + scalingFreqMinPath;
-        QString fullScalingFreqMaxPath = rootPath + cpuDir + scalingFreqMaxPath;
-        QString fullScalingGovernorPath = rootPath + cpuDir + scalingGovernorPath;
-
-        if (!currentCpu || currentCpu->scalingMinFreq != cpu.scalingMinFreq) {
-            success = writeToFile(fullScalingFreqMinPath, QByteArray::number(cpu.scalingMinFreq)) && success;
-        }
-        if (!currentCpu || currentCpu->scalingMaxFreq != cpu.scalingMaxFreq) {
-            success = writeToFile(fullScalingFreqMaxPath, QByteArray::number(cpu.scalingMaxFreq)) && success;
-        }
-        if (!currentCpu || currentCpu->availableGovernor != cpu.availableGovernor) {
-            success = writeToFile(fullScalingGovernorPath, cpu.availableGovernor) && success;
-        }
-    }
+    bool success = CpuFiles::writeControls(mCpuDirs, cpuConfig, currentConfig);
 
     if (success) {
         mForceControlRefresh = true;

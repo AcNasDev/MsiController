@@ -25,6 +25,7 @@ signals:
 protected:
     virtual QVariant readValue() const = 0;
     virtual bool writeValue(const QVariant& value) = 0;
+    bool publishValue(const QVariant& value);
 
 private:
     QVariant mName;

@@ -1,6 +1,7 @@
 #pragma once
 #include <QTimer>
 #include <QVariant>
+#include <QVector>
 
 #include "parameter.h"
 #include "struct.h"
@@ -30,5 +31,4 @@ private:
 
     QVector<CpuCoreStat> readCoreStats() const;
     void updateConfig();
-    bool writeToFile(const QString& fileName, const QString& value);
 };

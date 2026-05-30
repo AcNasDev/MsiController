@@ -59,8 +59,14 @@ bool Parameter::isReadOnly() const {
 
 void Parameter::update() {
     auto newValue = readValue();
-    if (newValue != mValue) {
-        mValue = newValue;
-        emit valueChanged(mValue);
-    }
+    publishValue(newValue);
+}
+
+bool Parameter::publishValue(const QVariant& value) {
+    if (value == mValue)
+        return false;
+
+    mValue = value;
+    emit valueChanged(mValue);
+    return true;
 }

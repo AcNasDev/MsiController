@@ -78,7 +78,7 @@ Pane {
     }
 
     Timer {
-        interval: 1000
+        interval: 1500
         running: root.visible
         repeat: true
         onTriggered: root.appendValues()

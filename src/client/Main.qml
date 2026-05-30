@@ -12,9 +12,9 @@ import MSI.Helpers 1.0
 ApplicationWindow {
     id: mainWindow
 
-    width: Math.max(minimumWidth, Math.min(1040, Screen.availableWidth > 0 ? Screen.availableWidth - 48 : 1040))
-    height: Math.max(minimumHeight, Math.min(680, Screen.availableHeight > 0 ? Screen.availableHeight - 72 : 680))
-    minimumWidth: 760
+    width: Math.max(minimumWidth, Math.min(1180, Screen.availableWidth > 0 ? Screen.availableWidth - 48 : 1180))
+    height: Math.max(minimumHeight, Math.min(720, Screen.availableHeight > 0 ? Screen.availableHeight - 72 : 720))
+    minimumWidth: 820
     minimumHeight: 520
     visible: false
     title: qsTr("MSI Control Center")
@@ -121,7 +121,9 @@ ApplicationWindow {
     property var fanControlModeParam: proxy.getProxyParameter(Msi.Parametr.FanControlMode)
     property var fanTargetCpuTempParam: proxy.getProxyParameter(Msi.Parametr.FanTargetCpuTemp)
     property var fanTargetGpuTempParam: proxy.getProxyParameter(Msi.Parametr.FanTargetGpuTemp)
+    readonly property bool coolerBoostActive: binaryChecked(coolerBoostParam)
     readonly property bool targetFanModeActive: fanControlModeValue() === 1
+    readonly property bool manualFanCurveActive: !coolerBoostActive && !targetFanModeActive && fanModeValue() === 3
 
     function fanControlModeValue() {
         if (!fanControlModeParam || !fanControlModeParam.isValid || fanControlModeParam.value === undefined ||
@@ -135,6 +137,28 @@ ApplicationWindow {
 
         var text = fanControlModeParam.value.toString()
         return text.indexOf("TargetTemperature") >= 0 ? 1 : 0
+    }
+
+    function fanModeValue() {
+        if (!fanModeParam || !fanModeParam.isValid || fanModeParam.value === undefined ||
+                fanModeParam.value === null) {
+            return -1
+        }
+
+        var value = Number(fanModeParam.value)
+        if (!isNaN(value))
+            return Math.round(value)
+
+        var text = enumText(fanModeParam.value, "FanMode")
+        if (text === "Auto")
+            return 0
+        if (text === "Silent")
+            return 1
+        if (text === "Basic")
+            return 2
+        if (text === "Advanced")
+            return 3
+        return -1
     }
 
     function valueText(parameter, unit, decimals) {
@@ -377,10 +401,7 @@ ApplicationWindow {
 
                         Repeater {
                             model: [
-                                {label: qsTr("Overview"), page: 0},
-                                {label: qsTr("Fans"), page: 1},
-                                {label: qsTr("CPU"), page: 2},
-                                {label: qsTr("Controls"), page: 3}
+                                {label: qsTr("Dashboard"), page: 0}
                             ]
 
                             delegate: Rectangle {
@@ -447,22 +468,20 @@ ApplicationWindow {
                 }
             }
 
-            StackLayout {
+            Flickable {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                currentIndex: mainWindow.currentPage
+                clip: true
+                contentWidth: width
+                contentHeight: dashboardColumn.implicitHeight
+                interactive: !(fanCurveCpu.isDragging || fanCurveGpu.isDragging || cpuPage.editingCpuLimit)
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: ScrollBar {}
 
-                Flickable {
-                    clip: true
-                    contentWidth: width
-                    contentHeight: overviewColumn.implicitHeight
-                    boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: ScrollBar {}
-
-                    ColumnLayout {
-                        id: overviewColumn
-                        width: parent.width
-                        spacing: 12
+                ColumnLayout {
+                    id: dashboardColumn
+                    width: parent.width
+                    spacing: 12
 
                         RowLayout {
                             Layout.fillWidth: true
@@ -474,7 +493,7 @@ ApplicationWindow {
 
                                 Label {
                                     Layout.fillWidth: true
-                                    text: qsTr("Overview")
+                                    text: qsTr("Dashboard")
                                     color: mainWindow.theme.text
                                     font.pixelSize: 24
                                     font.bold: true
@@ -507,7 +526,7 @@ ApplicationWindow {
 
                         GridLayout {
                             Layout.fillWidth: true
-                            columns: width >= 820 ? 3 : width >= 540 ? 2 : 1
+                            columns: width >= 920 ? 3 : width >= 600 ? 2 : 1
                             columnSpacing: 12
                             rowSpacing: 12
                             uniformCellWidths: true
@@ -555,8 +574,10 @@ ApplicationWindow {
                                 title: qsTr("CPU fan")
                                 value: valueText(fanCpu, "%", 0)
                                 unit: fanCpu && fanCpu.isValid ? "%" : ""
-                                detail: targetFanModeActive ? qsTr("Target temp") :
+                                detail: coolerBoostActive ? qsTr("Cooler Boost") :
+                                                               (targetFanModeActive ? qsTr("Target temp") :
                                                                (fanModeParam && fanModeParam.isValid ? enumText(fanModeParam.value, "FanMode") : qsTr("Fan mode"))
+                                                               )
                                 chartEnabled: fanCpu && fanCpu.isValid
                                 chartValue: fanCpu && fanCpu.isValid ? Number(fanCpu.value || 0) : 0
                                 chartMin: 0
@@ -574,7 +595,8 @@ ApplicationWindow {
                                 title: qsTr("GPU fan")
                                 value: valueText(fanGpu, "%", 0)
                                 unit: fanGpu && fanGpu.isValid ? "%" : ""
-                                detail: targetFanModeActive ? qsTr("Target temp") : qsTr("Fan curve")
+                                detail: coolerBoostActive ? qsTr("Cooler Boost") :
+                                                            (targetFanModeActive ? qsTr("Target temp") : qsTr("Fan curve"))
                                 chartEnabled: fanGpu && fanGpu.isValid
                                 chartValue: fanGpu && fanGpu.isValid ? Number(fanGpu.value || 0) : 0
                                 chartMin: 0
@@ -626,58 +648,37 @@ ApplicationWindow {
                                 mutedTextColor: mainWindow.theme.muted
                             }
 
-                            OptionGroup {
+                            TargetTemperatureCard {
                                 Layout.fillWidth: true
-                                title: qsTr("Fan mode")
-                                subtitle: qsTr("Cooling behavior")
-                                parameter: fanModeParam
-                                enumName: "FanMode"
-                                accentColor: mainWindow.theme.warn
+                                Layout.preferredHeight: implicitHeight
+                                title: qsTr("Cooling mode")
+                                subtitle: coolerBoostActive ? qsTr("Maximum cooling") :
+                                                               (targetFanModeActive ? qsTr("Target temperature") :
+                                                                  (manualFanCurveActive ? qsTr("Manual fan curve") : qsTr("Firmware profile"))
+                                                               )
+                                visible: (fanModeParam && fanModeParam.isValid) ||
+                                         (fanControlModeParam && fanControlModeParam.isValid) ||
+                                         (coolerBoostParam && coolerBoostParam.isValid)
+                                hardwareModeParameter: fanModeParam
+                                coolerBoostParameter: coolerBoostParam
+                                modeParameter: fanControlModeParam
+                                cpuTargetParameter: fanTargetCpuTempParam
+                                gpuTargetParameter: fanTargetGpuTempParam
                                 surfaceColor: mainWindow.theme.surface
+                                elevatedColor: mainWindow.theme.elevated
                                 borderColor: mainWindow.theme.border
                                 textColor: mainWindow.theme.text
                                 mutedTextColor: mainWindow.theme.muted
+                                accentColor: mainWindow.theme.warn
                             }
                         }
-                    }
-                }
-
-                Flickable {
-                    clip: true
-                    contentWidth: width
-                    contentHeight: fansColumn.implicitHeight
-                    interactive: !(fanCurveCpu.isDragging || fanCurveGpu.isDragging)
-                    boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: ScrollBar {}
-
-                    ColumnLayout {
-                        id: fansColumn
-                        width: parent.width
-                        spacing: 12
 
                         Label {
                             Layout.fillWidth: true
-                            text: qsTr("Fans")
+                            text: qsTr("Cooling")
                             color: mainWindow.theme.text
-                            font.pixelSize: 24
+                            font.pixelSize: 18
                             font.bold: true
-                        }
-
-                        TargetTemperatureCard {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 172
-                            title: qsTr("Cooling control")
-                            subtitle: targetFanModeActive ? qsTr("Target temperature") : qsTr("Manual fan curve")
-                            visible: fanControlModeParam && fanControlModeParam.isValid
-                            modeParameter: fanControlModeParam
-                            cpuTargetParameter: fanTargetCpuTempParam
-                            gpuTargetParameter: fanTargetGpuTempParam
-                            surfaceColor: mainWindow.theme.surface
-                            elevatedColor: mainWindow.theme.elevated
-                            borderColor: mainWindow.theme.border
-                            textColor: mainWindow.theme.text
-                            mutedTextColor: mainWindow.theme.muted
-                            accentColor: mainWindow.theme.accent
                         }
 
                         GridLayout {
@@ -691,17 +692,20 @@ ApplicationWindow {
                             FanCurveCard {
                                 id: fanCurveCpu
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 300
+                                Layout.preferredHeight: 270
                                 title: qsTr("CPU fan curve")
-                                subtitle: targetFanModeActive ? qsTr("Managed by service") : qsTr("Temperature to speed map")
+                                subtitle: coolerBoostActive ? qsTr("Cooler Boost") :
+                                                              (targetFanModeActive ? qsTr("Managed by service") :
+                                                                 (manualFanCurveActive ? qsTr("Temperature to speed map") : qsTr("Managed by firmware"))
+                                                              )
                                 surfaceColor: mainWindow.theme.surface
                                 borderColor: mainWindow.theme.border
                                 textColor: mainWindow.theme.text
                                 mutedTextColor: mainWindow.theme.muted
                                 gridColor: mainWindow.theme.track
                                 accentColor: mainWindow.theme.warn
-                                enabled: !targetFanModeActive
-                                opacity: targetFanModeActive ? 0.55 : 1.0
+                                enabled: manualFanCurveActive
+                                opacity: manualFanCurveActive ? 1.0 : 0.55
                                 visible: isValid
 
                                 property var fssg1: proxy.getProxyParameter(Msi.Parametr.FanSetSpeedCpu1Ec)
@@ -753,17 +757,20 @@ ApplicationWindow {
                             FanCurveCard {
                                 id: fanCurveGpu
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 300
+                                Layout.preferredHeight: 270
                                 title: qsTr("GPU fan curve")
-                                subtitle: targetFanModeActive ? qsTr("Managed by service") : qsTr("Temperature to speed map")
+                                subtitle: coolerBoostActive ? qsTr("Cooler Boost") :
+                                                              (targetFanModeActive ? qsTr("Managed by service") :
+                                                                 (manualFanCurveActive ? qsTr("Temperature to speed map") : qsTr("Managed by firmware"))
+                                                              )
                                 surfaceColor: mainWindow.theme.surface
                                 borderColor: mainWindow.theme.border
                                 textColor: mainWindow.theme.text
                                 mutedTextColor: mainWindow.theme.muted
                                 gridColor: mainWindow.theme.track
                                 accentColor: mainWindow.theme.good
-                                enabled: !targetFanModeActive
-                                opacity: targetFanModeActive ? 0.55 : 1.0
+                                enabled: manualFanCurveActive
+                                opacity: manualFanCurveActive ? 1.0 : 0.55
                                 visible: isValid
 
                                 property var fssg1: proxy.getProxyParameter(Msi.Parametr.FanSetSpeedGpu1Ec)
@@ -812,10 +819,12 @@ ApplicationWindow {
                                 }
                             }
                         }
-                    }
-                }
 
                 CpuPage {
+                    id: cpuPage
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: implicitHeight
+                    embedded: true
                     proxy: proxy
                     surfaceColor: mainWindow.theme.surface
                     elevatedColor: mainWindow.theme.elevated
@@ -826,23 +835,11 @@ ApplicationWindow {
                     secondaryAccentColor: mainWindow.theme.accent2
                 }
 
-                Flickable {
-                    clip: true
-                    contentWidth: width
-                    contentHeight: controlsColumn.implicitHeight
-                    boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: ScrollBar {}
-
-                    ColumnLayout {
-                        id: controlsColumn
-                        width: parent.width
-                        spacing: 12
-
                         Label {
                             Layout.fillWidth: true
-                            text: qsTr("Controls")
+                            text: qsTr("Device controls")
                             color: mainWindow.theme.text
-                            font.pixelSize: 24
+                            font.pixelSize: 18
                             font.bold: true
                         }
 
@@ -856,7 +853,6 @@ ApplicationWindow {
 
                             Repeater {
                                 model: [
-                                    {title: qsTr("Cooler Boost"), subtitle: qsTr("Maximum cooling"), parameter: coolerBoostParam},
                                     {title: qsTr("USB Power Share"), subtitle: qsTr("Power USB while sleeping"), parameter: usbPowerParam},
                                     {title: qsTr("Webcam"), subtitle: qsTr("Camera power"), parameter: webcamParam},
                                     {title: qsTr("Webcam Block"), subtitle: qsTr("Hardware camera block"), parameter: webcamBlockParam},
@@ -967,4 +963,3 @@ ApplicationWindow {
             }
         }
     }
-}

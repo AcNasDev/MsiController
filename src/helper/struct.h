@@ -61,6 +61,7 @@ enum class Parametr : quint8 {
     FanControlMode,
     FanTargetCpuTemp,
     FanTargetGpuTemp,
+    CpuControlConfig,
     CountEs
 };
 Q_ENUM_NS(Parametr)

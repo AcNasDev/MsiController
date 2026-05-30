@@ -10,10 +10,10 @@ AppCard {
     property color elevatedColor: "#252b36"
     property color accentColor: "#3fa7ff"
     property color secondaryAccentColor: "#6bd0c4"
-    property int frequencyEaseMs: 900
-    property int usageEaseMs: 1100
-    property int limitEaseMs: 260
-    property int dragLimitEaseMs: 55
+    property bool editingLimits: false
+    property int telemetryEaseMs: 900
+    property int limitEaseMs: 280
+    property int dragLimitEaseMs: 45
     property real frequencyKalmanProcessNoise: 0.0007
     property real frequencyKalmanMeasurementNoise: 0.22
     property real usageKalmanProcessNoise: 0.0006
@@ -28,9 +28,7 @@ AppCard {
 
     QtObject {
         id: internal
-        property var targetFreqNorm: []
-        property var targetUsageNorm: []
-        property var targetLimitNorm: []
+
         property var displayFreqNorm: []
         property var displayUsageNorm: []
         property var displayLimitNorm: []
@@ -38,8 +36,6 @@ AppCard {
         property var filteredUsageNorm: []
         property var freqEstimateError: []
         property var usageEstimateError: []
-        property double lastFrameMs: 0
-        property bool animating: false
     }
 
     implicitHeight: 320
@@ -75,6 +71,10 @@ AppCard {
         return clamp((Number(value || 0) - minValue) / Math.max(1, maxValue - minValue), 0, 1)
     }
 
+    function denormalizeFreq(value, index) {
+        return minFreq(index) + clamp(value, 0, 1) * (maxFreq(index) - minFreq(index))
+    }
+
     function limitFor(index) {
         var core = coreAt(index)
         if (!core)
@@ -84,35 +84,12 @@ AppCard {
         return Number(core.scalingMaxFreq || core.maxFreq || 0)
     }
 
-    function ghz(value) {
-        return (Number(value || 0) / 1000000.0).toFixed(2) + " GHz"
-    }
-
-    function roundedRectPath(ctx, x, y, width, height, radius) {
-        var r = Math.max(0, Math.min(radius, width / 2, height / 2))
-        ctx.moveTo(x + r, y)
-        ctx.lineTo(x + width - r, y)
-        ctx.quadraticCurveTo(x + width, y, x + width, y + r)
-        ctx.lineTo(x + width, y + height - r)
-        ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height)
-        ctx.lineTo(x + r, y + height)
-        ctx.quadraticCurveTo(x, y + height, x, y + height - r)
-        ctx.lineTo(x, y + r)
-        ctx.quadraticCurveTo(x, y, x + r, y)
-    }
-
     function valueAt(values, index, fallback) {
         return values && values.length > index ? Number(values[index]) : fallback
     }
 
-    function smoothStep(current, target, factor) {
-        if (Math.abs(current - target) < 0.00035)
-            return target
-        return current + (target - current) * factor
-    }
-
-    function easingFactor(deltaMs, durationMs) {
-        return 1.0 - Math.exp(-Math.max(1, deltaMs) / Math.max(1, durationMs))
+    function ghz(value) {
+        return (Number(value || 0) / 1000000.0).toFixed(2) + " GHz"
     }
 
     function kalmanFilter(measurement, previous, estimateError, processNoise, measurementNoise) {
@@ -138,12 +115,10 @@ AppCard {
         var freq = measuredFreq
         var usage = measuredUsage
         var resetFilter = resetDisplay || internal.filteredFreqNorm.length !== coreCount
-        if (filterTelemetry === false && internal.targetFreqNorm.length === coreCount) {
-            freq = internal.targetFreqNorm.slice()
-            usage = internal.targetUsageNorm.slice()
+        if (filterTelemetry === false && internal.displayFreqNorm.length === coreCount) {
+            freq = internal.displayFreqNorm.slice()
+            usage = internal.displayUsageNorm.slice()
         } else if (resetFilter) {
-            internal.filteredFreqNorm = measuredFreq.slice()
-            internal.filteredUsageNorm = measuredUsage.slice()
             internal.freqEstimateError = Array(coreCount).fill(root.initialKalmanError)
             internal.usageEstimateError = Array(coreCount).fill(root.initialKalmanError)
         } else {
@@ -167,87 +142,15 @@ AppCard {
                 freqErrors[j] = filteredFreq.error
                 usageErrors[j] = filteredUsage.error
             }
-            internal.filteredFreqNorm = freq.slice()
-            internal.filteredUsageNorm = usage.slice()
             internal.freqEstimateError = freqErrors
             internal.usageEstimateError = usageErrors
         }
 
-        internal.targetFreqNorm = freq
-        internal.targetUsageNorm = usage
-        internal.targetLimitNorm = limit
-
-        if (resetDisplay || internal.displayFreqNorm.length !== coreCount) {
-            internal.displayFreqNorm = freq.slice()
-            internal.displayUsageNorm = usage.slice()
-            internal.displayLimitNorm = limit.slice()
-            internal.lastFrameMs = Date.now()
-            internal.animating = false
-            canvas.requestPaint()
-            return
-        }
-        startAnimation()
-    }
-
-    function startAnimation() {
-        if (coreCount <= 0) {
-            internal.animating = false
-            canvas.requestPaint()
-            return
-        }
-        if (!internal.animating)
-            internal.lastFrameMs = Date.now()
-        internal.animating = true
-    }
-
-    function advanceAnimation() {
-        if (coreCount <= 0) {
-            internal.animating = false
-            return
-        }
-
-        var now = Date.now()
-        var deltaMs = internal.lastFrameMs > 0 ? Math.min(100, now - internal.lastFrameMs) : animationTimer.interval
-        internal.lastFrameMs = now
-        var freqFactor = easingFactor(deltaMs, root.frequencyEaseMs)
-        var usageFactor = easingFactor(deltaMs, root.usageEaseMs)
-        var limitFactor = easingFactor(deltaMs, plot.dragging ? root.dragLimitEaseMs : root.limitEaseMs)
-
-        var freq = internal.displayFreqNorm.slice()
-        var usage = internal.displayUsageNorm.slice()
-        var limit = internal.displayLimitNorm.slice()
-        var maxDelta = 0
-        for (var i = 0; i < coreCount; ++i) {
-            var targetFreq = valueAt(internal.targetFreqNorm, i, 0)
-            var targetUsage = valueAt(internal.targetUsageNorm, i, 0)
-            var targetLimit = valueAt(internal.targetLimitNorm, i, 0)
-            freq[i] = smoothStep(valueAt(freq, i, targetFreq), targetFreq, freqFactor)
-            usage[i] = smoothStep(valueAt(usage, i, targetUsage), targetUsage, usageFactor)
-            limit[i] = smoothStep(valueAt(limit, i, targetLimit), targetLimit, limitFactor)
-            maxDelta = Math.max(maxDelta,
-                                Math.abs(freq[i] - targetFreq),
-                                Math.abs(usage[i] - targetUsage),
-                                Math.abs(limit[i] - targetLimit))
-        }
-        if (!plot.dragging && maxDelta < 0.003) {
-            internal.displayFreqNorm = internal.targetFreqNorm.slice()
-            internal.displayUsageNorm = internal.targetUsageNorm.slice()
-            internal.displayLimitNorm = internal.targetLimitNorm.slice()
-            internal.animating = false
-        } else {
-            internal.displayFreqNorm = freq
-            internal.displayUsageNorm = usage
-            internal.displayLimitNorm = limit
-        }
-        canvas.requestPaint()
-    }
-
-    Timer {
-        id: animationTimer
-        interval: 50
-        running: root.visible && root.coreCount > 0 && internal.animating
-        repeat: true
-        onTriggered: root.advanceAnimation()
+        internal.filteredFreqNorm = freq.slice()
+        internal.filteredUsageNorm = usage.slice()
+        internal.displayFreqNorm = freq
+        internal.displayUsageNorm = usage
+        internal.displayLimitNorm = limit
     }
 
     RowLayout {
@@ -289,18 +192,21 @@ AppCard {
 
     Rectangle {
         id: plot
+
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.minimumHeight: 210
         radius: 8
         color: root.elevatedColor
         border.color: root.borderColor
+        clip: true
 
         property int hoveredIndex: -1
+        property int limitHoverIndex: -1
+        property int editingIndex: -1
         property bool dragging: false
         property real tooltipX: 0
         property real tooltipY: 0
-        property string tooltipText: ""
 
         function plotLeft() { return 14 }
         function plotRight() { return width - 14 }
@@ -312,7 +218,7 @@ AppCard {
         function barWidth() { return Math.max(8, Math.min(28, slotWidth() * 0.52)) }
 
         function indexFromX(x) {
-            if (root.coreCount <= 0)
+            if (root.coreCount <= 0 || x < plotLeft() || x > plotRight())
                 return -1
             return root.clamp(Math.floor((x - plotLeft()) / Math.max(1, slotWidth())), 0, root.coreCount - 1)
         }
@@ -322,102 +228,149 @@ AppCard {
             return root.minFreq(index) + norm * (root.maxFreq(index) - root.minFreq(index))
         }
 
-        function updateHover(x, y) {
-            hoveredIndex = indexFromX(x)
-            if (hoveredIndex < 0) {
-                tooltipText = ""
-                canvas.requestPaint()
-                return
-            }
-
-            var core = root.coreAt(hoveredIndex)
-            tooltipX = x
-            tooltipY = y
-            tooltipText = qsTr("Core") + " " + (hoveredIndex + 1) + "\n" +
-                          qsTr("Frequency") + " " + root.ghz(core.currentFreq) + "\n" +
-                          qsTr("Usage") + " " + Number(core.usage || 0).toFixed(0) + "%\n" +
-                          qsTr("Limit") + " " + root.ghz(root.limitFor(hoveredIndex))
-            canvas.requestPaint()
+        function limitNorm(index) {
+            if (dragging && editingIndex === index)
+                return root.normalizeFreq(root.limitFor(index), index)
+            return root.valueAt(internal.displayLimitNorm, index, root.normalizeFreq(root.limitFor(index), index))
         }
 
-        Canvas {
-            id: canvas
-            anchors.fill: parent
-            antialiasing: true
+        function limitY(index) {
+            return plotBottom() - plotHeight() * limitNorm(index)
+        }
 
-            onWidthChanged: requestPaint()
-            onHeightChanged: requestPaint()
-            Connections {
-                target: root
-                function onAccentColorChanged() { canvas.requestPaint() }
-                function onSecondaryAccentColorChanged() { canvas.requestPaint() }
+        function coreCenter(index) {
+            return plotLeft() + slotWidth() * index + slotWidth() / 2
+        }
+
+        function limitIndexAt(x, y) {
+            var index = indexFromX(x)
+            if (index < 0)
+                return -1
+
+            var bar = barWidth()
+            var barX = coreCenter(index) - bar / 2
+            if (x < barX - 8 || x > barX + bar + 8)
+                return -1
+
+            return Math.abs(y - limitY(index)) <= 9 ? index : -1
+        }
+
+        function updateHover(x, y) {
+            hoveredIndex = dragging && editingIndex >= 0 ? editingIndex : indexFromX(x)
+            limitHoverIndex = dragging && editingIndex >= 0 ? editingIndex : limitIndexAt(x, y)
+            tooltipX = x
+            tooltipY = y
+        }
+
+        function currentTooltipText() {
+            if (hoveredIndex < 0)
+                return ""
+
+            var core = root.coreAt(hoveredIndex)
+            var freqNorm = root.valueAt(internal.displayFreqNorm,
+                                        hoveredIndex,
+                                        root.normalizeFreq(core ? core.currentFreq : 0, hoveredIndex))
+            var usageNorm = root.valueAt(internal.displayUsageNorm,
+                                         hoveredIndex,
+                                         root.clamp(Number(core ? core.usage || 0 : 0) / 100.0, 0, 1))
+            return qsTr("Core") + " " + (hoveredIndex + 1) + "\n" +
+                   qsTr("Frequency") + " " + root.ghz(root.denormalizeFreq(freqNorm, hoveredIndex)) + "\n" +
+                   qsTr("Usage") + " " + (usageNorm * 100).toFixed(0) + "%\n" +
+                   qsTr("Limit") + " " + root.ghz(root.limitFor(hoveredIndex))
+        }
+
+        Repeater {
+            model: 4
+
+            Rectangle {
+                x: plot.plotLeft()
+                y: plot.plotTop() + plot.plotHeight() * index / 3
+                width: plot.plotWidth()
+                height: 1
+                color: root.borderColor
             }
+        }
 
-            onPaint: {
-                var ctx = getContext("2d")
-                ctx.setTransform(1, 0, 0, 1, 0, 0)
-                ctx.clearRect(0, 0, width, height)
+        Repeater {
+            model: root.coreCount
 
-                var left = plot.plotLeft()
-                var right = plot.plotRight()
-                var top = plot.plotTop()
-                var bottom = plot.plotBottom()
-                var plotHeight = plot.plotHeight()
-                var slot = plot.slotWidth()
-                var bar = plot.barWidth()
+            Item {
+                id: coreItem
 
-                ctx.lineWidth = 1
-                ctx.strokeStyle = root.borderColor
-                for (var grid = 0; grid < 4; ++grid) {
-                    var gy = top + plotHeight * grid / 3
-                    ctx.beginPath()
-                    ctx.moveTo(left, gy)
-                    ctx.lineTo(right, gy)
-                    ctx.stroke()
+                readonly property var core: root.coreAt(index)
+                readonly property real centerX: plot.coreCenter(index)
+                readonly property real barW: plot.barWidth()
+                readonly property real freqNorm: root.valueAt(internal.displayFreqNorm,
+                                                              index,
+                                                              root.normalizeFreq(core ? core.currentFreq : 0, index))
+                readonly property real usageNorm: root.valueAt(internal.displayUsageNorm,
+                                                               index,
+                                                               root.clamp(Number(core ? core.usage || 0 : 0) / 100.0, 0, 1))
+                readonly property real limitNorm: plot.limitNorm(index)
+                property real visualFreqNorm: freqNorm
+                property real visualUsageNorm: usageNorm
+                property real visualLimitNorm: limitNorm
+
+                x: centerX - barW / 2
+                y: plot.plotTop()
+                width: barW
+                height: plot.plotHeight()
+
+                Behavior on visualFreqNorm {
+                    NumberAnimation { duration: root.telemetryEaseMs; easing.type: Easing.OutCubic }
                 }
 
-                if (root.coreCount <= 0)
-                    return
+                Behavior on visualUsageNorm {
+                    NumberAnimation { duration: root.telemetryEaseMs; easing.type: Easing.OutCubic }
+                }
 
-                for (var i = 0; i < root.coreCount; ++i) {
-                    var core = root.coreAt(i)
-                    var center = left + slot * i + slot / 2
-                    var x = center - bar / 2
-                    var freqNorm = root.valueAt(internal.displayFreqNorm, i, root.normalizeFreq(core.currentFreq, i))
-                    var usageNorm = root.valueAt(internal.displayUsageNorm, i, root.clamp(Number(core.usage || 0) / 100.0, 0, 1))
-                    var limitNorm = plot.dragging ? root.normalizeFreq(root.limitFor(i), i)
-                                                   : root.valueAt(internal.displayLimitNorm, i, root.normalizeFreq(root.limitFor(i), i))
-                    var freqHeight = Math.max(2, plotHeight * freqNorm)
-                    var usageHeight = Math.max(2, plotHeight * usageNorm)
-                    var limitY = bottom - plotHeight * limitNorm
+                Behavior on visualLimitNorm {
+                    NumberAnimation {
+                        duration: plot.dragging ? root.dragLimitEaseMs : root.limitEaseMs
+                        easing.type: Easing.OutCubic
+                    }
+                }
 
-                    ctx.fillStyle = Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.16)
-                    ctx.beginPath()
-                    root.roundedRectPath(ctx, x, top, bar, plotHeight, 5)
-                    ctx.fill()
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 5
+                    color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.13)
+                }
 
-                    ctx.fillStyle = Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.86)
-                    ctx.beginPath()
-                    root.roundedRectPath(ctx, x, bottom - freqHeight, bar, freqHeight, 5)
-                    ctx.fill()
+                Rectangle {
+                    width: parent.width
+                    height: Math.max(2, parent.height * coreItem.visualFreqNorm)
+                    y: parent.height - height
+                    radius: 5
+                    color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.86)
+                }
 
-                    ctx.fillStyle = Qt.rgba(root.secondaryAccentColor.r, root.secondaryAccentColor.g, root.secondaryAccentColor.b, 0.72)
-                    ctx.beginPath()
-                    root.roundedRectPath(ctx, x + bar * 0.18, bottom - usageHeight, bar * 0.64, usageHeight, 4)
-                    ctx.fill()
+                Rectangle {
+                    x: parent.width * 0.18
+                    width: parent.width * 0.64
+                    height: Math.max(2, parent.height * coreItem.visualUsageNorm)
+                    y: parent.height - height
+                    radius: 4
+                    color: Qt.rgba(root.secondaryAccentColor.r, root.secondaryAccentColor.g, root.secondaryAccentColor.b, 0.72)
+                }
 
-                    ctx.lineWidth = plot.hoveredIndex === i || plot.dragging ? 3 : 2
-                    ctx.strokeStyle = root.accentColor
-                    ctx.beginPath()
-                    ctx.moveTo(x - 5, limitY)
-                    ctx.lineTo(x + bar + 5, limitY)
-                    ctx.stroke()
+                Rectangle {
+                    x: -5
+                    y: parent.height * (1 - coreItem.visualLimitNorm) - height / 2
+                    width: parent.width + 10
+                    height: plot.limitHoverIndex === index || plot.editingIndex === index ? 3 : 2
+                    radius: 2
+                    color: root.accentColor
+                }
 
-                    ctx.fillStyle = root.mutedTextColor
-                    ctx.font = "11px sans-serif"
-                    ctx.textAlign = "center"
-                    ctx.textBaseline = "top"
-                    ctx.fillText(String(i + 1), center, bottom + 8)
+                Label {
+                    x: -plot.slotWidth() / 2 + parent.width / 2
+                    y: plot.plotHeight() + 8
+                    width: plot.slotWidth()
+                    text: String(index + 1)
+                    color: root.mutedTextColor
+                    font.pixelSize: 11
+                    horizontalAlignment: Text.AlignHCenter
                 }
             }
         }
@@ -425,47 +378,61 @@ AppCard {
         MouseArea {
             anchors.fill: parent
             hoverEnabled: true
-            cursorShape: containsMouse ? Qt.SizeVerCursor : Qt.ArrowCursor
+            preventStealing: true
+            cursorShape: plot.dragging || plot.limitHoverIndex >= 0 ? Qt.SizeVerCursor : Qt.ArrowCursor
 
             onEntered: plot.updateHover(mouseX, mouseY)
             onExited: {
                 if (!plot.dragging) {
                     plot.hoveredIndex = -1
-                    plot.tooltipText = ""
-                    canvas.requestPaint()
+                    plot.limitHoverIndex = -1
                 }
             }
             onPositionChanged: function(mouse) {
+                if (plot.dragging)
+                    mouse.accepted = true
                 plot.updateHover(mouse.x, mouse.y)
-                if (!pressed || plot.hoveredIndex < 0)
+                if (!pressed || !plot.dragging || plot.editingIndex < 0)
                     return
-                root.limitEdited(plot.hoveredIndex, plot.limitFromY(mouse.y, plot.hoveredIndex))
+                root.limitEdited(plot.editingIndex, plot.limitFromY(mouse.y, plot.editingIndex))
                 plot.updateHover(mouse.x, mouse.y)
             }
             onPressed: function(mouse) {
-                plot.dragging = true
-                root.editingChanged(true)
                 plot.updateHover(mouse.x, mouse.y)
-                if (plot.hoveredIndex >= 0)
-                    root.limitEdited(plot.hoveredIndex, plot.limitFromY(mouse.y, plot.hoveredIndex))
+                var editIndex = plot.limitIndexAt(mouse.x, mouse.y)
+                if (editIndex < 0) {
+                    mouse.accepted = false
+                    return
+                }
+
+                mouse.accepted = true
+                plot.dragging = true
+                plot.editingIndex = editIndex
+                plot.limitHoverIndex = editIndex
+                root.editingChanged(true)
+                root.limitEdited(plot.editingIndex, plot.limitFromY(mouse.y, plot.editingIndex))
                 plot.updateHover(mouse.x, mouse.y)
             }
-            onReleased: {
+            onReleased: function(mouse) {
+                if (!plot.dragging)
+                    return
                 plot.dragging = false
+                plot.limitHoverIndex = plot.limitIndexAt(mouse.x, mouse.y)
+                plot.editingIndex = -1
                 root.commitRequested()
                 root.editingChanged(false)
-                canvas.requestPaint()
             }
             onCanceled: {
                 plot.dragging = false
+                plot.limitHoverIndex = -1
+                plot.editingIndex = -1
                 root.editingChanged(false)
-                canvas.requestPaint()
             }
         }
 
         Label {
-            visible: plot.tooltipText.length > 0
-            text: plot.tooltipText
+            visible: plot.hoveredIndex >= 0
+            text: plot.currentTooltipText()
             color: root.textColor
             font.pixelSize: 12
             padding: 8

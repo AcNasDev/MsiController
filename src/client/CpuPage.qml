@@ -15,15 +15,21 @@ Flickable {
     property color mutedTextColor: "#9aa6b6"
     property color accentColor: "#3fa7ff"
     property color secondaryAccentColor: "#6bd0c4"
+    property bool embedded: false
 
     property var cpuParameter: proxy ? proxy.getProxyParameter(Msi.Parametr.CpuConfig) : null
+    property var cpuControlParameter: proxy ? proxy.getProxyParameter(Msi.Parametr.CpuControlConfig) : null
     property var cpuConfig: cpuParameter ? cpuParameter.value : null
+    property var cpuControlConfig: cpuControlParameter && cpuControlParameter.value && cpuControlParameter.value.cpus
+                                   ? cpuControlParameter.value
+                                   : cpuConfig
     property var draftMaxFreqScaling: []
-    property var committedMaxFreqScaling: []
     property bool editingCpuLimit: false
-    property bool waitingCpuLimitConfirmation: false
+    readonly property int cpuLimitConfirmTolerance: 25000
 
     clip: true
+    implicitHeight: contentColumn.implicitHeight
+    interactive: !embedded
     contentWidth: width
     contentHeight: contentColumn.implicitHeight
     boundsBehavior: Flickable.StopAtBounds
@@ -34,103 +40,131 @@ Flickable {
         if (!a || !b || a.length !== b.length)
             return false
         for (var i = 0; i < a.length; ++i) {
-            if (a[i] !== b[i])
+            var aValue = Number(a[i])
+            var bValue = Number(b[i])
+            if (!isNaN(aValue) && !isNaN(bValue)) {
+                if (Math.abs(aValue - bValue) > root.cpuLimitConfirmTolerance)
+                    return false
+            } else if (a[i] !== b[i]) {
                 return false
+            }
         }
         return true
     }
 
     function clampFreq(value, idx) {
-        if (!cpuConfig || !cpuConfig.cpus || !cpuConfig.cpus[idx])
+        if (!cpuControlConfig || !cpuControlConfig.cpus || !cpuControlConfig.cpus[idx])
             return value
-        var core = cpuConfig.cpus[idx]
+        var core = cpuControlConfig.cpus[idx]
         return Math.max(core.minFreq, Math.min(core.maxFreq, value))
     }
 
     function currentMaxFreqScaling() {
-        if (!root.cpuConfig || !root.cpuConfig.cpus)
+        if (!root.cpuControlConfig || !root.cpuControlConfig.cpus)
             return []
 
         var values = []
-        for (var i = 0; i < root.cpuConfig.cpus.length; i++)
-            values.push(root.cpuConfig.cpus[i].scalingMaxFreq)
+        for (var i = 0; i < root.cpuControlConfig.cpus.length; i++)
+            values.push(root.cpuControlConfig.cpus[i].scalingMaxFreq)
         return values
     }
 
     function updateDraftLimit(idx, value) {
-        if (!root.cpuConfig || !root.cpuConfig.cpus || !root.cpuConfig.cpus[idx])
+        if (!root.cpuControlConfig || !root.cpuControlConfig.cpus || !root.cpuControlConfig.cpus[idx])
             return
 
-        var values = root.draftMaxFreqScaling.length === root.cpuConfig.cpus.length
+        var values = root.draftMaxFreqScaling.length === root.cpuControlConfig.cpus.length
             ? root.draftMaxFreqScaling.slice()
-            : Array(root.cpuConfig.cpus.length).fill(0)
+            : Array(root.cpuControlConfig.cpus.length).fill(0)
         values[idx] = Math.round(clampFreq(value, idx))
         root.draftMaxFreqScaling = values
     }
 
     function updateAllDraftLimits(value) {
-        if (!root.cpuConfig || !root.cpuConfig.cpus)
+        if (!root.cpuControlConfig || !root.cpuControlConfig.cpus)
             return
 
         var values = []
-        for (var i = 0; i < root.cpuConfig.cpus.length; ++i)
+        for (var i = 0; i < root.cpuControlConfig.cpus.length; ++i)
             values.push(Math.round(clampFreq(value, i)))
         root.draftMaxFreqScaling = values
     }
 
     function commitDraftLimits() {
-        if (!root.cpuConfig || !root.cpuConfig.cpus || root.draftMaxFreqScaling.length === 0)
+        if (!root.cpuControlConfig || !root.cpuControlConfig.cpus || root.draftMaxFreqScaling.length === 0)
             return
 
-        var config = root.cpuConfig
-        for (var i = 0; i < config.cpus.length && i < root.draftMaxFreqScaling.length; ++i)
-            config.cpus[i].scalingMaxFreq = Math.round(clampFreq(root.draftMaxFreqScaling[i], i))
-        root.committedMaxFreqScaling = root.draftMaxFreqScaling.slice()
-        root.waitingCpuLimitConfirmation = true
-        cpuConfirmTimeout.restart()
-        root.setCpuConfig(config)
+        var values = []
+        for (var i = 0; i < root.cpuControlConfig.cpus.length && i < root.draftMaxFreqScaling.length; ++i)
+            values.push(Math.round(clampFreq(root.draftMaxFreqScaling[i], i)))
+
+        if (root.proxy && typeof root.proxy.setCpuScalingMaxFrequencies === "function")
+            root.proxy.setCpuScalingMaxFrequencies(values)
+        else {
+            var config = root.cpuControlConfig
+            for (var j = 0; j < config.cpus.length && j < values.length; ++j)
+                config.cpus[j].scalingMaxFreq = values[j]
+            root.setCpuControlConfig(config)
+        }
     }
 
     function displayedGlobalFreqGhz() {
         if (root.draftMaxFreqScaling.length > 0)
             return root.draftMaxFreqScaling[0] / 1000000.0
-        if (root.cpuConfig && root.cpuConfig.cpus && root.cpuConfig.cpus.length > 0)
-            return root.cpuConfig.cpus[0].scalingMaxFreq / 1000000.0
+        if (root.cpuControlConfig && root.cpuControlConfig.cpus && root.cpuControlConfig.cpus.length > 0)
+            return root.cpuControlConfig.cpus[0].scalingMaxFreq / 1000000.0
         return 0
     }
 
-    function setCpuConfig(config) {
-        if (cpuParameter)
+    function setCpuControlConfig(config) {
+        if (cpuControlParameter && cpuControlParameter.isValid)
+            cpuControlParameter.value = config
+        else if (cpuParameter)
             cpuParameter.value = config
     }
 
-    onCpuConfigChanged: {
-        if (!cpuConfig || !cpuConfig.cpus)
+    function controlWritePending() {
+        if (root.cpuControlParameter && root.cpuControlParameter.isValid)
+            return root.cpuControlParameter.isPending
+        return root.cpuParameter && root.cpuParameter.isPending
+    }
+
+    onCpuControlConfigChanged: {
+        if (!cpuControlConfig || !cpuControlConfig.cpus)
             return
 
         var curMaxFreqScaling = currentMaxFreqScaling()
 
-        if (root.waitingCpuLimitConfirmation) {
-            if (arraysEqual(curMaxFreqScaling, root.committedMaxFreqScaling)) {
-                root.waitingCpuLimitConfirmation = false
-                cpuConfirmTimeout.stop()
-                root.draftMaxFreqScaling = curMaxFreqScaling
-            }
+        if (root.editingCpuLimit || root.controlWritePending())
             return
-        }
 
-        if (!root.editingCpuLimit && !arraysEqual(curMaxFreqScaling, draftMaxFreqScaling))
+        if (!arraysEqual(curMaxFreqScaling, draftMaxFreqScaling))
             draftMaxFreqScaling = curMaxFreqScaling
     }
 
-    Timer {
-        id: cpuConfirmTimeout
-        interval: 2500
-        repeat: false
-        onTriggered: {
-            root.waitingCpuLimitConfirmation = false
-            if (!root.editingCpuLimit)
-                root.draftMaxFreqScaling = root.currentMaxFreqScaling()
+    Connections {
+        target: root.cpuControlParameter
+        function onIsPendingChanged() {
+            if (!root.cpuControlParameter || root.cpuControlParameter.isPending || root.editingCpuLimit)
+                return
+
+            var curMaxFreqScaling = root.currentMaxFreqScaling()
+            if (!root.arraysEqual(curMaxFreqScaling, root.draftMaxFreqScaling))
+                root.draftMaxFreqScaling = curMaxFreqScaling
+        }
+    }
+
+    Connections {
+        target: root.cpuParameter
+        function onIsPendingChanged() {
+            if (root.cpuControlParameter && root.cpuControlParameter.isValid)
+                return
+            if (!root.cpuParameter || root.cpuParameter.isPending || root.editingCpuLimit)
+                return
+
+            var curMaxFreqScaling = root.currentMaxFreqScaling()
+            if (!root.arraysEqual(curMaxFreqScaling, root.draftMaxFreqScaling))
+                root.draftMaxFreqScaling = curMaxFreqScaling
         }
     }
 
@@ -141,9 +175,10 @@ Flickable {
 
         CpuPerformanceGraph {
             Layout.fillWidth: true
-            Layout.preferredHeight: 340
+            Layout.preferredHeight: root.embedded ? 300 : 340
             cpuConfig: root.cpuConfig
             draftLimits: root.draftMaxFreqScaling
+            editingLimits: root.editingCpuLimit
             surfaceColor: root.surfaceColor
             elevatedColor: root.elevatedColor
             borderColor: root.borderColor
@@ -179,8 +214,8 @@ Flickable {
                 Slider {
                     id: globalFreqSlider
                     Layout.fillWidth: true
-                    from: root.cpuConfig && root.cpuConfig.cpus.length > 0 ? root.cpuConfig.cpus[0].minFreq / 1000000.0 : 0
-                    to: root.cpuConfig && root.cpuConfig.cpus.length > 0 ? root.cpuConfig.cpus[0].maxFreq / 1000000.0 : 100
+                    from: root.cpuControlConfig && root.cpuControlConfig.cpus.length > 0 ? root.cpuControlConfig.cpus[0].minFreq / 1000000.0 : 0
+                    to: root.cpuControlConfig && root.cpuControlConfig.cpus.length > 0 ? root.cpuControlConfig.cpus[0].maxFreq / 1000000.0 : 100
                     stepSize: 0.1
                     value: root.displayedGlobalFreqGhz() > 0 ? root.displayedGlobalFreqGhz() : to
 
@@ -194,7 +229,7 @@ Flickable {
                     }
 
                     onMoved: {
-                        if (!root.cpuConfig)
+                        if (!root.cpuControlConfig)
                             return
                         var newFreq = value * 1000000
                         root.updateAllDraftLimits(newFreq)
@@ -222,8 +257,8 @@ Flickable {
                 Layout.fillWidth: true
                 spacing: 8
 
-                property var availableGovernors: root.cpuConfig && root.cpuConfig.cpus.length > 0 ? root.cpuConfig.cpus[0].availableGovernors || [] : []
-                property string availableGovernor: root.cpuConfig && root.cpuConfig.cpus.length > 0 ? root.cpuConfig.cpus[0].availableGovernor || "N/A" : "N/A"
+                property var availableGovernors: root.cpuControlConfig && root.cpuControlConfig.cpus.length > 0 ? root.cpuControlConfig.cpus[0].availableGovernors || [] : []
+                property string availableGovernor: root.cpuControlConfig && root.cpuControlConfig.cpus.length > 0 ? root.cpuControlConfig.cpus[0].availableGovernor || "N/A" : "N/A"
 
                 Repeater {
                     model: parent.availableGovernors
@@ -250,12 +285,16 @@ Flickable {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                if (!root.cpuConfig)
+                                if (!root.cpuControlConfig)
                                     return
-                                var config = root.cpuConfig
-                                for (var i = 0; i < config.cpus.length; i++)
-                                    config.cpus[i].availableGovernor = modelData
-                                root.setCpuConfig(config)
+                                if (root.proxy && typeof root.proxy.setCpuGovernor === "function") {
+                                    root.proxy.setCpuGovernor(modelData)
+                                } else {
+                                    var config = root.cpuControlConfig
+                                    for (var i = 0; i < config.cpus.length; i++)
+                                        config.cpus[i].availableGovernor = modelData
+                                    root.setCpuControlConfig(config)
+                                }
                             }
                         }
                     }

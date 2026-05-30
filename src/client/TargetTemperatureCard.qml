@@ -1,10 +1,13 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import MSI.Helpers 1.0
 
 AppCard {
     id: root
 
+    property var hardwareModeParameter
+    property var coolerBoostParameter
     property var modeParameter
     property var cpuTargetParameter
     property var gpuTargetParameter
@@ -13,7 +16,15 @@ AppCard {
     readonly property int curveMode: 0
     readonly property int targetTemperatureMode: 1
     readonly property bool active: modeParameter && modeParameter.isValid
+    readonly property bool hardwareActive: hardwareModeParameter && hardwareModeParameter.isValid
+    readonly property bool coolerBoostActive: coolerBoostParameter && coolerBoostParameter.isValid
+    readonly property bool boostMode: coolerBoostChecked()
     readonly property bool targetMode: active && modeValue() === targetTemperatureMode
+    readonly property bool targetControlsVisible: targetMode && !boostMode
+    readonly property bool twoColumnTargets: width > 380
+    property var pendingHardwareMode: null
+
+    implicitHeight: targetControlsVisible && !twoColumnTargets ? 206 : 154
 
     function modeValue() {
         if (!modeParameter || modeParameter.value === undefined || modeParameter.value === null)
@@ -27,9 +38,78 @@ AppCard {
         return text.indexOf("TargetTemperature") >= 0 ? targetTemperatureMode : curveMode
     }
 
-    function setMode(mode) {
+    function setControlMode(mode) {
         if (modeParameter && modeParameter.isValid)
             modeParameter.value = mode
+    }
+
+    function setHardwareMode(mode) {
+        if (hardwareModeParameter && hardwareModeParameter.isValid)
+            hardwareModeParameter.value = mode
+    }
+
+    function coolerBoostChecked() {
+        if (!coolerBoostParameter || !coolerBoostParameter.isValid || coolerBoostParameter.value === undefined)
+            return false
+
+        if (coolerBoostParameter.availableValues && coolerBoostParameter.availableValues.length > 1)
+            return coolerBoostParameter.value === coolerBoostParameter.availableValues[1]
+
+        return !!coolerBoostParameter.value
+    }
+
+    function setCoolerBoost(enabled) {
+        if (!coolerBoostParameter || !coolerBoostParameter.isValid)
+            return
+
+        if (coolerBoostParameter.availableValues && coolerBoostParameter.availableValues.length > 1)
+            coolerBoostParameter.value = coolerBoostParameter.availableValues[enabled ? 1 : 0]
+        else
+            coolerBoostParameter.value = enabled
+    }
+
+    function selectHardwareMode(mode) {
+        if (!hardwareActive)
+            return
+
+        setCoolerBoost(false)
+        if (targetMode) {
+            pendingHardwareMode = mode
+            setControlMode(curveMode)
+            hardwareModeDelay.restart()
+        } else {
+            setControlMode(curveMode)
+            setHardwareMode(mode)
+        }
+    }
+
+    function selectTargetMode() {
+        if (!active)
+            return
+
+        hardwareModeDelay.stop()
+        pendingHardwareMode = null
+        setCoolerBoost(false)
+        setControlMode(targetTemperatureMode)
+    }
+
+    function selectCoolerBoost() {
+        if (!coolerBoostActive)
+            return
+
+        hardwareModeDelay.stop()
+        pendingHardwareMode = null
+        setControlMode(curveMode)
+        setCoolerBoost(true)
+    }
+
+    function hardwareModeText(mode) {
+        var text = EnumHelper.enumToString(mode, "FanMode")
+        return text && text !== "Unknown" ? text : qsTr("N/A")
+    }
+
+    function sameHardwareMode(mode) {
+        return hardwareModeParameter && hardwareModeParameter.value === mode
     }
 
     function rangeMin(parameter, fallback) {
@@ -40,29 +120,53 @@ AppCard {
         return parameter && parameter.availableValues ? Number(parameter.availableValues.max) : fallback
     }
 
-    RowLayout {
+    Timer {
+        id: hardwareModeDelay
+        interval: 180
+        repeat: false
+        onTriggered: {
+            if (root.pendingHardwareMode !== null)
+                root.setHardwareMode(root.pendingHardwareMode)
+            root.pendingHardwareMode = null
+        }
+    }
+
+    Flow {
         Layout.fillWidth: true
         spacing: 8
 
-        ModeButton {
-            text: qsTr("Curve")
-            checked: root.modeValue() === root.curveMode
-            onClicked: root.setMode(root.curveMode)
+        Repeater {
+            model: root.hardwareActive && root.hardwareModeParameter.availableValues ? root.hardwareModeParameter.availableValues : []
+
+            delegate: ModeButton {
+                text: root.hardwareModeText(modelData)
+                checked: !root.boostMode && !root.targetMode && root.sameHardwareMode(modelData)
+                buttonEnabled: root.hardwareActive
+                onClicked: root.selectHardwareMode(modelData)
+            }
         }
 
         ModeButton {
             text: qsTr("Target temp")
-            checked: root.modeValue() === root.targetTemperatureMode
-            onClicked: root.setMode(root.targetTemperatureMode)
+            checked: !root.boostMode && root.targetMode
+            buttonEnabled: root.active
+            onClicked: root.selectTargetMode()
         }
 
-        Item { Layout.fillWidth: true }
+        ModeButton {
+            text: qsTr("Cooler Boost")
+            checked: root.boostMode
+            buttonEnabled: root.coolerBoostActive
+            onClicked: root.selectCoolerBoost()
+        }
     }
 
     component ModeButton: Button {
         id: modeButton
 
-        enabled: root.active
+        property bool buttonEnabled: root.active
+
+        enabled: buttonEnabled
         checkable: true
         implicitWidth: Math.max(98, modeText.implicitWidth + 26)
         implicitHeight: 34
@@ -88,9 +192,10 @@ AppCard {
 
     GridLayout {
         Layout.fillWidth: true
-        columns: width > 520 ? 2 : 1
+        columns: root.twoColumnTargets ? 2 : 1
         columnSpacing: 12
         rowSpacing: 10
+        visible: root.targetControlsVisible
         opacity: root.active ? 1.0 : 0.55
 
         TargetSlider {

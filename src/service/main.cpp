@@ -7,6 +7,7 @@
 #include <optional>
 #include <type_traits>
 
+#include "cpucontrolparameter.h"
 #include "cpuparameter.h"
 #include "ecadaptor.h"
 #include "ecservice.h"
@@ -471,4 +472,5 @@ void registerEsSys(EcService& service) {
         }
     }
     service.registerParameter(new CpuParameter(QVariant::fromValue(Msi::Parametr::CpuConfig), &service));
+    service.registerParameter(new CpuControlParameter(QVariant::fromValue(Msi::Parametr::CpuControlConfig), &service));
 }

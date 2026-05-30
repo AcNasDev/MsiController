@@ -31,7 +31,6 @@ Pane {
     implicitHeight: chartEnabled ? 116 : 96
 
     Component.onCompleted: appendChartValue()
-    onChartValueChanged: chartCanvas.requestPaint()
     onChartMinChanged: chartCanvas.requestPaint()
     onChartMaxChanged: chartCanvas.requestPaint()
     onAccentColorChanged: chartCanvas.requestPaint()
@@ -54,7 +53,7 @@ Pane {
     }
 
     Timer {
-        interval: 1000
+        interval: 1500
         running: root.visible && root.chartEnabled
         repeat: true
         onTriggered: root.appendChartValue()
