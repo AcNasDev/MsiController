@@ -108,6 +108,7 @@ Or build them in Docker:
 ```
 
 Docker-built packages are written to `packages/`.
+By default the artifact filenames are stable (`msicontroller_amd64.deb`, `msicontroller_x86_64.rpm`) while the package release metadata remains unique so upgrades still work.
 The helper script uses a temporary build directory outside the repository by default.
 
 If the build environment requires a proxy, set it outside the repository before running the script:

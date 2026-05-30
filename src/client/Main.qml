@@ -646,6 +646,7 @@ ApplicationWindow {
                     clip: true
                     contentWidth: width
                     contentHeight: fansColumn.implicitHeight
+                    interactive: !(fanCurveCpu.isDragging || fanCurveGpu.isDragging)
                     boundsBehavior: Flickable.StopAtBounds
                     ScrollBar.vertical: ScrollBar {}
 

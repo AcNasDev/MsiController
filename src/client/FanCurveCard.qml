@@ -375,7 +375,9 @@ Pane {
 
                     MouseArea {
                         anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton
                         hoverEnabled: true
+                        preventStealing: true
                         cursorShape: Qt.PointingHandCursor
 
                         onEntered: pointHandle.color = Qt.lighter(root.surfaceColor, 1.25)
@@ -384,16 +386,24 @@ Pane {
                                 pointHandle.color = root.surfaceColor
                         }
                         onPressed: function(mouse) {
+                            mouse.accepted = true
                             root.dragIndex = index
                             root.isDragging = true
                             root.movePoint(index, pointHandle, mouse.x, mouse.y)
                         }
                         onPositionChanged: function(mouse) {
+                            mouse.accepted = true
                             if (pressed)
                                 root.movePoint(index, pointHandle, mouse.x, mouse.y)
                         }
                         onReleased: {
                             root.pointEdited(index, root.pointTemp(index), root.pointSpeed(index))
+                            root.isDragging = false
+                            root.dragIndex = -1
+                            root.hoverText = ""
+                            pointHandle.color = root.surfaceColor
+                        }
+                        onCanceled: {
                             root.isDragging = false
                             root.dragIndex = -1
                             root.hoverText = ""

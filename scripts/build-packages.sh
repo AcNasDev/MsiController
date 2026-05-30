@@ -7,6 +7,10 @@ PACKAGE_PREFIX="${MSICONTROLLER_PACKAGE_PREFIX:-/opt/msicontroller}"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_OUTPUT_DIR="${MSICONTROLLER_PACKAGE_OUTPUT_DIR:-${PROJECT_ROOT}/packages}"
 PACKAGE_RELEASE="${MSICONTROLLER_PACKAGE_RELEASE:-$(date -u +%Y%m%d%H%M%S)}"
+DEB_ARCH="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
+RPM_ARCH="$(rpm --eval '%{_target_cpu}' 2>/dev/null || uname -m)"
+DEB_FILE_NAME="${MSICONTROLLER_DEB_FILE_NAME:-msicontroller_${DEB_ARCH}.deb}"
+RPM_FILE_NAME="${MSICONTROLLER_RPM_FILE_NAME:-msicontroller_${RPM_ARCH}.rpm}"
 
 export PATH="${QT_HOST_DIR}/bin:${PATH}"
 export CMAKE_PREFIX_PATH="${QT_HOST_DIR}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
@@ -47,4 +51,8 @@ cmake --build "${BUILD_DIR}" --parallel
   cpack -G RPM
 )
 
-cp "${BUILD_DIR}"/*.deb "${BUILD_DIR}"/*.rpm "${PACKAGE_OUTPUT_DIR}/"
+DEB_PACKAGE="$(find "${BUILD_DIR}" -maxdepth 1 -type f -name '*.deb' -print -quit)"
+RPM_PACKAGE="$(find "${BUILD_DIR}" -maxdepth 1 -type f -name '*.rpm' -print -quit)"
+
+install -m 0644 "${DEB_PACKAGE}" "${PACKAGE_OUTPUT_DIR}/${DEB_FILE_NAME}"
+install -m 0644 "${RPM_PACKAGE}" "${PACKAGE_OUTPUT_DIR}/${RPM_FILE_NAME}"
