@@ -1,142 +1,190 @@
 [![Forgejo CI](https://forgejo.acnas.net/app/msicontroller/actions/workflows/ci.yml/badge.svg?branch=main)](https://forgejo.acnas.net/app/msicontroller/actions/workflows/ci.yml/badge.svg?branch=main)
 
-# MsiController
+# MSI Control Center
 
-**MsiController** is a comprehensive project for managing and monitoring MSI devices on Linux. The project consists of several components: a service, a client application, a helper library, and a kernel module.
+**MSI Control Center** is a Linux control panel for supported MSI laptops. It combines a Qt 6 desktop client, a system D-Bus service, a helper library, and an EC kernel module for monitoring thermals and controlling laptop-specific features.
+
+The packaged build is designed for daily use: the application is installed into `/opt/msicontroller`, Qt runtime files are bundled privately, and the kernel module is managed through DKMS so it is rebuilt when the kernel changes.
 
 ## Features
 
-- Fan control and monitoring (CPU/GPU)
-- Shift mode switching (Eco, Comfort, Sport, Turbo)
-- Keyboard backlight control (where supported)
-- Super Battery mode (where supported)
-- Mic mute and LED control (where supported)
-- Battery charge threshold management
-- Cooler Boost support
-- Webcam toggle (where supported)
-- System tray integration (client)
-- Modern Qt6/QML graphical interface
-- D-Bus and systemd integration
-- Modular architecture (service, client, kernel module, helper library)
-- Easy installation and uninstallation
+- Dashboard with CPU/GPU temperatures, fan speed, battery state, and live GPU-rendered mini charts.
+- Cooling modes: firmware auto, manual fan curve, target temperature, and Cooler Boost.
+- Service-managed target temperature mode for CPU/GPU fan adjustment.
+- Editable CPU and GPU fan curves with temperature-to-speed maps.
+- CPU performance view for per-core frequency, usage, and frequency limits.
+- CPU controls for frequency limit and governor selection.
+- Shift mode switching where firmware supports it: Eco, Comfort, Sport, Turbo.
+- Device controls for webcam, USB Power Share, FN/Meta swap, Super Battery, mute state, LEDs, keyboard backlight, and battery charge threshold where available.
+- Multiple UI themes, desktop entry, autostart entry, and system tray integration.
+- System service over D-Bus with systemd integration.
+- DEB/RPM packaging with DKMS-managed kernel module installation.
+- Forgejo CI package artifacts for releases and test builds.
+
+Feature availability depends on the detected firmware configuration in `src/service/settings.ini`.
 
 ## Screenshots
 
-**Main Window**
+**Dashboard and cooling controls**
 
-![Main Window](screenshot/main.png)
+![Dashboard and cooling controls](screenshot/Screenshot_20260530_114620.png)
 
-**CPU Monitoring**
+**CPU performance and device controls**
 
-![CPU Monitoring](screenshot/cpu.png)
+![CPU performance and device controls](screenshot/Screenshot_20260530_114644.png)
 
-## Project Structure
+## Architecture
 
-- **src/helper** — helper library (`libhelper.so`) used by both the service and the client.
-- **src/module** — Linux kernel module for interacting with the EC (Embedded Controller).
-- **src/service** — system service (`MsiControlCenterService`) providing an API for device management.
-- **src/client** — graphical Qt/QML client (`MsiControlCenterClient`).
+- `src/client` - Qt/QML desktop client (`MsiControlCenterClient`).
+- `src/service` - privileged system service (`MsiControlCenterService`) exposing device state and commands over D-Bus.
+- `src/helper` - shared D-Bus/helper library used by the client and service.
+- `src/module` - EC kernel module and DKMS source files.
+- `cmake/packaging` - DEB/RPM, DKMS, Docker, and Qt runtime bundling helpers.
+- `scripts` - package build entry points for local and Docker builds.
 
-## Build and Installation
+The client does not talk to EC hardware directly. It talks to the service, and the service owns hardware access, CPU control readback, fan target control, and state synchronization.
 
-### Dependencies
+## Installation
 
-- CMake >= 3.16
-- C++17 compiler (e.g. g++ or clang++)
-- Qt6 (qt6-base-dev, qt6-declarative-dev, qt6-tools-dev, qt6-tools-dev-tools, qt6-charts-dev, qt6-qmltooling-plugins)
-- libdbus-1-dev
-- ninja-build
-- pkg-config
-- linux-headers-$(uname -r) (for building the kernel module)
-- systemd (libsystemd-dev, systemd)
-- git
-- make
-
-> On Debian/Ubuntu, you can install the required packages with:
->
-> ```sh
-> sudo apt install build-essential cmake ninja-build pkg-config git \
->   qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools \
->   qt6-charts-dev qt6-qmltooling-plugins \
->   libdbus-1-dev libsystemd-dev \
->   linux-headers-$(uname -r)
-> ```
-
-### Build
+### DEB
 
 ```sh
-git clone <repo_url>
-cd MsiController
-mkdir build
-cd build
-cmake ..
-cmake --build .
+sudo apt install ./packages/msicontroller_amd64.deb
 ```
 
-### Installation
+### RPM
 
 ```sh
-sudo cmake --install .
+sudo dnf install ./packages/msicontroller_x86_64.rpm
 ```
 
-This will install all components to standard directories (`/usr/local/bin`, `/usr/local/lib`, `/lib/modules`, etc.), and will also configure the systemd service and D-Bus.
-
-### Build Bundled DEB/RPM Packages
-
-Packages are built with DKMS support, so the kernel module is compiled during package installation and rebuilt automatically by DKMS when a new kernel is installed. Release packages also bundle Qt 6.11.1 runtime libraries, plugins, and QML modules under `/opt/msicontroller/qt`, so the client does not depend on the system Qt packages.
+or:
 
 ```sh
-export MSICONTROLLER_QT_VERSION=6.11.1
-export MSICONTROLLER_QT_HOST_DIR=/opt/Qt/6.11.1/gcc_64
-cmake -S . -B /tmp/msicontroller-build-package -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX=/opt/msicontroller \
-  -DCMAKE_PREFIX_PATH="${MSICONTROLLER_QT_HOST_DIR}" \
-  -DMSICONTROLLER_BUNDLE_QT_RUNTIME=ON \
-  -DMSICONTROLLER_BUILD_KERNEL_MODULE=OFF \
-  -DMSICONTROLLER_INSTALL_DKMS=ON
-cmake --build /tmp/msicontroller-build-package
-cd /tmp/msicontroller-build-package
-cpack -G DEB
-cpack -G RPM
+sudo rpm -Uvh ./packages/msicontroller_x86_64.rpm
 ```
 
-Or build them in Docker:
+The install host needs DKMS, `kmod`, systemd, and kernel headers for the running kernel. The package installs application files into `/opt/msicontroller` and system integration files into standard locations:
+
+- systemd service: `/lib/systemd/system/msi-ec-service.service`
+- D-Bus policy: `/etc/dbus-1/system.d/msi-ec-service.conf`
+- DKMS source: `/usr/src/msiecmodule-<version>`
+- modules-load config: `/etc/modules-load.d/msiecmodule.conf`
+- desktop/autostart entries: `/usr/share/applications` and `/etc/xdg/autostart`
+
+After installation:
+
+```sh
+systemctl status msi-ec-service
+/opt/msicontroller/bin/msicontroller-client
+```
+
+The desktop launcher is named **MSI Control Center**.
+
+## Building Packages
+
+The recommended packaging path is Docker. It builds inside Ubuntu 22.04 with Qt 6.11.1 from `aqtinstall`, bundles the Qt runtime, and writes stable artifact names into `packages/`.
 
 ```sh
 ./scripts/build-packages-docker.sh
 ```
 
-Docker-built packages are written to `packages/`.
-By default the artifact filenames are stable (`msicontroller_amd64.deb`, `msicontroller_x86_64.rpm`) while the package release metadata remains unique so upgrades still work.
-The helper script uses a temporary build directory outside the repository by default.
+Generated files:
 
-If the build environment requires a proxy, set it outside the repository before running the script:
+- `packages/msicontroller_amd64.deb`
+- `packages/msicontroller_x86_64.rpm`
+
+The filenames stay stable, but package release metadata is unique so upgrades work normally. The script keeps the `packages/` directory in place and atomically replaces package files, which avoids breaking terminals opened inside that directory.
+
+If your build environment needs a proxy:
 
 ```sh
 export MSICONTROLLER_HTTP_PROXY="http://user:password@proxy.example:3128"
 ./scripts/build-packages-docker.sh
 ```
 
-The package install host must have DKMS and matching kernel headers available for the running kernel.
-The application binaries, private library, and bundled Qt runtime are installed into `/opt/msicontroller`; systemd, D-Bus, desktop, autostart, modules-load, and DKMS integration files are installed into their standard system locations.
-
-### Uninstallation
+To build packages without Docker, install Qt 6.11.1 locally and run:
 
 ```sh
-sudo cmake --build . --target uninstall
+export MSICONTROLLER_QT_VERSION=6.11.1
+export MSICONTROLLER_QT_HOST_DIR=/opt/Qt/6.11.1/gcc_64
+./scripts/build-packages.sh
 ```
 
-## Usage
+## Forgejo CI
 
-- **Service** starts automatically via systemd:  
-  `systemctl status msi-ec-service`
-- **Client** can be launched from the applications menu or with the command:  
-  `MsiControlCenterClient`
+Forgejo builds the project on pushes to `main` and has a dedicated package job. Download ready-to-install packages from the workflow artifact named `msicontroller-packages`.
+
+When a tag matching `v*` is pushed, the package job also creates or updates the matching Forgejo Release and uploads:
+
+- `msicontroller_amd64.deb`
+- `msicontroller_x86_64.rpm`
+
+The CI package job supports the same proxy variable:
+
+```sh
+MSICONTROLLER_HTTP_PROXY
+```
+
+## Building From Source
+
+Install development dependencies on Debian/Ubuntu:
+
+```sh
+sudo apt install build-essential cmake ninja-build pkg-config git \
+  qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools \
+  qt6-charts-dev qt6-qmltooling-plugins \
+  libdbus-1-dev libsystemd-dev \
+  linux-headers-$(uname -r)
+```
+
+Build:
+
+```sh
+cmake -S . -B build -G Ninja
+cmake --build build
+```
+
+Install from the source build:
+
+```sh
+sudo cmake --install build
+```
+
+Uninstall a source install:
+
+```sh
+sudo cmake --build build --target uninstall
+```
+
+For package-style builds, the module is not compiled during CMake build; DKMS compiles it during package installation and on kernel updates:
+
+```sh
+cmake -S . -B build-package -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/opt/msicontroller \
+  -DMSICONTROLLER_BUNDLE_QT_RUNTIME=ON \
+  -DMSICONTROLLER_BUILD_KERNEL_MODULE=OFF \
+  -DMSICONTROLLER_INSTALL_DKMS=ON
+```
+
+## Runtime Commands
+
+```sh
+systemctl status msi-ec-service
+journalctl -u msi-ec-service -f
+/opt/msicontroller/bin/msicontroller-client
+```
+
+For a non-packaged source install, the client binary is usually available as:
+
+```sh
+MsiControlCenterClient
+```
 
 ## Supported Laptops
 
-Below is a full list of supported MSI laptop firmware configurations and available features, based on `src/service/settings.ini`:
+The current firmware configuration database contains 56 supported MSI firmware profiles (`CONF0` through `CONF55`). Feature availability is firmware-specific; the table below is based on `src/service/settings.ini`.
 
 | Config  | Firmware(s) | Fan | Shift | Keyboard Backlight | Super Battery | Mic Mute |
 |---------|-------------|-----|-------|--------------------|---------------|----------|

@@ -21,6 +21,10 @@ add_executable(MsiControlCenterClient
     proxyparameter.cpp
     curveutils.cpp
     curveutils.h
+    gpucpuperformancegraph.cpp
+    gpucpuperformancegraph.h
+    gpulinechart.cpp
+    gpulinechart.h
     resources.qrc
 )
 

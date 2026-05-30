@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQml.Models
+import MsiController 1.0
 
 Pane {
     id: root
@@ -39,11 +40,6 @@ Pane {
     }
 
     Component.onCompleted: appendValues()
-    onVisibleChanged: if (visible) chartCanvas.requestPaint()
-    onMinChanged: chartCanvas.requestPaint()
-    onMaxChanged: chartCanvas.requestPaint()
-    onGridColorChanged: chartCanvas.requestPaint()
-    onAccentColorChanged: chartCanvas.requestPaint()
 
     function sensorEnabled(sensor) {
         return sensor && sensor.isSensor && sensor.visible !== false
@@ -53,28 +49,29 @@ Pane {
         return sensor.name && sensor.name.length > 0 ? sensor.name : "sensor-" + index
     }
 
-    function normalizedValue(value) {
-        var span = Math.max(1, root.max - root.min)
-        var normalized = (Number(value || 0) - root.min) / span
-        return Math.max(0, Math.min(1, normalized))
+    function historyFor(sensor, index) {
+        var key = root.sensorKey(sensor, index)
+        return internal.histories[key] || [Number(sensor && sensor.value || 0)]
     }
 
     function appendValues() {
-        var histories = internal.histories
+        var histories = ({})
+        for (var oldKey in internal.histories)
+            histories[oldKey] = internal.histories[oldKey]
+
         for (var i = 0; i < sensorsContainer.children.length; ++i) {
             var sensor = sensorsContainer.children[i]
             if (!sensorEnabled(sensor))
                 continue
 
             var key = sensorKey(sensor, i)
-            var values = histories[key] || []
+            var values = histories[key] ? histories[key].slice() : []
             values.push(Number(sensor.value || 0))
             while (values.length > root.maxHistoryLength)
                 values.shift()
             histories[key] = values
         }
         internal.histories = histories
-        chartCanvas.requestPaint()
     }
 
     Timer {
@@ -149,76 +146,42 @@ Pane {
             }
         }
 
-        Canvas {
-            id: chartCanvas
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.minimumHeight: 130
-            antialiasing: true
 
-            onWidthChanged: requestPaint()
-            onHeightChanged: requestPaint()
+            GpuLineChart {
+                anchors.fill: parent
+                values: []
+                minValue: root.min
+                maxValue: root.max
+                topPadding: 10
+                bottomPadding: 8
+                gridRows: 4
+                gridColumns: 0
+                showGrid: true
+                fillVisible: false
+                lineColor: "transparent"
+                gridColor: root.gridColor
+            }
 
-            onPaint: {
-                var ctx = getContext("2d")
-                ctx.setTransform(1, 0, 0, 1, 0, 0)
-                ctx.globalAlpha = 1.0
-                ctx.clearRect(0, 0, width, height)
+            Repeater {
+                model: sensorsContainer.children
 
-                var left = 0
-                var top = 10
-                var right = width
-                var bottom = height - 8
-                var plotWidth = Math.max(1, right - left)
-                var plotHeight = Math.max(1, bottom - top)
-
-                ctx.lineWidth = 1
-                ctx.strokeStyle = root.gridColor
-                for (var gy = 0; gy < 4; ++gy) {
-                    var y = top + plotHeight * gy / 3
-                    ctx.beginPath()
-                    ctx.moveTo(left, y)
-                    ctx.lineTo(right, y)
-                    ctx.stroke()
-                }
-
-                for (var i = 0; i < sensorsContainer.children.length; ++i) {
-                    var sensor = sensorsContainer.children[i]
-                    if (!root.sensorEnabled(sensor))
-                        continue
-
-                    var key = root.sensorKey(sensor, i)
-                    var values = internal.histories[key] || [Number(sensor.value || 0)]
-                    if (values.length === 0)
-                        continue
-
-                    ctx.beginPath()
-                    ctx.moveTo(left, bottom)
-                    for (var p = 0; p < values.length; ++p) {
-                        var x = left + (root.maxHistoryLength <= 1 ? 0 : plotWidth * p / (root.maxHistoryLength - 1))
-                        var py = bottom - root.normalizedValue(values[p]) * plotHeight
-                        ctx.lineTo(x, py)
-                    }
-                    var lastX = left + (root.maxHistoryLength <= 1 ? 0 : plotWidth * (values.length - 1) / (root.maxHistoryLength - 1))
-                    ctx.lineTo(lastX, bottom)
-                    ctx.closePath()
-                    ctx.fillStyle = Qt.rgba(sensor.color.r, sensor.color.g, sensor.color.b, 0.20)
-                    ctx.fill()
-
-                    ctx.beginPath()
-                    for (var lp = 0; lp < values.length; ++lp) {
-                        var lineX = left + (root.maxHistoryLength <= 1 ? 0 : plotWidth * lp / (root.maxHistoryLength - 1))
-                        var lineY = bottom - root.normalizedValue(values[lp]) * plotHeight
-                        if (lp === 0)
-                            ctx.moveTo(lineX, lineY)
-                        else
-                            ctx.lineTo(lineX, lineY)
-                    }
-                    ctx.lineWidth = 2
-                    ctx.lineJoin = "round"
-                    ctx.lineCap = "round"
-                    ctx.strokeStyle = sensor.color
-                    ctx.stroke()
+                GpuLineChart {
+                    anchors.fill: parent
+                    visible: root.sensorEnabled(modelData)
+                    values: root.historyFor(modelData, index)
+                    minValue: root.min
+                    maxValue: root.max
+                    sampleCapacity: root.maxHistoryLength
+                    topPadding: 10
+                    bottomPadding: 8
+                    showGrid: false
+                    lineWidth: 2
+                    lineColor: modelData.color
+                    fillColor: Qt.rgba(modelData.color.r, modelData.color.g, modelData.color.b, 0.20)
                 }
             }
         }

@@ -4,12 +4,15 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
 
 env:
   GIT_DEPTH: 0
 
 jobs:
   all-in-one:
+    if: startsWith(github.ref, 'refs/heads/main')
     runs-on: docker
     container:
       image: ubuntu:25.10
@@ -122,3 +125,86 @@ jobs:
         with:
           name: msicontroller-packages
           path: packages/*
+
+      - name: Publish Forgejo release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          FORGEJO_API_URL: ${{ forgejo.api_url }}
+          FORGEJO_REPOSITORY: ${{ forgejo.repository }}
+          FORGEJO_TOKEN: ${{ forgejo.token }}
+          RELEASE_TAG: ${{ forgejo.ref_name }}
+          RELEASE_SHA: ${{ forgejo.sha }}
+        run: |
+          set -euo pipefail
+
+          create_payload="$(python3 - <<'PY'
+          import json
+          import os
+
+          tag = os.environ["RELEASE_TAG"]
+          sha = os.environ["RELEASE_SHA"]
+          print(json.dumps({
+              "tag_name": tag,
+              "target_commitish": sha,
+              "name": tag,
+              "body": f"Automated package release for {tag}.",
+              "draft": False,
+              "prerelease": "-" in tag,
+          }))
+          PY
+          )"
+
+          release_json="$(curl -fsS \
+            -H "Authorization: token ${FORGEJO_TOKEN}" \
+            "${FORGEJO_API_URL}/repos/${FORGEJO_REPOSITORY}/releases/tags/${RELEASE_TAG}" \
+            || true)"
+
+          if [ -z "${release_json}" ]; then
+            release_json="$(curl -fsS \
+              -X POST \
+              -H "Authorization: token ${FORGEJO_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "${create_payload}" \
+              "${FORGEJO_API_URL}/repos/${FORGEJO_REPOSITORY}/releases")"
+          else
+            release_id="$(printf '%s' "${release_json}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')"
+            release_json="$(curl -fsS \
+              -X PATCH \
+              -H "Authorization: token ${FORGEJO_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "${create_payload}" \
+              "${FORGEJO_API_URL}/repos/${FORGEJO_REPOSITORY}/releases/${release_id}")"
+          fi
+
+          release_id="$(printf '%s' "${release_json}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')"
+          assets_json="$(curl -fsS \
+            -H "Authorization: token ${FORGEJO_TOKEN}" \
+            "${FORGEJO_API_URL}/repos/${FORGEJO_REPOSITORY}/releases/${release_id}/assets")"
+
+          for package in packages/msicontroller_amd64.deb packages/msicontroller_x86_64.rpm; do
+            name="$(basename "${package}")"
+            asset_id="$(ASSETS_JSON="${assets_json}" ASSET_NAME="${name}" python3 - <<'PY'
+          import json
+          import os
+
+          name = os.environ["ASSET_NAME"]
+          for asset in json.loads(os.environ["ASSETS_JSON"]):
+              if asset.get("name") == name:
+                  print(asset["id"])
+                  break
+          PY
+          )"
+
+            if [ -n "${asset_id}" ]; then
+              curl -fsS \
+                -X DELETE \
+                -H "Authorization: token ${FORGEJO_TOKEN}" \
+                "${FORGEJO_API_URL}/repos/${FORGEJO_REPOSITORY}/releases/${release_id}/assets/${asset_id}"
+            fi
+
+            curl -fsS \
+              -X POST \
+              -H "Authorization: token ${FORGEJO_TOKEN}" \
+              -F "attachment=@${package};filename=${name}" \
+              "${FORGEJO_API_URL}/repos/${FORGEJO_REPOSITORY}/releases/${release_id}/assets?name=${name}"
+          done

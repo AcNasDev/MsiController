@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import MsiController 1.0
 
 Pane {
     id: root
@@ -71,8 +72,6 @@ Pane {
     onSpeed7Changed: syncDraft(false)
 
     Component.onCompleted: syncDraft(true)
-    onDraftTempsChanged: if (chartCanvas) chartCanvas.requestPaint()
-    onDraftSpeedsChanged: if (chartCanvas) chartCanvas.requestPaint()
 
     function sourceTemps() {
         return normalizeTemps([temp1, temp2, temp3, temp4, temp5, temp6, temp7])
@@ -126,13 +125,6 @@ Pane {
         for (var i = 0; i < 7; ++i)
             result.push(boundedNumber(values[i], root.minSpeed, root.maxSpeed, root.minSpeed))
         return result
-    }
-
-    function pointList() {
-        var points = []
-        for (var i = 0; i < 7; ++i)
-            points.push({temperature: pointTemp(i), speed: pointSpeed(i)})
-        return points
     }
 
     function setPoint(index, temperature, speed) {
@@ -260,84 +252,58 @@ Pane {
                 return root.minSpeed + (1 - Math.max(0, Math.min(plotHeight, value - plotY)) / plotHeight) * speedSpan()
             }
 
-            onWidthChanged: chartCanvas.requestPaint()
-            onHeightChanged: chartCanvas.requestPaint()
-
-            Canvas {
-                id: chartCanvas
+            GpuLineChart {
                 anchors.fill: parent
-                antialiasing: true
+                values: root.draftSpeeds
+                xValues: root.draftTemps
+                minValue: root.minSpeed
+                maxValue: root.maxSpeed
+                minX: root.minTemp
+                maxX: root.maxTemp
+                leftPadding: chartArea.leftPadding
+                rightPadding: chartArea.rightPadding
+                topPadding: chartArea.topPadding
+                bottomPadding: chartArea.bottomPadding
+                gridRows: 5
+                gridColumns: 6
+                lineWidth: 3
+                showGrid: true
+                extendLastToMaxX: true
+                lineColor: root.accentColor
+                fillColor: root.fillColor
+                gridColor: root.gridColor
+            }
 
-                onPaint: {
-                    var ctx = getContext("2d")
-                    ctx.setTransform(1, 0, 0, 1, 0, 0)
-                    ctx.globalAlpha = 1.0
-                    ctx.clearRect(0, 0, width, height)
+            Label {
+                x: chartArea.plotX + 2
+                y: chartArea.plotY + 3
+                text: Math.round(root.maxSpeed) + root.unit
+                color: root.mutedTextColor
+                font.pixelSize: 11
+            }
 
-                    var points = root.pointList()
-                    var plotBottom = chartArea.plotY + chartArea.plotHeight
-                    var plotRight = chartArea.plotX + chartArea.plotWidth
+            Label {
+                x: chartArea.plotX + 2
+                y: chartArea.plotY + chartArea.plotHeight - height - 2
+                text: Math.round(root.minSpeed) + root.unit
+                color: root.mutedTextColor
+                font.pixelSize: 11
+            }
 
-                    ctx.lineWidth = 1
-                    ctx.strokeStyle = root.gridColor
-                    ctx.globalAlpha = 1.0
-                    for (var gx = 0; gx <= 5; ++gx) {
-                        var x = chartArea.plotX + chartArea.plotWidth * gx / 5
-                        ctx.beginPath()
-                        ctx.moveTo(x, chartArea.plotY)
-                        ctx.lineTo(x, plotBottom)
-                        ctx.stroke()
-                    }
-                    for (var gy = 0; gy <= 4; ++gy) {
-                        var y = chartArea.plotY + chartArea.plotHeight * gy / 4
-                        ctx.beginPath()
-                        ctx.moveTo(chartArea.plotX, y)
-                        ctx.lineTo(plotRight, y)
-                        ctx.stroke()
-                    }
+            Label {
+                x: chartArea.plotX + 2
+                y: chartArea.height - height - 2
+                text: Math.round(root.minTemp) + root.tempUnit
+                color: root.mutedTextColor
+                font.pixelSize: 11
+            }
 
-                    if (points.length === 0)
-                        return
-
-                    var lastPoint = points[points.length - 1]
-                    var lastPointY = chartArea.speedToY(lastPoint.speed)
-
-                    ctx.beginPath()
-                    ctx.moveTo(chartArea.tempToX(points[0].temperature), plotBottom)
-                    for (var i = 0; i < points.length; ++i)
-                        ctx.lineTo(chartArea.tempToX(points[i].temperature), chartArea.speedToY(points[i].speed))
-                    ctx.lineTo(plotRight, lastPointY)
-                    ctx.lineTo(plotRight, plotBottom)
-                    ctx.closePath()
-                    ctx.fillStyle = root.fillColor
-                    ctx.fill()
-
-                    ctx.beginPath()
-                    for (var p = 0; p < points.length; ++p) {
-                        var px = chartArea.tempToX(points[p].temperature)
-                        var py = chartArea.speedToY(points[p].speed)
-                        if (p === 0)
-                            ctx.moveTo(px, py)
-                        else
-                            ctx.lineTo(px, py)
-                    }
-                    ctx.lineTo(plotRight, lastPointY)
-                    ctx.lineWidth = 3
-                    ctx.lineCap = "round"
-                    ctx.lineJoin = "round"
-                    ctx.strokeStyle = root.accentColor
-                    ctx.stroke()
-
-                    ctx.font = "11px sans-serif"
-                    ctx.fillStyle = root.mutedTextColor
-                    ctx.textBaseline = "middle"
-                    ctx.fillText(Math.round(root.maxSpeed) + root.unit, chartArea.plotX + 2, chartArea.plotY + 9)
-                    ctx.fillText(Math.round(root.minSpeed) + root.unit, chartArea.plotX + 2, plotBottom - 9)
-                    ctx.textBaseline = "alphabetic"
-                    ctx.fillText(Math.round(root.minTemp) + root.tempUnit, chartArea.plotX + 2, height - 5)
-                    var maxTempText = Math.round(root.maxTemp) + root.tempUnit
-                    ctx.fillText(maxTempText, plotRight - ctx.measureText(maxTempText).width - 2, height - 5)
-                }
+            Label {
+                x: chartArea.plotX + chartArea.plotWidth - width - 2
+                y: chartArea.height - height - 2
+                text: Math.round(root.maxTemp) + root.tempUnit
+                color: root.mutedTextColor
+                font.pixelSize: 11
             }
 
             Label {

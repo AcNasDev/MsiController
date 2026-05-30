@@ -57,9 +57,10 @@ Pane {
         }
 
         Switch {
+            id: switchControl
             checked: root.checked
             enabled: root.active
-            onToggled: root.toggled(checked)
+            onToggled: root.toggled(switchControl.checked)
         }
     }
 }

@@ -31,7 +31,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-rm -rf "${PACKAGE_OUTPUT_DIR}"
 mkdir -p "${PACKAGE_OUTPUT_DIR}"
 
 cmake -S "${PROJECT_ROOT}" -B "${BUILD_DIR}" -G Ninja \
@@ -54,5 +53,7 @@ cmake --build "${BUILD_DIR}" --parallel
 DEB_PACKAGE="$(find "${BUILD_DIR}" -maxdepth 1 -type f -name '*.deb' -print -quit)"
 RPM_PACKAGE="$(find "${BUILD_DIR}" -maxdepth 1 -type f -name '*.rpm' -print -quit)"
 
-install -m 0644 "${DEB_PACKAGE}" "${PACKAGE_OUTPUT_DIR}/${DEB_FILE_NAME}"
-install -m 0644 "${RPM_PACKAGE}" "${PACKAGE_OUTPUT_DIR}/${RPM_FILE_NAME}"
+install -m 0644 "${DEB_PACKAGE}" "${PACKAGE_OUTPUT_DIR}/${DEB_FILE_NAME}.tmp"
+install -m 0644 "${RPM_PACKAGE}" "${PACKAGE_OUTPUT_DIR}/${RPM_FILE_NAME}.tmp"
+mv -f "${PACKAGE_OUTPUT_DIR}/${DEB_FILE_NAME}.tmp" "${PACKAGE_OUTPUT_DIR}/${DEB_FILE_NAME}"
+mv -f "${PACKAGE_OUTPUT_DIR}/${RPM_FILE_NAME}.tmp" "${PACKAGE_OUTPUT_DIR}/${RPM_FILE_NAME}"

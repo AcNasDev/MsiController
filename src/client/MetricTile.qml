@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import MsiController 1.0
 
 Pane {
     id: root
@@ -31,14 +32,6 @@ Pane {
     implicitHeight: chartEnabled ? 116 : 96
 
     Component.onCompleted: appendChartValue()
-    onChartMinChanged: chartCanvas.requestPaint()
-    onChartMaxChanged: chartCanvas.requestPaint()
-    onAccentColorChanged: chartCanvas.requestPaint()
-
-    function normalizedChartValue(value) {
-        var span = Math.max(1, root.chartMax - root.chartMin)
-        return Math.max(0, Math.min(1, (Number(value || 0) - root.chartMin) / span))
-    }
 
     function appendChartValue() {
         if (!root.chartEnabled)
@@ -49,7 +42,6 @@ Pane {
         while (values.length > root.maxHistoryLength)
             values.shift()
         internal.history = values
-        chartCanvas.requestPaint()
     }
 
     Timer {
@@ -66,72 +58,25 @@ Pane {
         border.width: 1
     }
 
-    Canvas {
-        id: chartCanvas
+    GpuLineChart {
         anchors.fill: parent
         anchors.margins: 8
         visible: root.chartEnabled
-        antialiasing: true
-
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
-
-        onPaint: {
-            var ctx = getContext("2d")
-            ctx.setTransform(1, 0, 0, 1, 0, 0)
-            ctx.clearRect(0, 0, width, height)
-
-            var values = internal.history
-            if (!values || values.length === 0)
-                return
-
-            var left = 12
-            var right = width - 4
-            var top = Math.max(26, height * 0.28)
-            var bottom = height - 5
-            var plotHeight = Math.max(1, bottom - top)
-            var plotWidth = Math.max(1, right - left)
-
-            ctx.strokeStyle = Qt.rgba(root.borderColor.r, root.borderColor.g, root.borderColor.b, 0.55)
-            ctx.lineWidth = 1
-            ctx.beginPath()
-            ctx.moveTo(left, bottom)
-            ctx.lineTo(right, bottom)
-            ctx.stroke()
-
-            ctx.beginPath()
-            ctx.moveTo(left, bottom)
-            var lastX = left
-            var lastY = bottom
-            for (var i = 0; i < values.length; ++i) {
-                var x = left + (root.maxHistoryLength <= 1 ? 0 : plotWidth * i / (root.maxHistoryLength - 1))
-                var y = bottom - root.normalizedChartValue(values[i]) * plotHeight
-                ctx.lineTo(x, y)
-                lastX = x
-                lastY = y
-            }
-            ctx.lineTo(lastX, bottom)
-            ctx.closePath()
-            ctx.fillStyle = Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.16)
-            ctx.fill()
-
-            ctx.beginPath()
-            for (var p = 0; p < values.length; ++p) {
-                var lineX = left + (root.maxHistoryLength <= 1 ? 0 : plotWidth * p / (root.maxHistoryLength - 1))
-                var lineY = bottom - root.normalizedChartValue(values[p]) * plotHeight
-                if (p === 0)
-                    ctx.moveTo(lineX, lineY)
-                else
-                    ctx.lineTo(lineX, lineY)
-                lastX = lineX
-                lastY = lineY
-            }
-            ctx.lineWidth = 2
-            ctx.lineJoin = "round"
-            ctx.lineCap = "round"
-            ctx.strokeStyle = root.accentColor
-            ctx.stroke()
-        }
+        values: internal.history
+        minValue: root.chartMin
+        maxValue: root.chartMax
+        sampleCapacity: root.maxHistoryLength
+        leftPadding: 12
+        rightPadding: 4
+        topPadding: Math.max(26, height * 0.28)
+        bottomPadding: 5
+        gridRows: 1
+        gridColumns: 0
+        showGrid: true
+        lineWidth: 2
+        lineColor: root.accentColor
+        fillColor: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.16)
+        gridColor: Qt.rgba(root.borderColor.r, root.borderColor.g, root.borderColor.b, 0.55)
     }
 
     RowLayout {

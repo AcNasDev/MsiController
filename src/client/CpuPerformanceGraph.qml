@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import MsiController 1.0
 
 AppCard {
     id: root
@@ -11,8 +12,8 @@ AppCard {
     property color accentColor: "#3fa7ff"
     property color secondaryAccentColor: "#6bd0c4"
     property bool editingLimits: false
-    property int telemetryEaseMs: 900
-    property int limitEaseMs: 280
+    property int telemetryEaseMs: 620
+    property int limitEaseMs: 240
     property int dragLimitEaseMs: 45
     property real frequencyKalmanProcessNoise: 0.0007
     property real frequencyKalmanMeasurementNoise: 0.22
@@ -208,51 +209,38 @@ AppCard {
         property real tooltipX: 0
         property real tooltipY: 0
 
-        function plotLeft() { return 14 }
-        function plotRight() { return width - 14 }
-        function plotTop() { return 18 }
-        function plotBottom() { return height - 28 }
+        function plotLeft() { return graph.leftPadding }
+        function plotRight() { return graph.width - graph.rightPadding }
+        function plotTop() { return graph.topPadding }
+        function plotBottom() { return graph.plotBottom() }
         function plotWidth() { return Math.max(1, plotRight() - plotLeft()) }
         function plotHeight() { return Math.max(1, plotBottom() - plotTop()) }
-        function slotWidth() { return root.coreCount > 0 ? plotWidth() / root.coreCount : 0 }
-        function barWidth() { return Math.max(8, Math.min(28, slotWidth() * 0.52)) }
+        function slotWidth() { return graph.slotWidth() }
+        function barWidth() { return graph.barWidth() }
 
         function indexFromX(x) {
-            if (root.coreCount <= 0 || x < plotLeft() || x > plotRight())
-                return -1
-            return root.clamp(Math.floor((x - plotLeft()) / Math.max(1, slotWidth())), 0, root.coreCount - 1)
+            return graph.coreAt(x)
         }
 
         function limitFromY(y, index) {
-            var norm = 1 - root.clamp((y - plotTop()) / plotHeight(), 0, 1)
+            var norm = graph.limitNormFromY(y)
             return root.minFreq(index) + norm * (root.maxFreq(index) - root.minFreq(index))
         }
 
         function limitNorm(index) {
-            if (dragging && editingIndex === index)
-                return root.normalizeFreq(root.limitFor(index), index)
-            return root.valueAt(internal.displayLimitNorm, index, root.normalizeFreq(root.limitFor(index), index))
+            return graph.displayLimitNorm(index)
         }
 
         function limitY(index) {
-            return plotBottom() - plotHeight() * limitNorm(index)
+            return graph.limitY(index)
         }
 
         function coreCenter(index) {
-            return plotLeft() + slotWidth() * index + slotWidth() / 2
+            return graph.coreCenter(index)
         }
 
         function limitIndexAt(x, y) {
-            var index = indexFromX(x)
-            if (index < 0)
-                return -1
-
-            var bar = barWidth()
-            var barX = coreCenter(index) - bar / 2
-            if (x < barX - 8 || x > barX + bar + 8)
-                return -1
-
-            return Math.abs(y - limitY(index)) <= 9 ? index : -1
+            return graph.limitAt(x, y)
         }
 
         function updateHover(x, y) {
@@ -262,116 +250,54 @@ AppCard {
             tooltipY = y
         }
 
-        function currentTooltipText() {
+        function currentTooltipText(frameTick) {
+            var tick = frameTick
             if (hoveredIndex < 0)
                 return ""
 
             var core = root.coreAt(hoveredIndex)
-            var freqNorm = root.valueAt(internal.displayFreqNorm,
-                                        hoveredIndex,
-                                        root.normalizeFreq(core ? core.currentFreq : 0, hoveredIndex))
-            var usageNorm = root.valueAt(internal.displayUsageNorm,
-                                         hoveredIndex,
-                                         root.clamp(Number(core ? core.usage || 0 : 0) / 100.0, 0, 1))
+            var freqNorm = graph.displayFrequencyNorm(hoveredIndex)
+            var usageNorm = graph.displayUsageNorm(hoveredIndex)
             return qsTr("Core") + " " + (hoveredIndex + 1) + "\n" +
                    qsTr("Frequency") + " " + root.ghz(root.denormalizeFreq(freqNorm, hoveredIndex)) + "\n" +
                    qsTr("Usage") + " " + (usageNorm * 100).toFixed(0) + "%\n" +
                    qsTr("Limit") + " " + root.ghz(root.limitFor(hoveredIndex))
         }
 
-        Repeater {
-            model: 4
-
-            Rectangle {
-                x: plot.plotLeft()
-                y: plot.plotTop() + plot.plotHeight() * index / 3
-                width: plot.plotWidth()
-                height: 1
-                color: root.borderColor
-            }
+        GpuCpuPerformanceGraph {
+            id: graph
+            anchors.fill: parent
+            frequencyNorms: internal.displayFreqNorm
+            usageNorms: internal.displayUsageNorm
+            limitNorms: internal.displayLimitNorm
+            trackColor: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.13)
+            frequencyColor: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.86)
+            usageColor: Qt.rgba(root.secondaryAccentColor.r, root.secondaryAccentColor.g, root.secondaryAccentColor.b, 0.72)
+            limitColor: root.accentColor
+            gridColor: root.borderColor
+            limitHoverIndex: plot.limitHoverIndex
+            editingIndex: plot.editingIndex
+            animationFps: 30
+            telemetryEaseMs: root.telemetryEaseMs
+            limitEaseMs: root.limitEaseMs
+            dragLimitEaseMs: root.dragLimitEaseMs
+            changeEpsilon: 0.0035
         }
 
         Repeater {
             model: root.coreCount
 
-            Item {
-                id: coreItem
-
-                readonly property var core: root.coreAt(index)
-                readonly property real centerX: plot.coreCenter(index)
-                readonly property real barW: plot.barWidth()
-                readonly property real freqNorm: root.valueAt(internal.displayFreqNorm,
-                                                              index,
-                                                              root.normalizeFreq(core ? core.currentFreq : 0, index))
-                readonly property real usageNorm: root.valueAt(internal.displayUsageNorm,
-                                                               index,
-                                                               root.clamp(Number(core ? core.usage || 0 : 0) / 100.0, 0, 1))
-                readonly property real limitNorm: plot.limitNorm(index)
-                property real visualFreqNorm: freqNorm
-                property real visualUsageNorm: usageNorm
-                property real visualLimitNorm: limitNorm
-
-                x: centerX - barW / 2
-                y: plot.plotTop()
-                width: barW
-                height: plot.plotHeight()
-
-                Behavior on visualFreqNorm {
-                    NumberAnimation { duration: root.telemetryEaseMs; easing.type: Easing.OutCubic }
-                }
-
-                Behavior on visualUsageNorm {
-                    NumberAnimation { duration: root.telemetryEaseMs; easing.type: Easing.OutCubic }
-                }
-
-                Behavior on visualLimitNorm {
-                    NumberAnimation {
-                        duration: plot.dragging ? root.dragLimitEaseMs : root.limitEaseMs
-                        easing.type: Easing.OutCubic
-                    }
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 5
-                    color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.13)
-                }
-
-                Rectangle {
-                    width: parent.width
-                    height: Math.max(2, parent.height * coreItem.visualFreqNorm)
-                    y: parent.height - height
-                    radius: 5
-                    color: Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.86)
-                }
-
-                Rectangle {
-                    x: parent.width * 0.18
-                    width: parent.width * 0.64
-                    height: Math.max(2, parent.height * coreItem.visualUsageNorm)
-                    y: parent.height - height
-                    radius: 4
-                    color: Qt.rgba(root.secondaryAccentColor.r, root.secondaryAccentColor.g, root.secondaryAccentColor.b, 0.72)
-                }
-
-                Rectangle {
-                    x: -5
-                    y: parent.height * (1 - coreItem.visualLimitNorm) - height / 2
-                    width: parent.width + 10
-                    height: plot.limitHoverIndex === index || plot.editingIndex === index ? 3 : 2
-                    radius: 2
-                    color: root.accentColor
-                }
-
-                Label {
-                    x: -plot.slotWidth() / 2 + parent.width / 2
-                    y: plot.plotHeight() + 8
-                    width: plot.slotWidth()
-                    text: String(index + 1)
-                    color: root.mutedTextColor
-                    font.pixelSize: 11
-                    horizontalAlignment: Text.AlignHCenter
-                }
+            Label {
+                readonly property real labelSlotWidth: root.coreCount > 0
+                                                           ? Math.max(1, (plot.width - graph.leftPadding - graph.rightPadding) / root.coreCount)
+                                                           : 0
+                x: graph.leftPadding + labelSlotWidth * index
+                y: plot.height - graph.bottomPadding + 8
+                width: labelSlotWidth
+                text: String(index + 1)
+                color: root.mutedTextColor
+                font.pixelSize: 11
+                horizontalAlignment: Text.AlignHCenter
             }
         }
 
@@ -432,14 +358,14 @@ AppCard {
 
         Label {
             visible: plot.hoveredIndex >= 0
-            text: plot.currentTooltipText()
-            color: root.textColor
+            text: plot.currentTooltipText(graph.frameTick)
+            color: Qt.rgba(root.textColor.r, root.textColor.g, root.textColor.b, 0.96)
             font.pixelSize: 12
             padding: 8
             background: Rectangle {
-                color: "#10141c"
+                color: Qt.rgba(root.surfaceColor.r, root.surfaceColor.g, root.surfaceColor.b, 0.72)
                 radius: 6
-                border.color: root.borderColor
+                border.color: Qt.rgba(root.borderColor.r, root.borderColor.g, root.borderColor.b, 0.65)
             }
             x: Math.max(8, Math.min(plot.tooltipX - width / 2, plot.width - width - 8))
             y: Math.max(8, Math.min(plot.tooltipY - height - 10, plot.height - height - 8))

@@ -12,6 +12,8 @@
 #include "curveutils.h"
 #include "ecinterface.h"
 #include "esproxy.h"
+#include "gpucpuperformancegraph.h"
+#include "gpulinechart.h"
 #include "struct.h"
 
 const char* UNIQUE_KEY = "MsiControlCenterUniqueKey";
@@ -79,6 +81,8 @@ int main(int argc, char* argv[]) {
     app.setWindowIcon(QIcon(":/resources/icon/logo.svg"));
     qmlRegisterUncreatableMetaObject(Msi::staticMetaObject, "Msi", 1, 0, "Msi", "Enums only");
     qmlRegisterType<EsProxy>("MsiController", 1, 0, "EsProxy");
+    qmlRegisterType<GpuCpuPerformanceGraph>("MsiController", 1, 0, "GpuCpuPerformanceGraph");
+    qmlRegisterType<GpuLineChart>("MsiController", 1, 0, "GpuLineChart");
     qmlRegisterType<CurveUtils>("CurveUtils", 1, 0, "CurveUtils");
     qmlRegisterSingletonType<EnumHelper>("MSI.Helpers",
                                          1,

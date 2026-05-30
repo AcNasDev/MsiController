@@ -445,7 +445,10 @@ ApplicationWindow {
                             textRole: "label"
                             valueRole: "key"
                             currentIndex: mainWindow.themeIndex(mainWindow.currentTheme)
-                            onActivated: mainWindow.currentTheme = mainWindow.themeChoices[index].key
+                            onActivated: function(index) {
+                                if (index >= 0 && index < mainWindow.themeChoices.length)
+                                    mainWindow.currentTheme = mainWindow.themeChoices[index].key
+                            }
                         }
 
                         Label {
@@ -875,7 +878,9 @@ ApplicationWindow {
                                     textColor: mainWindow.theme.text
                                     mutedTextColor: mainWindow.theme.muted
                                     accentColor: mainWindow.theme.accent
-                                    onToggled: setBinaryParameter(modelData.parameter, checked)
+                                    onToggled: function(checked) {
+                                        setBinaryParameter(modelData.parameter, checked)
+                                    }
                                 }
                             }
                         }
