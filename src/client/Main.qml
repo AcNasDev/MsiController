@@ -392,14 +392,129 @@ ApplicationWindow {
                         spacing: 8
 
                         ComboBox {
+                            id: themeSelector
                             Layout.fillWidth: true
+                            Layout.preferredHeight: 38
                             model: mainWindow.themeChoices
                             textRole: "label"
                             valueRole: "key"
                             currentIndex: mainWindow.themeIndex(mainWindow.currentTheme)
+                            leftPadding: 12
+                            rightPadding: 34
                             onActivated: function(index) {
                                 if (index >= 0 && index < mainWindow.themeChoices.length)
                                     mainWindow.currentTheme = mainWindow.themeChoices[index].key
+                            }
+
+                            contentItem: Label {
+                                leftPadding: themeSelector.leftPadding
+                                rightPadding: themeSelector.rightPadding
+                                text: themeSelector.displayText
+                                color: mainWindow.theme.text
+                                font.pixelSize: 12
+                                font.bold: true
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                            }
+
+                            indicator: Item {
+                                x: themeSelector.width - width - 13
+                                y: (themeSelector.height - height) / 2
+                                width: 12
+                                height: 8
+
+                                Rectangle {
+                                    x: 1
+                                    y: 3
+                                    width: 7
+                                    height: 2
+                                    radius: 1
+                                    color: mainWindow.theme.muted
+                                    rotation: 45
+                                    antialiasing: true
+                                }
+
+                                Rectangle {
+                                    x: 5
+                                    y: 3
+                                    width: 7
+                                    height: 2
+                                    radius: 1
+                                    color: mainWindow.theme.muted
+                                    rotation: -45
+                                    antialiasing: true
+                                }
+                            }
+
+                            background: Rectangle {
+                                radius: 8
+                                color: themeSelector.pressed || themeSelector.popup.visible
+                                       ? Qt.rgba(mainWindow.theme.elevated.r, mainWindow.theme.elevated.g,
+                                                 mainWindow.theme.elevated.b, 0.72)
+                                       : Qt.rgba(mainWindow.theme.elevated.r, mainWindow.theme.elevated.g,
+                                                 mainWindow.theme.elevated.b, 0.42)
+                                border.width: 1
+                                border.color: themeSelector.popup.visible ? mainWindow.theme.accent : mainWindow.theme.border
+                            }
+
+                            delegate: ItemDelegate {
+                                id: themeDelegate
+                                width: themeSelector.width - 12
+                                height: 34
+                                highlighted: themeSelector.highlightedIndex === index
+
+                                contentItem: RowLayout {
+                                    spacing: 8
+
+                                    Rectangle {
+                                        Layout.preferredWidth: 8
+                                        Layout.preferredHeight: 8
+                                        radius: 4
+                                        color: mainWindow.palettes[modelData.key].accent
+                                    }
+
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: modelData.label
+                                        color: themeDelegate.highlighted || themeSelector.currentIndex === index
+                                               ? mainWindow.theme.text : mainWindow.theme.muted
+                                        font.pixelSize: 12
+                                        font.bold: themeSelector.currentIndex === index
+                                        elide: Text.ElideRight
+                                    }
+                                }
+
+                                background: Rectangle {
+                                    radius: 7
+                                    color: parent.highlighted
+                                           ? Qt.rgba(mainWindow.theme.accent.r, mainWindow.theme.accent.g,
+                                                     mainWindow.theme.accent.b, 0.18)
+                                           : "transparent"
+                                    border.width: themeSelector.currentIndex === index ? 1 : 0
+                                    border.color: Qt.rgba(mainWindow.theme.accent.r, mainWindow.theme.accent.g,
+                                                          mainWindow.theme.accent.b, 0.56)
+                                }
+                            }
+
+                            popup: Popup {
+                                y: themeSelector.height + 6
+                                width: themeSelector.width
+                                implicitHeight: contentItem.implicitHeight + topPadding + bottomPadding
+                                padding: 6
+
+                                contentItem: ListView {
+                                    clip: true
+                                    implicitHeight: contentHeight
+                                    model: themeSelector.popup.visible ? themeSelector.delegateModel : null
+                                    currentIndex: themeSelector.highlightedIndex
+                                    interactive: contentHeight > height
+                                }
+
+                                background: Rectangle {
+                                    radius: 8
+                                    color: mainWindow.theme.surface
+                                    border.color: mainWindow.theme.border
+                                }
                             }
                         }
 

@@ -6,9 +6,20 @@ DKMS_NAME="@MSICONTROLLER_DKMS_MODULE_NAME@"
 DKMS_VERSION="@MSICONTROLLER_DKMS_VERSION@"
 SERVICE_NAME="msi-ec-service.service"
 
+cleanup_broken_dkms_versions() {
+    dkms status -m "$DKMS_NAME" 2>/dev/null | \
+        awk -F'[/,:]' -v module="$DKMS_NAME" '$1 == module && $0 ~ /: broken/ { print $2 }' | \
+        while IFS= read -r stale_version; do
+            [ -n "$stale_version" ] || continue
+            [ "$stale_version" = "$DKMS_VERSION" ] && continue
+            dkms remove -m "$DKMS_NAME" -v "$stale_version" --all >/dev/null 2>&1 || true
+        done
+}
+
 case "$1" in
     configure|"")
         if command -v dkms >/dev/null 2>&1; then
+            cleanup_broken_dkms_versions
             dkms add -m "$DKMS_NAME" -v "$DKMS_VERSION" >/dev/null 2>&1 || true
             KERNEL_VERSION="$(uname -r)"
             if ! dkms status -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$KERNEL_VERSION" 2>/dev/null | grep -q "installed"; then
