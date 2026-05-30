@@ -120,6 +120,8 @@ When a tag matching `v*` is pushed, the package job also creates or updates the 
 - `msicontroller_amd64.deb`
 - `msicontroller_x86_64.rpm`
 
+If the `GITHUBTOKEN` secret is configured, the same tag is pushed to GitHub and the same package files are uploaded to the matching GitHub Release.
+
 Application, package, and DKMS versions are derived from the Git tag. For example, tag `v1.2.3` produces application version `1.2.3`, package version `1.2.3`, and DKMS module version `1.2.3`.
 
 The CI package job supports the same proxy variable:

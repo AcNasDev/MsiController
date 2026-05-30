@@ -208,3 +208,102 @@ jobs:
               -F "attachment=@${package};filename=${name}" \
               "${FORGEJO_API_URL}/repos/${FORGEJO_REPOSITORY}/releases/${release_id}/assets?name=${name}"
           done
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUBTOKEN: ${{ secrets.GITHUBTOKEN }}
+          GITHUB_REPOSITORY: AcNasDev/MsiController
+          RELEASE_TAG: ${{ forgejo.ref_name }}
+          RELEASE_SHA: ${{ forgejo.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GITHUBTOKEN:-}" ]; then
+            echo "::warning::GITHUBTOKEN secret is empty; skipping GitHub release"
+            exit 0
+          fi
+
+          git push "https://x-access-token:${GITHUBTOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+
+          create_payload="$(python3 - <<'PY'
+          import json
+          import os
+
+          tag = os.environ["RELEASE_TAG"]
+          sha = os.environ["RELEASE_SHA"]
+          print(json.dumps({
+              "tag_name": tag,
+              "target_commitish": sha,
+              "name": tag,
+              "body": f"Automated package release for {tag}.",
+              "draft": False,
+              "prerelease": "-" in tag,
+          }))
+          PY
+          )"
+
+          github_api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          github_uploads="https://uploads.github.com/repos/${GITHUB_REPOSITORY}"
+          github_headers=(
+            -H "Authorization: Bearer ${GITHUBTOKEN}"
+            -H "Accept: application/vnd.github+json"
+            -H "X-GitHub-Api-Version: 2022-11-28"
+          )
+
+          release_json="$(curl -fsS \
+            "${github_headers[@]}" \
+            "${github_api}/releases/tags/${RELEASE_TAG}" \
+            || true)"
+
+          if [ -z "${release_json}" ]; then
+            release_json="$(curl -fsS \
+              -X POST \
+              "${github_headers[@]}" \
+              -H "Content-Type: application/json" \
+              -d "${create_payload}" \
+              "${github_api}/releases")"
+          else
+            release_id="$(printf '%s' "${release_json}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')"
+            release_json="$(curl -fsS \
+              -X PATCH \
+              "${github_headers[@]}" \
+              -H "Content-Type: application/json" \
+              -d "${create_payload}" \
+              "${github_api}/releases/${release_id}")"
+          fi
+
+          release_id="$(printf '%s' "${release_json}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')"
+          assets_json="$(curl -fsS \
+            "${github_headers[@]}" \
+            "${github_api}/releases/${release_id}/assets")"
+
+          for package in packages/msicontroller_amd64.deb packages/msicontroller_x86_64.rpm; do
+            name="$(basename "${package}")"
+            asset_id="$(ASSETS_JSON="${assets_json}" ASSET_NAME="${name}" python3 - <<'PY'
+          import json
+          import os
+
+          name = os.environ["ASSET_NAME"]
+          for asset in json.loads(os.environ["ASSETS_JSON"]):
+              if asset.get("name") == name:
+                  print(asset["id"])
+                  break
+          PY
+          )"
+
+            if [ -n "${asset_id}" ]; then
+              curl -fsS \
+                -X DELETE \
+                "${github_headers[@]}" \
+                "${github_api}/releases/assets/${asset_id}"
+            fi
+
+            curl -fsS \
+              -X POST \
+              "${github_headers[@]}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@${package}" \
+              "${github_uploads}/releases/${release_id}/assets?name=${name}"
+          done
