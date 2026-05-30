@@ -6,7 +6,13 @@ QT_HOST_DIR="${MSICONTROLLER_QT_HOST_DIR:-/opt/Qt/${QT_VERSION}/gcc_64}"
 PACKAGE_PREFIX="${MSICONTROLLER_PACKAGE_PREFIX:-/opt/msicontroller}"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_OUTPUT_DIR="${MSICONTROLLER_PACKAGE_OUTPUT_DIR:-${PROJECT_ROOT}/packages}"
-PACKAGE_RELEASE="${MSICONTROLLER_PACKAGE_RELEASE:-$(date -u +%Y%m%d%H%M%S)}"
+if [[ -n "${MSICONTROLLER_PACKAGE_RELEASE:-}" ]]; then
+  PACKAGE_RELEASE="${MSICONTROLLER_PACKAGE_RELEASE}"
+elif git -C "${PROJECT_ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
+  PACKAGE_RELEASE="1"
+else
+  PACKAGE_RELEASE="$(date -u +%Y%m%d%H%M%S)"
+fi
 DEB_ARCH="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
 RPM_ARCH="$(rpm --eval '%{_target_cpu}' 2>/dev/null || uname -m)"
 DEB_FILE_NAME="${MSICONTROLLER_DEB_FILE_NAME:-msicontroller_${DEB_ARCH}.deb}"

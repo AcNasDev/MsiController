@@ -239,34 +239,6 @@ ApplicationWindow {
         Qt.quit()
     }
 
-    Dialog {
-        id: aboutDialog
-        title: qsTr("About")
-        modal: true
-        standardButtons: Dialog.Ok
-        width: 360
-
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 8
-
-            Label {
-                Layout.fillWidth: true
-                text: qsTr("MSI Control Center")
-                font.pixelSize: 20
-                font.bold: true
-                color: mainWindow.theme.text
-            }
-
-            Label {
-                Layout.fillWidth: true
-                text: qsTr("Version") + " " + appversion + "\nQt " + qtversion + "\nAcNas"
-                color: mainWindow.theme.muted
-                wrapMode: Text.WordWrap
-            }
-        }
-    }
-
     Platform.SystemTrayIcon {
         visible: true
         icon.source: "qrc:/resources/icon/logo.svg"
@@ -287,26 +259,6 @@ ApplicationWindow {
             Platform.MenuItem {
                 text: qsTr("Exit")
                 onTriggered: exitApplication()
-            }
-        }
-    }
-
-    menuBar: MenuBar {
-        Menu {
-            title: qsTr("App")
-            MenuItem { text: qsTr("About"); onTriggered: aboutDialog.open() }
-            MenuItem { text: qsTr("Exit"); onTriggered: exitApplication() }
-        }
-        Menu {
-            title: qsTr("Theme")
-            Repeater {
-                model: mainWindow.themeChoices
-                MenuItem {
-                    text: modelData.label
-                    checkable: true
-                    checked: mainWindow.currentTheme === modelData.key
-                    onTriggered: mainWindow.currentTheme = modelData.key
-                }
             }
         }
     }
@@ -451,21 +403,61 @@ ApplicationWindow {
                             }
                         }
 
-                        Label {
+                        Rectangle {
                             Layout.fillWidth: true
-                            text: firmwareVersion && firmwareVersion.isValid ? firmwareVersion.value : qsTr("Firmware N/A")
-                            color: mainWindow.theme.text
-                            font.pixelSize: 12
-                            elide: Text.ElideRight
-                        }
+                            Layout.preferredHeight: 112
+                            radius: 8
+                            color: Qt.rgba(mainWindow.theme.elevated.r, mainWindow.theme.elevated.g,
+                                           mainWindow.theme.elevated.b, 0.42)
+                            border.color: Qt.rgba(mainWindow.theme.border.r, mainWindow.theme.border.g,
+                                                  mainWindow.theme.border.b, 0.78)
 
-                        Label {
-                            Layout.fillWidth: true
-                            text: (firmwareDate && firmwareDate.isValid ? formatDate(firmwareDate.value) : "N/A") + "  " +
-                                  (firmwareTime && firmwareTime.isValid ? formatTime(firmwareTime.value) : "N/A")
-                            color: mainWindow.theme.muted
-                            font.pixelSize: 11
-                            elide: Text.ElideRight
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 10
+                                spacing: 4
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: qsTr("Version ") + appversion
+                                    color: mainWindow.theme.text
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    elide: Text.ElideRight
+                                }
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: qsTr("Qt ") + qtversion
+                                    color: mainWindow.theme.muted
+                                    font.pixelSize: 11
+                                    elide: Text.ElideRight
+                                }
+
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 1
+                                    color: Qt.rgba(mainWindow.theme.border.r, mainWindow.theme.border.g,
+                                                   mainWindow.theme.border.b, 0.72)
+                                }
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: firmwareVersion && firmwareVersion.isValid ? firmwareVersion.value : qsTr("Firmware N/A")
+                                    color: mainWindow.theme.text
+                                    font.pixelSize: 12
+                                    elide: Text.ElideRight
+                                }
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: (firmwareDate && firmwareDate.isValid ? formatDate(firmwareDate.value) : "N/A") + "  " +
+                                          (firmwareTime && firmwareTime.isValid ? formatTime(firmwareTime.value) : "N/A")
+                                    color: mainWindow.theme.muted
+                                    font.pixelSize: 11
+                                    elide: Text.ElideRight
+                                }
+                            }
                         }
                     }
                 }

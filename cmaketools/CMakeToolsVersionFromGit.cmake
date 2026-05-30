@@ -82,11 +82,13 @@ execute_process(
 )
 
 if(NOT git_result STREQUAL "0")
+  set(CMAKE_TOOLS_GIT_FOUND_TAG FALSE)
   set(CMAKE_TOOLS_GIT_TAG_MAJOR 0)
   set(CMAKE_TOOLS_GIT_TAG_MINOR 0)
   set(CMAKE_TOOLS_GIT_TAG_PATCH 0)
   set(CMAKE_TOOLS_GIT_DISTANCE 0)
 else()
+  set(CMAKE_TOOLS_GIT_FOUND_TAG TRUE)
   # First, remove any nondigit prefix from the output.
   string(REGEX REPLACE "^[^0-9]+" "" git_output "${git_output}")
 

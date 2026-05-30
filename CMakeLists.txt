@@ -1,8 +1,27 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(MsiController VERSION 0.1 LANGUAGES CXX)
-include(GNUInstallDirs)
+set(MSICONTROLLER_FALLBACK_VERSION "0.1.0" CACHE STRING "Version used when no Git tag is available")
 include(cmaketools/CMakeToolsVersionFromGit.cmake)
+
+if(NOT CMAKE_TOOLS_GIT_FOUND_TAG)
+    string(REPLACE "." ";" _msicontroller_fallback_version "${MSICONTROLLER_FALLBACK_VERSION}")
+    list(GET _msicontroller_fallback_version 0 CMAKE_TOOLS_GIT_TAG_MAJOR)
+    list(GET _msicontroller_fallback_version 1 CMAKE_TOOLS_GIT_TAG_MINOR)
+    list(GET _msicontroller_fallback_version 2 CMAKE_TOOLS_GIT_TAG_PATCH)
+    set(CMAKE_TOOLS_GIT_DISTANCE 0)
+endif()
+
+if(CMAKE_TOOLS_GIT_TAG_MINOR STREQUAL "")
+    set(CMAKE_TOOLS_GIT_TAG_MINOR 0)
+endif()
+if(CMAKE_TOOLS_GIT_TAG_PATCH STREQUAL "")
+    set(CMAKE_TOOLS_GIT_TAG_PATCH 0)
+endif()
+
+set(MSICONTROLLER_VERSION "${CMAKE_TOOLS_GIT_TAG_MAJOR}.${CMAKE_TOOLS_GIT_TAG_MINOR}.${CMAKE_TOOLS_GIT_TAG_PATCH}")
+
+project(MsiController VERSION "${MSICONTROLLER_VERSION}" LANGUAGES CXX)
+include(GNUInstallDirs)
 add_definitions(-DCMAKE_TOOLS_GIT_TAG_MAJOR="${CMAKE_TOOLS_GIT_TAG_MAJOR}")
 add_definitions(-DCMAKE_TOOLS_GIT_TAG_MINOR="${CMAKE_TOOLS_GIT_TAG_MINOR}")
 add_definitions(-DCMAKE_TOOLS_GIT_TAG_PATCH="${CMAKE_TOOLS_GIT_TAG_PATCH}")

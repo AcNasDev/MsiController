@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(helper LANGUAGES CXX)
+project(helper VERSION "${MSICONTROLLER_VERSION}" LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
