@@ -34,7 +34,9 @@ void IOParameter<T>::setEnumHash(const QHash<T, BaseType>& hash) {
 
 template <typename T>
 bool IOParameter<T>::writeValue(const QVariant& value) {
-    qDebug() << "Writing value:" << value << "to address:" << mAddress;
+    if (qEnvironmentVariableIsSet("MSICONTROLLER_DEBUG_WRITES")) {
+        qDebug() << "Writing value:" << value << "to address:" << mAddress;
+    }
     const BaseType current = static_cast<BaseType>(rawRead());
     const T typedValue = value.value<T>();
     BaseType newValue = static_cast<BaseType>(typedValue);

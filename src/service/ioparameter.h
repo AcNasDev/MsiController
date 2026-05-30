@@ -4,6 +4,7 @@
 #include <QHash>
 #include <QVariant>
 #include <QtEndian>
+#include <QtGlobal>
 
 #include <cstring>
 #include <limits>

@@ -299,11 +299,15 @@ Pane {
                     if (points.length === 0)
                         return
 
+                    var lastPoint = points[points.length - 1]
+                    var lastPointY = chartArea.speedToY(lastPoint.speed)
+
                     ctx.beginPath()
                     ctx.moveTo(chartArea.tempToX(points[0].temperature), plotBottom)
                     for (var i = 0; i < points.length; ++i)
                         ctx.lineTo(chartArea.tempToX(points[i].temperature), chartArea.speedToY(points[i].speed))
-                    ctx.lineTo(chartArea.tempToX(points[points.length - 1].temperature), plotBottom)
+                    ctx.lineTo(plotRight, lastPointY)
+                    ctx.lineTo(plotRight, plotBottom)
                     ctx.closePath()
                     ctx.fillStyle = root.fillColor
                     ctx.fill()
@@ -317,6 +321,7 @@ Pane {
                         else
                             ctx.lineTo(px, py)
                     }
+                    ctx.lineTo(plotRight, lastPointY)
                     ctx.lineWidth = 3
                     ctx.lineCap = "round"
                     ctx.lineJoin = "round"

@@ -5,6 +5,8 @@
 #include <QIODevice>
 
 namespace {
+constexpr int ecPollIntervalMs = 1000;
+
 QByteArray readEcBuffer(QString fileName, QMap<uint, QByteArray> dataCache) {
     QFile file(fileName);
     if (!file.open(QIODevice::ReadWrite)) {
@@ -26,21 +28,30 @@ IOBuffer::IOBuffer(const QString& fileName, QObject* parent) : QObject(parent), 
     mBuffer = readEcBuffer(mFileName, mDataCache);
     mWatcher = new QFutureWatcher<QByteArray>(this);
     connect(mWatcher, &QFutureWatcher<QByteArray>::finished, this, [this]() {
-        if (mDataCache.isEmpty()) {
-            mBuffer = mWatcher->result();
-            emit bufferChanged(mBuffer);
+        mBuffer = mWatcher->result();
+        emit bufferChanged(mBuffer);
+        if (!mDataCache.isEmpty()) {
+            startRead();
         }
-        resetThread();
     });
-    resetThread();
+
+    mPollTimer.setInterval(ecPollIntervalMs);
+    connect(&mPollTimer, &QTimer::timeout, this, &IOBuffer::startRead);
+    mPollTimer.start();
+    startRead();
 }
 
 const QByteArray& IOBuffer::buffer() const {
     return mBuffer;
 }
 
-void IOBuffer::resetThread() {
-    QFuture<QByteArray> future = QtConcurrent::run(readEcBuffer, mFileName, mDataCache);
-    mWatcher->setFuture(future);
+void IOBuffer::startRead() {
+    if (mWatcher->isRunning()) {
+        return;
+    }
+
+    const QMap<uint, QByteArray> pendingWrites = mDataCache;
     mDataCache.clear();
+    QFuture<QByteArray> future = QtConcurrent::run(readEcBuffer, mFileName, pendingWrites);
+    mWatcher->setFuture(future);
 }

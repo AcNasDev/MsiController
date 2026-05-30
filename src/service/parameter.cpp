@@ -22,7 +22,9 @@ void Parameter::setValue(const QVariant& value) {
     if (mIsReadOnly)
         return;
 
-    qDebug() << "Setting value for parameter:" << mName << "to" << value;
+    if (qEnvironmentVariableIsSet("MSICONTROLLER_DEBUG_WRITES")) {
+        qDebug() << "Setting value for parameter:" << mName << "to" << value;
+    }
 
     bool success{writeValue(value)};
     if (success) {
@@ -30,7 +32,9 @@ void Parameter::setValue(const QVariant& value) {
         settings.beginGroup("Parameters");
         settings.setValue(mName.toString(), value);
         settings.endGroup();
-        qDebug() << "Value set for parameter:" << mName;
+        if (qEnvironmentVariableIsSet("MSICONTROLLER_DEBUG_WRITES")) {
+            qDebug() << "Value set for parameter:" << mName;
+        }
         update();
     } else {
         qWarning() << "Failed to set value for parameter:" << mName;

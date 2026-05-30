@@ -10,7 +10,9 @@
 #include "cpuparameter.h"
 #include "ecadaptor.h"
 #include "ecservice.h"
+#include "fantargetcontroller.h"
 #include "ioparameter.h"
+#include "softwareparameter.h"
 #include "struct.h"
 
 bool loadEcSysModule();
@@ -59,10 +61,12 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    QObject::connect(&service, &EcService::parameterChanged, [](const QDBusVariant& name, const QDBusVariant& value) {
-        qDebug() << "Parameter changed:" << name.variant().value<Msi::Msg>().variant
-                 << "new value:" << value.variant().value<Msi::Msg>().variant;
-    });
+    if (qEnvironmentVariableIsSet("MSICONTROLLER_DEBUG_EVENTS")) {
+        QObject::connect(&service, &EcService::parameterChanged, [](const QDBusVariant& name, const QDBusVariant& value) {
+            qDebug() << "Parameter changed:" << name.variant().value<Msi::Msg>().variant
+                     << "new value:" << value.variant().value<Msi::Msg>().variant;
+        });
+    }
 
     registerMetaType();
     registerEsSys(service);
@@ -386,6 +390,22 @@ void registerEsSys(EcService& service) {
                 QVariant::fromValue(Msi::Range{0, 100}),
                 false));
         }
+
+        service.registerParameter(new SoftwareParameter(
+            QVariant::fromValue(Msi::Parametr::FanControlMode),
+            QVariant::fromValue(QList<Msi::FanControlMode>{Msi::FanControlMode::Curve,
+                                                           Msi::FanControlMode::TargetTemperature}),
+            QVariant::fromValue(Msi::FanControlMode::Curve),
+            &service));
+        service.registerParameter(new SoftwareParameter(QVariant::fromValue(Msi::Parametr::FanTargetCpuTemp),
+                                                        QVariant::fromValue(Msi::Range{50, 95}),
+                                                        78,
+                                                        &service));
+        service.registerParameter(new SoftwareParameter(QVariant::fromValue(Msi::Parametr::FanTargetGpuTemp),
+                                                        QVariant::fromValue(Msi::Range{50, 95}),
+                                                        76,
+                                                        &service));
+        new FanTargetController(&service, &service);
 
         if (config.contains("ShiftModeEc") && config.contains("ShiftModeAvailable")) {
             QStringList modes{config.value("ShiftModeAvailable").toStringList()};

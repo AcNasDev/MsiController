@@ -26,6 +26,10 @@ add_executable(MsiControlCenterService
   iobuffer.cpp
   cpuparameter.h
   cpuparameter.cpp
+  fantargetcontroller.h
+  fantargetcontroller.cpp
+  softwareparameter.h
+  softwareparameter.cpp
   resources.qrc
 )
 

@@ -3,6 +3,7 @@
 #include <QVariant>
 
 #include "parameter.h"
+#include "struct.h"
 
 class CpuParameter : public Parameter {
     Q_OBJECT
@@ -24,6 +25,8 @@ private:
     QVector<CpuCoreStat> mCpuCoreStatsPrev;
     QVector<CpuCoreStat> mCpuCoreStatsCur;
     QTimer mTimer;
+    bool mForceControlRefresh{true};
+    int mTicksSinceControlRefresh{0};
 
     QVector<CpuCoreStat> readCoreStats() const;
     void updateConfig();

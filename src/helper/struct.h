@@ -58,6 +58,9 @@ enum class Parametr : quint8 {
     MuteLedEc,
     FirmwareReleaseTimeEc,
     CpuConfig,
+    FanControlMode,
+    FanTargetCpuTemp,
+    FanTargetGpuTemp,
     CountEs
 };
 Q_ENUM_NS(Parametr)
@@ -100,6 +103,9 @@ Q_ENUM_NS(ShiftMode)
 
 enum class FanMode : quint8 { Auto = 0, Silent, Basic, Advanced };
 Q_ENUM_NS(FanMode)
+
+enum class FanControlMode : quint8 { Curve = 0, TargetTemperature };
+Q_ENUM_NS(FanControlMode)
 
 enum class Enable : quint8 { Off = 0, On };
 Q_ENUM_NS(Enable)
@@ -220,6 +226,7 @@ Q_DECLARE_METATYPE(Msi::KeyboardBacklight)
 Q_DECLARE_METATYPE(Msi::FnSuperSwap)
 Q_DECLARE_METATYPE(Msi::ShiftMode)
 Q_DECLARE_METATYPE(Msi::FanMode)
+Q_DECLARE_METATYPE(Msi::FanControlMode)
 Q_DECLARE_METATYPE(Msi::Enable)
 Q_DECLARE_METATYPE(Msi::Msg)
 Q_DECLARE_METATYPE(Msi::Cpu)
@@ -233,12 +240,14 @@ inline void registerMetaType() {
     qRegisterMetaType<Msi::FnSuperSwap>("Msi::FnSuperSwap");
     qRegisterMetaType<Msi::ShiftMode>("Msi::ShiftMode");
     qRegisterMetaType<Msi::FanMode>("Msi::FanMode");
+    qRegisterMetaType<Msi::FanControlMode>("Msi::FanControlMode");
     qRegisterMetaType<Msi::Enable>("Msi::Enable");
     qRegisterMetaType<QList<quint8>>("QList<quint8>");
     qRegisterMetaType<QList<Msi::ChargingStatus>>("QList<Msi::ChargingStatus>");
     qRegisterMetaType<QList<Msi::Enable>>("QList<Msi::Enable>");
     qRegisterMetaType<QList<Msi::FnSuperSwap>>("QList<Msi::FnSuperSwap>");
     qRegisterMetaType<QList<Msi::FanMode>>("QList<Msi::FanMode>");
+    qRegisterMetaType<QList<Msi::FanControlMode>>("QList<Msi::FanControlMode>");
     qRegisterMetaType<QList<Msi::ShiftMode>>("QList<Msi::ShiftMode>");
     qRegisterMetaType<QList<Msi::Msg>>("QList<Msi::Msg>");
     qRegisterMetaType<Msi::Cpu>("Msi::Cpu");

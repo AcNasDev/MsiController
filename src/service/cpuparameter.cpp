@@ -19,6 +19,8 @@ static const char* cpuinfoFreqMinPath = "/cpufreq/cpuinfo_min_freq";
 static const char* scalingGovernorPath = "/cpufreq/scaling_governor";
 static const char* availableGovernorsPath = "/cpufreq/scaling_available_governors";
 static const char* statPath = "/proc/stat";
+static constexpr int cpuTelemetryIntervalMs = 1000;
+static constexpr int controlRefreshIntervalTicks = 5;
 } // namespace
 CpuParameter::CpuParameter(const QVariant& name, QObject* parent) : Parameter(name, QVariant(), false, parent) {
     QDir dir(rootPath);
@@ -37,7 +39,7 @@ CpuParameter::CpuParameter(const QVariant& name, QObject* parent) : Parameter(na
     mCpuDirs = cpuDirs;
 
     updateConfig();
-    mTimer.start(1000);
+    mTimer.start(cpuTelemetryIntervalMs);
     connect(&mTimer, &QTimer::timeout, this, &CpuParameter::updateConfig);
 }
 
@@ -85,32 +87,39 @@ QVector<CpuParameter::CpuCoreStat> CpuParameter::readCoreStats() const {
 }
 
 void CpuParameter::updateConfig() {
-    Msi::CpuConfig cpuConfig;
-    for (const QString& cpuDir : std::as_const(mCpuDirs)) {
-        Msi::Cpu cpu;
-        QString fullScalingCurFreqPath = rootPath + cpuDir + scalingCurFreqPath;
-        QString fullScalingFreqMinPath = rootPath + cpuDir + scalingFreqMinPath;
-        QString fullScalingFreqMaxPath = rootPath + cpuDir + scalingFreqMaxPath;
-        QString fullScalingGovernorPath = rootPath + cpuDir + scalingGovernorPath;
-        QString fullAvailableGovernorsPath = rootPath + cpuDir + availableGovernorsPath;
-        QString fullCpuinfoFreqMaxPath = rootPath + cpuDir + cpuinfoFreqMaxPath;
-        QString fullCpuinfoFreqMinPath = rootPath + cpuDir + cpuinfoFreqMinPath;
+    const Msi::CpuConfig previousConfig = mValue.value<Msi::CpuConfig>();
+    const bool hasPreviousConfig = previousConfig.cpus.size() == mCpuDirs.size();
+    const bool refreshControls =
+        mForceControlRefresh || !hasPreviousConfig || mTicksSinceControlRefresh >= controlRefreshIntervalTicks;
+    if (refreshControls) {
+        mForceControlRefresh = false;
+        mTicksSinceControlRefresh = 0;
+    } else {
+        ++mTicksSinceControlRefresh;
+    }
 
-        uint cpuinfoMinFreq = readFile(fullCpuinfoFreqMinPath).toUInt();
-        uint cpuinfoMaxFreq = readFile(fullCpuinfoFreqMaxPath).toUInt();
-        uint scalingMinFreq = readFile(fullScalingFreqMinPath).toUInt();
-        uint scalingMaxFreq = readFile(fullScalingFreqMaxPath).toUInt();
-        uint currentFreq = readFile(fullScalingCurFreqPath).toUInt();
-        QString currentGovernor = readFile(fullScalingGovernorPath);
-        QStringList availableGovernors =
-            readFile(fullAvailableGovernorsPath).split(QLatin1Char(' '), Qt::SkipEmptyParts);
-        cpu.scalingMinFreq = scalingMinFreq;
-        cpu.scalingMaxFreq = scalingMaxFreq;
-        cpu.minFreq = cpuinfoMinFreq;
-        cpu.maxFreq = cpuinfoMaxFreq;
-        cpu.currentFreq = currentFreq;
-        cpu.availableGovernors = availableGovernors;
-        cpu.availableGovernor = currentGovernor;
+    Msi::CpuConfig cpuConfig;
+    for (int i = 0; i < mCpuDirs.size(); ++i) {
+        const QString& cpuDir = mCpuDirs[i];
+        Msi::Cpu cpu = hasPreviousConfig ? previousConfig.cpus[i] : Msi::Cpu{};
+        QString fullScalingCurFreqPath = rootPath + cpuDir + scalingCurFreqPath;
+        cpu.currentFreq = readFile(fullScalingCurFreqPath).toUInt();
+
+        if (refreshControls) {
+            QString fullScalingFreqMinPath = rootPath + cpuDir + scalingFreqMinPath;
+            QString fullScalingFreqMaxPath = rootPath + cpuDir + scalingFreqMaxPath;
+            QString fullScalingGovernorPath = rootPath + cpuDir + scalingGovernorPath;
+            QString fullAvailableGovernorsPath = rootPath + cpuDir + availableGovernorsPath;
+            QString fullCpuinfoFreqMaxPath = rootPath + cpuDir + cpuinfoFreqMaxPath;
+            QString fullCpuinfoFreqMinPath = rootPath + cpuDir + cpuinfoFreqMinPath;
+
+            cpu.minFreq = readFile(fullCpuinfoFreqMinPath).toUInt();
+            cpu.maxFreq = readFile(fullCpuinfoFreqMaxPath).toUInt();
+            cpu.scalingMinFreq = readFile(fullScalingFreqMinPath).toUInt();
+            cpu.scalingMaxFreq = readFile(fullScalingFreqMaxPath).toUInt();
+            cpu.availableGovernor = readFile(fullScalingGovernorPath);
+            cpu.availableGovernors = readFile(fullAvailableGovernorsPath).split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        }
         cpuConfig.cpus.append(cpu);
     }
     mCpuCoreStatsPrev = mCpuCoreStatsCur;
@@ -173,6 +182,7 @@ bool CpuParameter::writeValue(const QVariant& value) {
     }
 
     if (success) {
+        mForceControlRefresh = true;
         updateConfig();
     }
     return success;

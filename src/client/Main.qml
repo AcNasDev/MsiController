@@ -118,6 +118,24 @@ ApplicationWindow {
     property var micMuteParam: proxy.getProxyParameter(Msi.Parametr.MicMuteEc)
     property var muteLedParam: proxy.getProxyParameter(Msi.Parametr.MuteLedEc)
     property var keyboardModeParam: proxy.getProxyParameter(Msi.Parametr.KeyboardBacklightModeEc)
+    property var fanControlModeParam: proxy.getProxyParameter(Msi.Parametr.FanControlMode)
+    property var fanTargetCpuTempParam: proxy.getProxyParameter(Msi.Parametr.FanTargetCpuTemp)
+    property var fanTargetGpuTempParam: proxy.getProxyParameter(Msi.Parametr.FanTargetGpuTemp)
+    readonly property bool targetFanModeActive: fanControlModeValue() === 1
+
+    function fanControlModeValue() {
+        if (!fanControlModeParam || !fanControlModeParam.isValid || fanControlModeParam.value === undefined ||
+                fanControlModeParam.value === null) {
+            return 0
+        }
+
+        var value = Number(fanControlModeParam.value)
+        if (!isNaN(value))
+            return Math.round(value)
+
+        var text = fanControlModeParam.value.toString()
+        return text.indexOf("TargetTemperature") >= 0 ? 1 : 0
+    }
 
     function valueText(parameter, unit, decimals) {
         if (!parameter || !parameter.isValid || parameter.value === undefined)
@@ -497,11 +515,15 @@ ApplicationWindow {
 
                             MetricTile {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 96
+                                Layout.preferredHeight: 116
                                 title: qsTr("CPU temperature")
                                 value: valueText(cpuTemp, "°C", 0)
                                 unit: cpuTemp && cpuTemp.isValid ? "°C" : ""
                                 detail: qsTr("Embedded controller")
+                                chartEnabled: cpuTemp && cpuTemp.isValid
+                                chartValue: cpuTemp && cpuTemp.isValid ? Number(cpuTemp.value || 0) : 0
+                                chartMin: 0
+                                chartMax: 100
                                 accentColor: mainWindow.theme.accent
                                 surfaceColor: mainWindow.theme.surface
                                 borderColor: mainWindow.theme.border
@@ -511,11 +533,15 @@ ApplicationWindow {
 
                             MetricTile {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 96
+                                Layout.preferredHeight: 116
                                 title: qsTr("GPU temperature")
                                 value: valueText(gpuTemp, "°C", 0)
                                 unit: gpuTemp && gpuTemp.isValid ? "°C" : ""
                                 detail: qsTr("Embedded controller")
+                                chartEnabled: gpuTemp && gpuTemp.isValid
+                                chartValue: gpuTemp && gpuTemp.isValid ? Number(gpuTemp.value || 0) : 0
+                                chartMin: 0
+                                chartMax: 100
                                 accentColor: mainWindow.theme.accent2
                                 surfaceColor: mainWindow.theme.surface
                                 borderColor: mainWindow.theme.border
@@ -525,11 +551,16 @@ ApplicationWindow {
 
                             MetricTile {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 96
+                                Layout.preferredHeight: 116
                                 title: qsTr("CPU fan")
                                 value: valueText(fanCpu, "%", 0)
                                 unit: fanCpu && fanCpu.isValid ? "%" : ""
-                                detail: fanModeParam && fanModeParam.isValid ? enumText(fanModeParam.value, "FanMode") : qsTr("Fan mode")
+                                detail: targetFanModeActive ? qsTr("Target temp") :
+                                                               (fanModeParam && fanModeParam.isValid ? enumText(fanModeParam.value, "FanMode") : qsTr("Fan mode"))
+                                chartEnabled: fanCpu && fanCpu.isValid
+                                chartValue: fanCpu && fanCpu.isValid ? Number(fanCpu.value || 0) : 0
+                                chartMin: 0
+                                chartMax: 150
                                 accentColor: mainWindow.theme.warn
                                 surfaceColor: mainWindow.theme.surface
                                 borderColor: mainWindow.theme.border
@@ -539,11 +570,15 @@ ApplicationWindow {
 
                             MetricTile {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 96
+                                Layout.preferredHeight: 116
                                 title: qsTr("GPU fan")
                                 value: valueText(fanGpu, "%", 0)
                                 unit: fanGpu && fanGpu.isValid ? "%" : ""
-                                detail: qsTr("Fan curve")
+                                detail: targetFanModeActive ? qsTr("Target temp") : qsTr("Fan curve")
+                                chartEnabled: fanGpu && fanGpu.isValid
+                                chartValue: fanGpu && fanGpu.isValid ? Number(fanGpu.value || 0) : 0
+                                chartMin: 0
+                                chartMax: 150
                                 accentColor: mainWindow.theme.good
                                 surfaceColor: mainWindow.theme.surface
                                 borderColor: mainWindow.theme.border
@@ -553,59 +588,20 @@ ApplicationWindow {
 
                             MetricTile {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 96
+                                Layout.preferredHeight: 116
                                 title: qsTr("Battery")
                                 value: valueText(batteryCharge, "%", 0)
                                 unit: batteryCharge && batteryCharge.isValid ? "%" : ""
                                 detail: batteryStatusText()
+                                chartEnabled: batteryCharge && batteryCharge.isValid
+                                chartValue: batteryCharge && batteryCharge.isValid ? Number(batteryCharge.value || 0) : 0
+                                chartMin: 0
+                                chartMax: 100
                                 accentColor: mainWindow.theme.good
                                 surfaceColor: mainWindow.theme.surface
                                 borderColor: mainWindow.theme.border
                                 textColor: mainWindow.theme.text
                                 mutedTextColor: mainWindow.theme.muted
-                            }
-                        }
-
-                        GridLayout {
-                            Layout.fillWidth: true
-                            columns: width > 850 ? 2 : 1
-                            columnSpacing: 16
-                            rowSpacing: 16
-                            uniformCellWidths: true
-                            uniformCellHeights: true
-
-                            GraphCard {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 220
-                                title: qsTr("Temperature")
-                                subtitle: qsTr("Last minute")
-                                min: 0
-                                max: 100
-                                accentColor: mainWindow.theme.accent
-                                surfaceColor: mainWindow.theme.surface
-                                borderColor: mainWindow.theme.border
-                                textColor: mainWindow.theme.text
-                                mutedTextColor: mainWindow.theme.muted
-                                gridColor: mainWindow.theme.track
-                                Sensor { name: "CPU"; color: mainWindow.theme.accent; unit: "°C"; value: cpuTemp.value || 0; visible: cpuTemp.isValid }
-                                Sensor { name: "GPU"; color: mainWindow.theme.accent2; unit: "°C"; value: gpuTemp.value || 0; visible: gpuTemp.isValid }
-                            }
-
-                            GraphCard {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 220
-                                title: qsTr("Fan speed")
-                                subtitle: qsTr("Last minute")
-                                min: 0
-                                max: 150
-                                accentColor: mainWindow.theme.warn
-                                surfaceColor: mainWindow.theme.surface
-                                borderColor: mainWindow.theme.border
-                                textColor: mainWindow.theme.text
-                                mutedTextColor: mainWindow.theme.muted
-                                gridColor: mainWindow.theme.track
-                                Sensor { name: "CPU"; color: mainWindow.theme.warn; unit: "%"; value: fanCpu.value || 0; visible: fanCpu.isValid }
-                                Sensor { name: "GPU"; color: mainWindow.theme.good; unit: "%"; value: fanGpu.value || 0; visible: fanGpu.isValid }
                             }
                         }
 
@@ -666,6 +662,23 @@ ApplicationWindow {
                             font.bold: true
                         }
 
+                        TargetTemperatureCard {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 172
+                            title: qsTr("Cooling control")
+                            subtitle: targetFanModeActive ? qsTr("Target temperature") : qsTr("Manual fan curve")
+                            visible: fanControlModeParam && fanControlModeParam.isValid
+                            modeParameter: fanControlModeParam
+                            cpuTargetParameter: fanTargetCpuTempParam
+                            gpuTargetParameter: fanTargetGpuTempParam
+                            surfaceColor: mainWindow.theme.surface
+                            elevatedColor: mainWindow.theme.elevated
+                            borderColor: mainWindow.theme.border
+                            textColor: mainWindow.theme.text
+                            mutedTextColor: mainWindow.theme.muted
+                            accentColor: mainWindow.theme.accent
+                        }
+
                         GridLayout {
                             Layout.fillWidth: true
                             columns: width > 900 ? 2 : 1
@@ -679,13 +692,15 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 300
                                 title: qsTr("CPU fan curve")
-                                subtitle: qsTr("Temperature to speed map")
+                                subtitle: targetFanModeActive ? qsTr("Managed by service") : qsTr("Temperature to speed map")
                                 surfaceColor: mainWindow.theme.surface
                                 borderColor: mainWindow.theme.border
                                 textColor: mainWindow.theme.text
                                 mutedTextColor: mainWindow.theme.muted
                                 gridColor: mainWindow.theme.track
                                 accentColor: mainWindow.theme.warn
+                                enabled: !targetFanModeActive
+                                opacity: targetFanModeActive ? 0.55 : 1.0
                                 visible: isValid
 
                                 property var fssg1: proxy.getProxyParameter(Msi.Parametr.FanSetSpeedCpu1Ec)
@@ -739,13 +754,15 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 300
                                 title: qsTr("GPU fan curve")
-                                subtitle: qsTr("Temperature to speed map")
+                                subtitle: targetFanModeActive ? qsTr("Managed by service") : qsTr("Temperature to speed map")
                                 surfaceColor: mainWindow.theme.surface
                                 borderColor: mainWindow.theme.border
                                 textColor: mainWindow.theme.text
                                 mutedTextColor: mainWindow.theme.muted
                                 gridColor: mainWindow.theme.track
                                 accentColor: mainWindow.theme.good
+                                enabled: !targetFanModeActive
+                                opacity: targetFanModeActive ? 0.55 : 1.0
                                 visible: isValid
 
                                 property var fssg1: proxy.getProxyParameter(Msi.Parametr.FanSetSpeedGpu1Ec)
