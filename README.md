@@ -40,7 +40,7 @@ Feature availability depends on the detected firmware configuration in `src/serv
 - `src/helper` - shared D-Bus/helper library used by the client and service.
 - `src/module` - EC kernel module and DKMS source files.
 - `cmake/packaging` - DEB/RPM, DKMS, Docker, and Qt runtime bundling helpers.
-- `scripts` - package build entry points for local and Docker builds.
+- `scripts` - package build and package install test entry points.
 
 The client does not talk to EC hardware directly. It talks to the service, and the service owns hardware access, CPU control readback, fan target control, and state synchronization.
 
@@ -111,11 +111,21 @@ export MSICONTROLLER_QT_HOST_DIR=/opt/Qt/6.11.1/gcc_64
 ./scripts/build-packages.sh
 ```
 
+## Testing Packages
+
+Package install smoke tests run the generated DEB/RPM in clean containers and check dependency resolution, installed file layout, desktop/autostart entries, D-Bus/systemd files, DKMS source placement, and unresolved shared libraries.
+
+```sh
+./scripts/test-packages-docker.sh
+```
+
+The test matrix covers Ubuntu 22.04, Ubuntu 24.04, Ubuntu 26.04, Debian 12, and Fedora. DKMS build/load is skipped only inside these container tests with `MSICONTROLLER_SKIP_DKMS=1`; normal user installation still builds and installs the module.
+
 ## Forgejo CI
 
-Forgejo builds the project on pushes to `main` and has a dedicated package job. Download ready-to-install packages from the workflow artifact named `msicontroller-packages`.
+Forgejo builds the project on pushes to `main`, has a dedicated package job, and runs package install smoke tests against the generated artifacts. Download ready-to-install packages from the workflow artifact named `msicontroller-packages`.
 
-When a tag matching `v*` is pushed, the package job also creates or updates the matching Forgejo Release and uploads:
+When a tag matching `v*` is pushed, packages are published only after the install smoke tests pass. The release job creates or updates the matching Forgejo Release and uploads:
 
 - `msicontroller_amd64.deb`
 - `msicontroller_x86_64.rpm`

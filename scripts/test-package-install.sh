@@ -5,6 +5,7 @@ PACKAGE_DIR="${1:-packages}"
 PACKAGE_DIR="$(cd "${PACKAGE_DIR}" && pwd)"
 DEB_PACKAGE="${MSICONTROLLER_TEST_DEB:-${PACKAGE_DIR}/msicontroller_amd64.deb}"
 RPM_PACKAGE="${MSICONTROLLER_TEST_RPM:-${PACKAGE_DIR}/msicontroller_x86_64.rpm}"
+export MSICONTROLLER_SKIP_DKMS="${MSICONTROLLER_SKIP_DKMS:-1}"
 
 log() {
   printf '\n==> %s\n' "$*"

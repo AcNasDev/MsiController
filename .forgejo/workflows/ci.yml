@@ -152,7 +152,7 @@ jobs:
           set -euo pipefail
           if command -v apt-get >/dev/null 2>&1; then
             apt-get update
-            apt-get install -y curl ca-certificates
+            apt-get install -y curl ca-certificates gnupg
             curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
             apt-get install -y nodejs git bash
           elif command -v dnf >/dev/null 2>&1; then
@@ -191,7 +191,7 @@ jobs:
       - name: Install Node.js and release tools
         run: |
           apt-get update
-          apt-get install -y curl ca-certificates
+          apt-get install -y curl ca-certificates gnupg
           curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
           apt-get install -y nodejs git python3
 
