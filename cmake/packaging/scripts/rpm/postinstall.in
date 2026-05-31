@@ -6,6 +6,10 @@ DKMS_NAME="@MSICONTROLLER_DKMS_MODULE_NAME@"
 DKMS_VERSION="@MSICONTROLLER_DKMS_VERSION@"
 SERVICE_NAME="msi-ec-service.service"
 
+skip_dkms() {
+    [ "${MSICONTROLLER_SKIP_DKMS:-0}" = "1" ]
+}
+
 cleanup_broken_dkms_versions() {
     dkms status -m "$DKMS_NAME" 2>/dev/null | \
         awk -F'[/,:]' -v module="$DKMS_NAME" '$1 == module && $0 ~ /: broken/ { print $2 }' | \
@@ -16,7 +20,7 @@ cleanup_broken_dkms_versions() {
         done
 }
 
-if command -v dkms >/dev/null 2>&1; then
+if ! skip_dkms && command -v dkms >/dev/null 2>&1; then
     cleanup_broken_dkms_versions
     dkms add -m "$DKMS_NAME" -v "$DKMS_VERSION" >/dev/null 2>&1 || true
     KERNEL_VERSION="$(uname -r)"
@@ -26,8 +30,10 @@ if command -v dkms >/dev/null 2>&1; then
     fi
 fi
 
-depmod -a >/dev/null 2>&1 || true
-modprobe "$DKMS_NAME" >/dev/null 2>&1 || true
+if ! skip_dkms; then
+    depmod -a >/dev/null 2>&1 || true
+    modprobe "$DKMS_NAME" >/dev/null 2>&1 || true
+fi
 
 if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload >/dev/null 2>&1 || true

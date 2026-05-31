@@ -126,8 +126,87 @@ jobs:
           name: msicontroller-packages
           path: packages/*
 
+  package-install-tests:
+    needs: packages
+    runs-on: docker
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ubuntu-22.04-deb
+            image: ubuntu:22.04
+          - name: ubuntu-24.04-deb
+            image: ubuntu:24.04
+          - name: ubuntu-26.04-deb
+            image: ubuntu:26.04
+          - name: debian-12-deb
+            image: debian:12
+          - name: fedora-rpm
+            image: fedora:latest
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - name: Install action runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v apt-get >/dev/null 2>&1; then
+            apt-get update
+            apt-get install -y curl ca-certificates
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt-get install -y nodejs git bash
+          elif command -v dnf >/dev/null 2>&1; then
+            dnf install -y nodejs git bash ca-certificates
+          else
+            echo "Unsupported package manager" >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Download packages
+        uses: actions/download-artifact@v3
+        with:
+          name: msicontroller-packages
+          path: packages
+
+      - name: Install package smoke test
+        env:
+          MSICONTROLLER_SKIP_DKMS: "1"
+        run: |
+          chmod +x scripts/test-package-install.sh
+          scripts/test-package-install.sh packages
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs:
+      - packages
+      - package-install-tests
+    runs-on: docker
+    container:
+      image: ubuntu:22.04
+    steps:
+      - name: Install Node.js and release tools
+        run: |
+          apt-get update
+          apt-get install -y curl ca-certificates
+          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          apt-get install -y nodejs git python3
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Download packages
+        uses: actions/download-artifact@v3
+        with:
+          name: msicontroller-packages
+          path: packages
+
       - name: Publish Forgejo release
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           FORGEJO_API_URL: ${{ forgejo.api_url }}
           FORGEJO_REPOSITORY: ${{ forgejo.repository }}
@@ -210,7 +289,6 @@ jobs:
           done
 
       - name: Publish GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUBTOKEN: ${{ secrets.GITHUBTOKEN }}
           GITHUB_REPOSITORY: AcNasDev/MsiController
