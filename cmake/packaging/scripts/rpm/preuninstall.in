@@ -5,8 +5,21 @@ cd /
 DKMS_NAME="@MSICONTROLLER_DKMS_MODULE_NAME@"
 DKMS_VERSION="@MSICONTROLLER_DKMS_VERSION@"
 SERVICE_NAME="msi-ec-service.service"
+REPOSITORY_ENABLED="@MSICONTROLLER_PACKAGE_REPOSITORY_ENABLE@"
+RPM_REPO_FILE="/etc/yum.repos.d/msicontroller-forgejo.repo"
+
+repository_enabled() {
+    [ "$REPOSITORY_ENABLED" = "ON" ] || [ "$REPOSITORY_ENABLED" = "1" ] || [ "$REPOSITORY_ENABLED" = "TRUE" ]
+}
+
+remove_rpm_repository() {
+    repository_enabled || return 0
+    rm -f "$RPM_REPO_FILE"
+}
 
 if [ "$1" = "0" ]; then
+    remove_rpm_repository
+
     if command -v systemctl >/dev/null 2>&1; then
         systemctl stop "$SERVICE_NAME" >/dev/null 2>&1 || true
         systemctl disable "$SERVICE_NAME" >/dev/null 2>&1 || true

@@ -45,6 +45,22 @@ const QByteArray& IOBuffer::buffer() const {
     return mBuffer;
 }
 
+bool IOBuffer::writeBytes(const QByteArray& bytes, uint address) {
+    if (bytes.isEmpty()) {
+        return true;
+    }
+
+    mDataCache[address] = bytes;
+    if (address + bytes.size() <= static_cast<uint>(mBuffer.size())) {
+        mBuffer.replace(static_cast<int>(address), bytes.size(), bytes);
+        emit bufferChanged(mBuffer);
+    }
+    if (mWatcher && !mWatcher->isRunning()) {
+        QTimer::singleShot(0, this, &IOBuffer::startRead);
+    }
+    return true;
+}
+
 void IOBuffer::startRead() {
     if (mWatcher->isRunning()) {
         return;

@@ -20,6 +20,7 @@ run_image() {
   log "Testing packages in ${image}"
   docker run --rm \
     -e MSICONTROLLER_SKIP_DKMS=1 \
+    -e MSICONTROLLER_DISABLE_REPOSITORY_SETUP=1 \
     -v "${PROJECT_ROOT}:/work:ro" \
     -v "${PACKAGE_DIR}:/packages:ro" \
     -w /work \

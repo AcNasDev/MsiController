@@ -16,18 +16,12 @@ public:
     ~IOBuffer() = default;
 
     const QByteArray& buffer() const;
+    bool writeBytes(const QByteArray& bytes, uint address = 0);
+
     template <typename T>
     bool write(const T& value, uint address = 0) {
         const QByteArray bytes(reinterpret_cast<const char*>(&value), sizeof(T));
-        mDataCache[address] = bytes;
-        if (address + bytes.size() <= static_cast<uint>(mBuffer.size())) {
-            mBuffer.replace(static_cast<int>(address), bytes.size(), bytes);
-            emit bufferChanged(mBuffer);
-        }
-        if (mWatcher && !mWatcher->isRunning()) {
-            QTimer::singleShot(0, this, &IOBuffer::startRead);
-        }
-        return true;
+        return writeBytes(bytes, address);
     }
 
 signals:

@@ -21,6 +21,14 @@ ApplicationWindow {
 
     property bool allowQuit: false
     property int currentPage: 0
+    property bool developerMode: false
+    readonly property var navigationPages: developerMode ? [
+        {label: qsTr("Dashboard"), page: 0},
+        {label: qsTr("Supported devices"), page: 1},
+        {label: qsTr("Memory debug"), page: 2}
+    ] : [
+        {label: qsTr("Dashboard"), page: 0}
+    ]
 
     QtCore.Settings {
         id: appSettings
@@ -87,6 +95,10 @@ ApplicationWindow {
     }
 
     onCurrentThemeChanged: appSettings.savedTheme = currentTheme
+    onDeveloperModeChanged: {
+        if (!developerMode && currentPage > 0)
+            currentPage = 0
+    }
     onClosing: function(close) {
         if (!allowQuit) {
             close.accepted = false
@@ -239,6 +251,15 @@ ApplicationWindow {
         Qt.quit()
     }
 
+    function toggleDeveloperMode() {
+        if (developerMode) {
+            developerMode = false
+            return
+        }
+
+        developerModePopup.open()
+    }
+
     Platform.SystemTrayIcon {
         visible: true
         icon.source: "qrc:/resources/icon/logo.svg"
@@ -259,6 +280,136 @@ ApplicationWindow {
             Platform.MenuItem {
                 text: qsTr("Exit")
                 onTriggered: exitApplication()
+            }
+        }
+    }
+
+    Popup {
+        id: developerModePopup
+
+        modal: true
+        dim: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape
+        width: Math.min(520, mainWindow.width - 48)
+        x: Math.round((mainWindow.width - width) / 2)
+        y: Math.round((mainWindow.height - height) / 2)
+        padding: 0
+
+        background: Rectangle {
+            radius: 8
+            color: mainWindow.theme.surface
+            border.color: mainWindow.theme.warn
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 14
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.margins: 18
+                spacing: 8
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("Developer mode")
+                    color: mainWindow.theme.text
+                    font.pixelSize: 18
+                    font.bold: true
+                    elide: Text.ElideRight
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    text: qsTr("This mode enables supported-device editing and raw EC memory writes. Wrong values can break cooling behavior, freeze the laptop, or require a reboot.")
+                    color: mainWindow.theme.muted
+                    font.pixelSize: 13
+                    wrapMode: Text.WordWrap
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: warningLabel.implicitHeight + 22
+                    radius: 8
+                    color: Qt.rgba(mainWindow.theme.warn.r, mainWindow.theme.warn.g, mainWindow.theme.warn.b, 0.12)
+                    border.color: Qt.rgba(mainWindow.theme.warn.r, mainWindow.theme.warn.g, mainWindow.theme.warn.b, 0.56)
+
+                    Label {
+                        id: warningLabel
+                        anchors.fill: parent
+                        anchors.margins: 11
+                        text: qsTr("The author is not responsible for data loss, hardware issues, firmware state changes, or any other damage caused by developer-mode actions.")
+                        color: mainWindow.theme.text
+                        font.pixelSize: 12
+                        font.bold: true
+                        wrapMode: Text.WordWrap
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                color: mainWindow.theme.border
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: 18
+                Layout.rightMargin: 18
+                Layout.bottomMargin: 18
+                spacing: 10
+
+                Item { Layout.fillWidth: true }
+
+                Rectangle {
+                    Layout.preferredWidth: 104
+                    Layout.preferredHeight: 34
+                    radius: 8
+                    color: cancelArea.containsMouse ? Qt.rgba(mainWindow.theme.elevated.r, mainWindow.theme.elevated.g,
+                                                               mainWindow.theme.elevated.b, 0.82)
+                                                    : "transparent"
+                    border.color: mainWindow.theme.border
+
+                    Label {
+                        anchors.centerIn: parent
+                        text: qsTr("Cancel")
+                        color: mainWindow.theme.text
+                        font.pixelSize: 12
+                    }
+
+                    MouseArea {
+                        id: cancelArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: developerModePopup.close()
+                    }
+                }
+
+                Rectangle {
+                    Layout.preferredWidth: 144
+                    Layout.preferredHeight: 34
+                    radius: 8
+                    color: mainWindow.theme.warn
+
+                    Label {
+                        anchors.centerIn: parent
+                        text: qsTr("Enable")
+                        color: "#111111"
+                        font.pixelSize: 12
+                        font.bold: true
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            mainWindow.developerMode = true
+                            developerModePopup.close()
+                        }
+                    }
+                }
             }
         }
     }
@@ -352,9 +503,7 @@ ApplicationWindow {
                         spacing: 7
 
                         Repeater {
-                            model: [
-                                {label: qsTr("Dashboard"), page: 0}
-                            ]
+                            model: mainWindow.navigationPages
 
                             delegate: Rectangle {
                                 Layout.fillWidth: true
@@ -382,6 +531,56 @@ ApplicationWindow {
                                     onClicked: mainWindow.currentPage = modelData.page
                                 }
                             }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 38
+                        radius: 8
+                        color: mainWindow.developerMode
+                               ? Qt.rgba(mainWindow.theme.warn.r, mainWindow.theme.warn.g, mainWindow.theme.warn.b, 0.18)
+                               : "transparent"
+                        border.color: mainWindow.developerMode ? mainWindow.theme.warn : mainWindow.theme.border
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 12
+                            anchors.rightMargin: 10
+                            spacing: 8
+
+                            Label {
+                                Layout.fillWidth: true
+                                text: qsTr("Developer mode")
+                                color: mainWindow.developerMode ? mainWindow.theme.text : mainWindow.theme.muted
+                                font.pixelSize: 13
+                                font.bold: mainWindow.developerMode
+                                elide: Text.ElideRight
+                            }
+
+                            Rectangle {
+                                Layout.preferredWidth: 34
+                                Layout.preferredHeight: 18
+                                radius: 9
+                                color: mainWindow.developerMode ? mainWindow.theme.warn : mainWindow.theme.track
+                                border.color: mainWindow.developerMode ? mainWindow.theme.warn : mainWindow.theme.border
+
+                                Rectangle {
+                                    width: 14
+                                    height: 14
+                                    radius: 7
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    x: mainWindow.developerMode ? parent.width - width - 2 : 2
+                                    color: mainWindow.developerMode ? "#111111" : mainWindow.theme.muted
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: mainWindow.toggleDeveloperMode()
                         }
                     }
 
@@ -578,20 +777,25 @@ ApplicationWindow {
                 }
             }
 
-            Flickable {
+            StackLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                clip: true
-                contentWidth: width
-                contentHeight: dashboardColumn.implicitHeight
-                interactive: !(fanCurveCpu.isDragging || fanCurveGpu.isDragging || cpuPage.editingCpuLimit)
-                boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: ScrollBar {}
+                currentIndex: mainWindow.currentPage
 
-                ColumnLayout {
-                    id: dashboardColumn
-                    width: parent.width
-                    spacing: 12
+                Flickable {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    contentWidth: width
+                    contentHeight: dashboardColumn.implicitHeight
+                    interactive: !(fanCurveCpu.isDragging || fanCurveGpu.isDragging || cpuPage.editingCpuLimit)
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar {}
+
+                    ColumnLayout {
+                        id: dashboardColumn
+                        width: parent.width
+                        spacing: 12
 
                         RowLayout {
                             Layout.fillWidth: true
@@ -1072,6 +1276,36 @@ ApplicationWindow {
                         }
                     }
                 }
+
+                DeviceProfilesPage {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    proxy: proxy
+                    currentFirmware: firmwareVersion && firmwareVersion.isValid ? firmwareVersion.value : ""
+                    surfaceColor: mainWindow.theme.surface
+                    elevatedColor: mainWindow.theme.elevated
+                    borderColor: mainWindow.theme.border
+                    textColor: mainWindow.theme.text
+                    mutedTextColor: mainWindow.theme.muted
+                    accentColor: mainWindow.theme.accent
+                    dangerColor: mainWindow.theme.danger
+                }
+
+                MemoryDebugPage {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    active: mainWindow.developerMode && mainWindow.currentPage === 2
+                    proxy: proxy
+                    surfaceColor: mainWindow.theme.surface
+                    elevatedColor: mainWindow.theme.elevated
+                    borderColor: mainWindow.theme.border
+                    textColor: mainWindow.theme.text
+                    mutedTextColor: mainWindow.theme.muted
+                    accentColor: mainWindow.theme.accent
+                    dangerColor: mainWindow.theme.danger
+                    warnColor: mainWindow.theme.warn
+                }
             }
         }
     }
+}

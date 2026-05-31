@@ -5,9 +5,23 @@ cd /
 DKMS_NAME="@MSICONTROLLER_DKMS_MODULE_NAME@"
 DKMS_VERSION="@MSICONTROLLER_DKMS_VERSION@"
 SERVICE_NAME="msi-ec-service.service"
+REPOSITORY_ENABLED="@MSICONTROLLER_PACKAGE_REPOSITORY_ENABLE@"
+APT_KEYRING="/etc/apt/keyrings/msicontroller-forgejo.asc"
+APT_SOURCE="/etc/apt/sources.list.d/msicontroller-forgejo.list"
+
+repository_enabled() {
+    [ "$REPOSITORY_ENABLED" = "ON" ] || [ "$REPOSITORY_ENABLED" = "1" ] || [ "$REPOSITORY_ENABLED" = "TRUE" ]
+}
+
+remove_apt_repository() {
+    repository_enabled || return 0
+    rm -f "$APT_SOURCE" "$APT_KEYRING"
+}
 
 case "$1" in
     remove|deconfigure)
+        remove_apt_repository
+
         if command -v systemctl >/dev/null 2>&1; then
             systemctl stop "$SERVICE_NAME" >/dev/null 2>&1 || true
             systemctl disable "$SERVICE_NAME" >/dev/null 2>&1 || true

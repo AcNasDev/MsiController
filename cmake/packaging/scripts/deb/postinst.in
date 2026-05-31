@@ -5,9 +5,70 @@ cd /
 DKMS_NAME="@MSICONTROLLER_DKMS_MODULE_NAME@"
 DKMS_VERSION="@MSICONTROLLER_DKMS_VERSION@"
 SERVICE_NAME="msi-ec-service.service"
+REPOSITORY_ENABLED="@MSICONTROLLER_PACKAGE_REPOSITORY_ENABLE@"
+REPOSITORY_BASE_URL="@MSICONTROLLER_PACKAGE_REPOSITORY_BASE_URL@"
+REPOSITORY_OWNER="@MSICONTROLLER_PACKAGE_REPOSITORY_OWNER@"
+DEBIAN_DISTRIBUTION="@MSICONTROLLER_PACKAGE_DEBIAN_DISTRIBUTION@"
+DEBIAN_COMPONENT="@MSICONTROLLER_PACKAGE_DEBIAN_COMPONENT@"
+APT_KEYRING="/etc/apt/keyrings/msicontroller-forgejo.asc"
+APT_SOURCE="/etc/apt/sources.list.d/msicontroller-forgejo.list"
 
 skip_dkms() {
     [ "${MSICONTROLLER_SKIP_DKMS:-0}" = "1" ]
+}
+
+skip_repository_setup() {
+    [ "${MSICONTROLLER_DISABLE_REPOSITORY_SETUP:-0}" = "1" ]
+}
+
+repository_enabled() {
+    [ "$REPOSITORY_ENABLED" = "ON" ] || [ "$REPOSITORY_ENABLED" = "1" ] || [ "$REPOSITORY_ENABLED" = "TRUE" ]
+}
+
+fetch_url() {
+    url="$1"
+    output="$2"
+
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL "$url" -o "$output"
+        return $?
+    fi
+
+    if command -v wget >/dev/null 2>&1; then
+        wget -qO "$output" "$url"
+        return $?
+    fi
+
+    return 127
+}
+
+configure_apt_repository() {
+    repository_enabled || return 0
+    skip_repository_setup && return 0
+    [ -n "$REPOSITORY_BASE_URL" ] || return 0
+    [ -n "$REPOSITORY_OWNER" ] || return 0
+    [ -n "$DEBIAN_DISTRIBUTION" ] || return 0
+    [ -n "$DEBIAN_COMPONENT" ] || return 0
+    [ -d /etc/apt ] || return 0
+
+    repository_url="${REPOSITORY_BASE_URL%/}/api/packages/${REPOSITORY_OWNER}/debian"
+    key_url="${repository_url}/repository.key"
+    tmp_key="$(mktemp)"
+
+    if fetch_url "$key_url" "$tmp_key" && [ -s "$tmp_key" ]; then
+        mkdir -p /etc/apt/keyrings /etc/apt/sources.list.d
+        install -m 0644 "$tmp_key" "$APT_KEYRING"
+        printf 'deb [signed-by=%s] %s %s %s\n' \
+            "$APT_KEYRING" \
+            "$repository_url" \
+            "$DEBIAN_DISTRIBUTION" \
+            "$DEBIAN_COMPONENT" > "$APT_SOURCE"
+        chmod 0644 "$APT_SOURCE"
+    else
+        echo "msicontroller: warning: unable to configure Forgejo apt repository from $repository_url" >&2
+    fi
+
+    rm -f "$tmp_key"
 }
 
 cleanup_broken_dkms_versions() {
@@ -22,6 +83,8 @@ cleanup_broken_dkms_versions() {
 
 case "$1" in
     configure|"")
+        configure_apt_repository
+
         if ! skip_dkms && command -v dkms >/dev/null 2>&1; then
             cleanup_broken_dkms_versions
             dkms add -m "$DKMS_NAME" -v "$DKMS_VERSION" >/dev/null 2>&1 || true

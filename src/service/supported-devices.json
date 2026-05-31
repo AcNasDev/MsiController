@@ -1,0 +1,1701 @@
+{
+  "schemaVersion": 1,
+  "defaults": {
+    "WebCamMask": "0x2",
+    "CoolerBoostEc": "0x98",
+    "CoolerBoostMask": "0x80",
+    "CpuTempEc": "0x68",
+    "FanCpuEc": "0x71",
+    "FanGpuEc": "0x89",
+    "FnWinSwapInvert": false,
+    "BatteryChargeEc": "0x42",
+    "BatteryChargingStatusEc": "0x31",
+    "UsbPowerShareEc": "0xBF",
+    "FnSuperSwapMask": "0x10"
+  },
+  "profiles": [
+    {
+      "id": "CONF0",
+      "values": {
+        "AllowedFw": [
+          "14C1EMS1.012",
+          "14C1EMS1.101",
+          "14C1EMS1.102"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Basic:0x4d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x4",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x08"
+        ],
+        "KeyboardBacklightEc": "0xf3",
+        "KeyboardBacklightStartState": "0x80"
+      }
+    },
+    {
+      "id": "CONF1",
+      "values": {
+        "AllowedFw": [
+          "17F2EMS1.103",
+          "17F2EMS1.104",
+          "17F2EMS1.106",
+          "17F2EMS1.107"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Basic:0x4d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x4",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x08"
+        ],
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF2",
+      "values": {
+        "AllowedFw": [
+          "1552EMS1.115",
+          "1552EMS1.118",
+          "1552EMS1.119",
+          "1552EMS1.120"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Basic:0x4d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x08"
+        ],
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF3",
+      "values": {
+        "AllowedFw": "1592EMS1.111",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Basic:0x4d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x2",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x08"
+        ],
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF4",
+      "values": {
+        "AllowedFw": [
+          "16V4EMS1.114",
+          "16V4EMS1.115"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0x00",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80"
+      }
+    },
+    {
+      "id": "CONF5",
+      "values": {
+        "AllowedFw": [
+          "158LEMS1.103",
+          "158LEMS1.105",
+          "158LEMS1.106"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x00",
+        "FanGpuEc": "0x00",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x4"
+      }
+    },
+    {
+      "id": "CONF6",
+      "values": {
+        "AllowedFw": [
+          "1542EMS1.102",
+          "1542EMS1.104"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xbf",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xd5",
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80"
+      }
+    },
+    {
+      "id": "CONF7",
+      "values": {
+        "AllowedFw": [
+          "17FKEMS1.108",
+          "17FKEMS1.109",
+          "17FKEMS1.10A"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x00",
+        "FanGpuEc": "0x00",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x4",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF8",
+      "values": {
+        "AllowedFw": [
+          "14F1EMS1.114",
+          "14F1EMS1.115",
+          "14F1EMS1.116",
+          "14F1EMS1.117",
+          "14F1EMS1.118",
+          "14F1EMS1.119",
+          "14F1EMS1.120"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x80"
+        ],
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF9",
+      "values": {
+        "AllowedFw": [
+          "14JKEMS1.104",
+          "14JKEMS1.300"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0xff",
+        "FanGpuEc": "0xff",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x4",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF10",
+      "values": {
+        "AllowedFw": "1582EMS1.107",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xff",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xe5",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x08"
+        ],
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF11",
+      "values": {
+        "AllowedFw": "16S6EMS1.111",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x00",
+        "FnSuperSwapEc": "0xe8",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x4d"
+        ],
+        "GpuTempEc": "0xff",
+        "FanGpuEc": "0xff",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF12",
+      "values": {
+        "AllowedFw": [
+          "16R6EMS1.104",
+          "16R6EMS1.106",
+          "16R6EMS1.107"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF13",
+      "values": {
+        "AllowedFw": "1594EMS1.109",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x08"
+        ],
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF14",
+      "values": {
+        "AllowedFw": "17L2EMS1.108",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF15",
+      "values": {
+        "AllowedFw": "15CKEMS1.108",
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x4"
+      }
+    },
+    {
+      "id": "CONF16",
+      "values": {
+        "AllowedFw": [
+          "155LEMS1.105",
+          "155LEMS1.106"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x00",
+        "FanGpuEc": "0x00",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x4",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF17",
+      "values": {
+        "AllowedFw": [
+          "15K1IMS1.110",
+          "15K1IMS1.111",
+          "15K1IMS1.112",
+          "15K1IMS1.113"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x08"
+        ],
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF18",
+      "values": {
+        "AllowedFw": "15HKEMS1.104",
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0xff",
+        "FanGpuEc": "0xff",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x4",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF19",
+      "values": {
+        "AllowedFw": [
+          "1543EMS1.113",
+          "17K3EMS1.115"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80"
+      }
+    },
+    {
+      "id": "CONF20",
+      "values": {
+        "AllowedFw": "1581EMS1.107",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF21",
+      "values": {
+        "AllowedFw": [
+          "16R3EMS1.100",
+          "16R3EMS1.102",
+          "16R3EMS1.104",
+          "16R4EMS2.102"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Basic:0x4d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF22",
+      "values": {
+        "AllowedFw": "17LLEMS1.106",
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc1",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c"
+      }
+    },
+    {
+      "id": "CONF23",
+      "values": {
+        "AllowedFw": "16WKEMS1.105",
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xbf",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Comfort:0xc1",
+          "Eco:0xc2",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF24",
+      "values": {
+        "AllowedFw": "14D1EMS1.103",
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0xff",
+        "FanGpuEc": "0xff",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x4",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF25",
+      "values": {
+        "AllowedFw": [
+          "14F1EMS1.207",
+          "14F1EMS1.209",
+          "14F1EMS1.211"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x08"
+        ],
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF26",
+      "values": {
+        "AllowedFw": "14DLEMS1.105",
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0xff",
+        "FanGpuEc": "0xff",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x4",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF27",
+      "values": {
+        "AllowedFw": "17S2IMS1.113",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2"
+      }
+    },
+    {
+      "id": "CONF28",
+      "values": {
+        "AllowedFw": [
+          "1822EMS1.105",
+          "1822EMS1.109",
+          "1822EMS1.111",
+          "1822EMS1.112",
+          "1822EMS1.114",
+          "1822EMS1.115"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0xff",
+        "FnSuperSwapEc": "0xe8",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2"
+      }
+    },
+    {
+      "id": "CONF29",
+      "values": {
+        "AllowedFw": "16V5EMS1.107",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80"
+      }
+    },
+    {
+      "id": "CONF30",
+      "values": {
+        "AllowedFw": [
+          "17Q2IMS1.107",
+          "17Q2IMS1.10D"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF31",
+      "values": {
+        "AllowedFw": "16Q4EMS1.110",
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4",
+          "Sport:0xc0"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Basic:0x4c",
+          "Auto:0x0c",
+          "Advanced:0x8c"
+        ],
+        "GpuTempEc": "0x80",
+        "KeyboardBacklightStartState": "0x81"
+      }
+    },
+    {
+      "id": "CONF32",
+      "values": {
+        "AllowedFw": [
+          "158PIMS1.207",
+          "158PIMS1.112",
+          "158PIMS1.114"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0xff",
+        "FanGpuEc": "0xff",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF33",
+      "values": {
+        "AllowedFw": "17N1EMS1.109",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x4d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2"
+      }
+    },
+    {
+      "id": "CONF34",
+      "values": {
+        "AllowedFw": "14C6EMS1.109",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x4d"
+        ],
+        "GpuTempEc": "0x00",
+        "FanGpuEc": "0x00",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x08"
+        ],
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF35",
+      "values": {
+        "AllowedFw": "15M2IMS1.113",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Comfort:0xc1",
+          "Eco:0xc2",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2"
+      }
+    },
+    {
+      "id": "CONF36",
+      "values": {
+        "AllowedFw": [
+          "1585EMS1.112",
+          "1585EMS1.115"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2"
+      }
+    },
+    {
+      "id": "CONF37",
+      "values": {
+        "AllowedFw": "15M1IMS1.113",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2"
+      }
+    },
+    {
+      "id": "CONF38",
+      "values": {
+        "AllowedFw": [
+          "17E8IMS1.106",
+          "17E8EMS1.101"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x00",
+          "Advanced:0x80"
+        ],
+        "GpuTempEc": "0x80",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x08"
+        ],
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF39",
+      "values": {
+        "AllowedFw": [
+          "16R8IMS1.108",
+          "16R8IMS1.111",
+          "16R8IMS1.117"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF40",
+      "values": {
+        "AllowedFw": "17S1IMS1.105",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Comfort:0xc1",
+          "Eco:0xc2",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2"
+      }
+    },
+    {
+      "id": "CONF41",
+      "values": {
+        "AllowedFw": "15M1IMS2.111",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Comfort:0xc1",
+          "Eco:0xc2",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2"
+      }
+    },
+    {
+      "id": "CONF42",
+      "values": {
+        "AllowedFw": [
+          "14L1EMS1.307",
+          "14L1EMS1.308"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0xff",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xe8",
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0xff",
+        "FanGpuEc": "0xff",
+        "MicMuteEc": "0x2c",
+        "LedsMask": "0x2",
+        "KeyboardBacklightModeEc": "0x2c",
+        "KeyboardBacklightMode": [
+          "0x00",
+          "0x08"
+        ],
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF43",
+      "values": {
+        "AllowedFw": [
+          "14DKEMS1.104",
+          "14DKEMS1.105"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0xff",
+        "FanGpuEc": "0xff",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x4",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF44",
+      "values": {
+        "AllowedFw": "17LNIMS1.505",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Comfort:0xc1",
+          "Eco:0xc2",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2"
+      }
+    },
+    {
+      "id": "CONF45",
+      "values": {
+        "AllowedFw": "1545IMS1.109",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Comfort:0xc1",
+          "Eco:0xc2",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80"
+      }
+    },
+    {
+      "id": "CONF46",
+      "values": {
+        "AllowedFw": [
+          "16W1EMS1.102",
+          "16W1EMS1.103",
+          "16W1EMS1.104",
+          "16W1EMS2.103",
+          "16W2EMS1.101"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Basic:0x4d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF47",
+      "values": {
+        "AllowedFw": [
+          "17KKIMS1.108",
+          "17KKIMS1.109",
+          "17KKIMS1.114",
+          "17KKIMS1.115"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80"
+      }
+    },
+    {
+      "id": "CONF48",
+      "values": {
+        "AllowedFw": [
+          "158NIMS1.10D",
+          "158NIMS1.30C"
+        ],
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF49",
+      "values": {
+        "AllowedFw": [
+          "16R4EMS1.101",
+          "16R4EMS1.102",
+          "16R5EMS1.102"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF50",
+      "values": {
+        "AllowedFw": "1584EMS1.112",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Sport:0xc0",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF51",
+      "values": {
+        "AllowedFw": [
+          "158MEMS1.101",
+          "158KEMS1.104",
+          "158KEMS1.106",
+          "158KEMS1.109"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "MicMuteEc": "0x2b",
+        "MuteLedEc": "0x2c",
+        "LedsMask": "0x4",
+        "KeyboardBacklightEc": "0xf3"
+      }
+    },
+    {
+      "id": "CONF52",
+      "values": {
+        "AllowedFw": [
+          "16V1EMS1.109",
+          "16V1EMS1.116",
+          "16V1EMS1.118",
+          "16V3EMS1.106"
+        ],
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "WebCamBlockEc": "0x2f",
+        "FnSuperSwapEc": "0xbf",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80"
+      }
+    },
+    {
+      "id": "CONF53",
+      "values": {
+        "AllowedFw": "159KIMS1.108",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0xff",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0xff",
+        "FanGpuEc": "0xff",
+        "MicMuteEc": "0x2c",
+        "MuteLedEc": "0x2d",
+        "LedsMask": "0x2",
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF54",
+      "values": {
+        "AllowedFw": "16R8IMS2.112",
+        "BatteryThresholdEc": "0xd7",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xe8",
+        "FnWinSwapInvert": true,
+        "ShiftModeEc": "0xd2",
+        "ShiftModeAvailable": [
+          "Eco:0xc2",
+          "Comfort:0xc1",
+          "Turbo:0xc4"
+        ],
+        "SuperBatteryEc": "0xeb",
+        "FanModeEc": "0xd4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Silent:0x1d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80",
+        "KeyboardBacklightEc": "0xd3"
+      }
+    },
+    {
+      "id": "CONF55",
+      "values": {
+        "AllowedFw": "17G1EMS1.107",
+        "BatteryThresholdEc": "0xef",
+        "WebCamEc": "0x2e",
+        "FnSuperSwapEc": "0xbf",
+        "ShiftModeEc": "0xf2",
+        "ShiftModeAvailable": [
+          "Sport:0xc0",
+          "Comfort:0xc1",
+          "Eco:0xc2",
+          "Turbo:0xc4"
+        ],
+        "FanModeEc": "0xf4",
+        "FanModeAvailable": [
+          "Auto:0x0d",
+          "Basic:0x4d",
+          "Advanced:0x8d"
+        ],
+        "GpuTempEc": "0x80"
+      }
+    }
+  ]
+}

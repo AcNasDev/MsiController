@@ -6,6 +6,7 @@ PACKAGE_DIR="$(cd "${PACKAGE_DIR}" && pwd)"
 DEB_PACKAGE="${MSICONTROLLER_TEST_DEB:-${PACKAGE_DIR}/msicontroller_amd64.deb}"
 RPM_PACKAGE="${MSICONTROLLER_TEST_RPM:-${PACKAGE_DIR}/msicontroller_x86_64.rpm}"
 export MSICONTROLLER_SKIP_DKMS="${MSICONTROLLER_SKIP_DKMS:-1}"
+export MSICONTROLLER_DISABLE_REPOSITORY_SETUP="${MSICONTROLLER_DISABLE_REPOSITORY_SETUP:-1}"
 
 log() {
   printf '\n==> %s\n' "$*"
@@ -86,6 +87,7 @@ test_deb_install() {
   apt-get update
   DEBIAN_FRONTEND=noninteractive \
   MSICONTROLLER_SKIP_DKMS=1 \
+  MSICONTROLLER_DISABLE_REPOSITORY_SETUP="${MSICONTROLLER_DISABLE_REPOSITORY_SETUP}" \
     apt-get install -y --no-install-recommends "${DEB_PACKAGE}"
 
   dpkg-query -W -f='${Package} ${Version} ${Architecture}\n' msicontroller
@@ -96,6 +98,7 @@ test_deb_install() {
   log "Removing DEB package"
   DEBIAN_FRONTEND=noninteractive \
   MSICONTROLLER_SKIP_DKMS=1 \
+  MSICONTROLLER_DISABLE_REPOSITORY_SETUP="${MSICONTROLLER_DISABLE_REPOSITORY_SETUP}" \
     apt-get remove -y msicontroller
 }
 

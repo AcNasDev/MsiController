@@ -9,6 +9,7 @@ The packaged build is designed for daily use: the application is installed into 
 ## Features
 
 - Dashboard with CPU/GPU temperatures, fan speed, battery state, and live GPU-rendered mini charts.
+- Built-in and user-editable supported-device profiles in JSON format.
 - Cooling modes: firmware auto, manual fan curve, target temperature, and Cooler Boost.
 - Service-managed target temperature mode for CPU/GPU fan adjustment.
 - Editable CPU and GPU fan curves with temperature-to-speed maps.
@@ -16,12 +17,13 @@ The packaged build is designed for daily use: the application is installed into 
 - CPU controls for frequency limit and governor selection.
 - Shift mode switching where firmware supports it: Eco, Comfort, Sport, Turbo.
 - Device controls for webcam, USB Power Share, FN/Meta swap, Super Battery, mute state, LEDs, keyboard backlight, and battery charge threshold where available.
+- EC memory debugger for service-mediated hex byte and bit edits.
 - Multiple UI themes, desktop entry, autostart entry, and system tray integration.
 - System service over D-Bus with systemd integration.
 - DEB/RPM packaging with DKMS-managed kernel module installation.
-- Forgejo CI package artifacts for releases and test builds.
+- Forgejo CI package artifacts, release uploads, and apt/dnf package registry publishing.
 
-Feature availability depends on the detected firmware configuration in `src/service/settings.ini`.
+Feature availability depends on the detected firmware configuration in `src/service/supported-devices.json` plus optional user profiles stored by the service in `/etc/MsiController/supported-devices.json`.
 
 ## Screenshots
 
@@ -71,6 +73,25 @@ The install host needs DKMS, `kmod`, systemd, and kernel headers for the running
 - DKMS source: `/usr/src/msiecmodule-<version>`
 - modules-load config: `/etc/modules-load.d/msiecmodule.conf`
 - desktop/autostart entries: `/usr/share/applications` and `/etc/xdg/autostart`
+
+Release packages also connect the Forgejo package repository during installation. After installing a downloaded `.deb` or `.rpm`, future tagged releases can be installed by the normal system updater:
+
+```sh
+sudo apt update
+sudo apt upgrade
+```
+
+or:
+
+```sh
+sudo dnf upgrade
+```
+
+Repository files are installed as:
+
+- apt source: `/etc/apt/sources.list.d/msicontroller-forgejo.list`
+- apt key: `/etc/apt/keyrings/msicontroller-forgejo.asc`
+- dnf/yum repo: `/etc/yum.repos.d/msicontroller-forgejo.repo`
 
 After installation:
 
@@ -129,6 +150,11 @@ When a tag matching `v*` is pushed, packages are published only after the instal
 
 - `msicontroller_amd64.deb`
 - `msicontroller_x86_64.rpm`
+
+The same files are uploaded to the Forgejo Package Registry as an apt/dnf repository:
+
+- Debian registry: `https://forgejo.acnas.net/api/packages/app/debian`, distribution `stable`, component `main`
+- RPM registry: `https://forgejo.acnas.net/api/packages/app/rpm`
 
 If the `GITHUBTOKEN` secret is configured, the same tag is pushed to GitHub and the same package files are uploaded to the matching GitHub Release.
 
@@ -198,7 +224,7 @@ MsiControlCenterClient
 
 ## Supported Laptops
 
-The current firmware configuration database contains 56 supported MSI firmware profiles (`CONF0` through `CONF55`). Feature availability is firmware-specific; the table below is based on `src/service/settings.ini`.
+The current firmware configuration database contains 56 built-in MSI firmware profiles (`CONF0` through `CONF55`). Feature availability is firmware-specific; the table below is based on `src/service/supported-devices.json`.
 
 | Config  | Firmware(s) | Fan | Shift | Keyboard Backlight | Super Battery | Mic Mute |
 |---------|-------------|-----|-------|--------------------|---------------|----------|
@@ -259,7 +285,7 @@ The current firmware configuration database contains 56 supported MSI firmware p
 | CONF54  | 16R8IMS2.112 | ✔ | ✔ | ✔ | ✔ |  |
 | CONF55  | 17G1EMS1.107 | ✔ | ✔ |  |  |  |
 
-*For details and updates, see `src/service/settings.ini`.*
+Built-in profiles are shipped in `src/service/supported-devices.json`. User profiles and overrides are written by the service to `/etc/MsiController/supported-devices.json` and can be managed from the client via **Supported devices** in the left panel. Saved profile changes are applied live: the service rebuilds the active EC parameter set and the client refreshes without restarting the service.
 
 ## Contact / Support
 

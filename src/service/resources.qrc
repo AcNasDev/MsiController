@@ -1,5 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>settings.ini</file>
+        <file>supported-devices.json</file>
     </qresource>
 </RCC>

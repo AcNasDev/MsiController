@@ -5,9 +5,51 @@ cd /
 DKMS_NAME="@MSICONTROLLER_DKMS_MODULE_NAME@"
 DKMS_VERSION="@MSICONTROLLER_DKMS_VERSION@"
 SERVICE_NAME="msi-ec-service.service"
+REPOSITORY_ENABLED="@MSICONTROLLER_PACKAGE_REPOSITORY_ENABLE@"
+REPOSITORY_BASE_URL="@MSICONTROLLER_PACKAGE_REPOSITORY_BASE_URL@"
+REPOSITORY_OWNER="@MSICONTROLLER_PACKAGE_REPOSITORY_OWNER@"
+RPM_GROUP="@MSICONTROLLER_PACKAGE_RPM_GROUP@"
+RPM_REPO_FILE="/etc/yum.repos.d/msicontroller-forgejo.repo"
 
 skip_dkms() {
     [ "${MSICONTROLLER_SKIP_DKMS:-0}" = "1" ]
+}
+
+skip_repository_setup() {
+    [ "${MSICONTROLLER_DISABLE_REPOSITORY_SETUP:-0}" = "1" ]
+}
+
+repository_enabled() {
+    [ "$REPOSITORY_ENABLED" = "ON" ] || [ "$REPOSITORY_ENABLED" = "1" ] || [ "$REPOSITORY_ENABLED" = "TRUE" ]
+}
+
+configure_rpm_repository() {
+    repository_enabled || return 0
+    skip_repository_setup && return 0
+    [ -n "$REPOSITORY_BASE_URL" ] || return 0
+    [ -n "$REPOSITORY_OWNER" ] || return 0
+    [ -d /etc ] || return 0
+
+    repo_url="${REPOSITORY_BASE_URL%/}/api/packages/${REPOSITORY_OWNER}/rpm"
+    if [ -n "$RPM_GROUP" ]; then
+        repo_url="${repo_url}/${RPM_GROUP}"
+    fi
+    gpgkey_url="${REPOSITORY_BASE_URL%/}/api/packages/${REPOSITORY_OWNER}/rpm/repository.key"
+
+    mkdir -p /etc/yum.repos.d
+    cat > "$RPM_REPO_FILE" <<EOF
+[msicontroller-forgejo]
+name=MSI Control Center Forgejo Packages
+baseurl=${repo_url}
+enabled=1
+gpgcheck=1
+gpgkey=${gpgkey_url}
+repo_gpgcheck=0
+metadata_expire=6h
+skip_if_unavailable=1
+type=rpm-md
+EOF
+    chmod 0644 "$RPM_REPO_FILE"
 }
 
 cleanup_broken_dkms_versions() {
@@ -19,6 +61,8 @@ cleanup_broken_dkms_versions() {
             dkms remove -m "$DKMS_NAME" -v "$stale_version" --all >/dev/null 2>&1 || true
         done
 }
+
+configure_rpm_repository
 
 if ! skip_dkms && command -v dkms >/dev/null 2>&1; then
     cleanup_broken_dkms_versions

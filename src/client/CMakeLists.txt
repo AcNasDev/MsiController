@@ -38,6 +38,8 @@ qt_add_qml_module(MsiControlCenterClient
         ToggleTile.qml
         OptionGroup.qml
         TargetTemperatureCard.qml
+        DeviceProfilesPage.qml
+        MemoryDebugPage.qml
         CpuPerformanceGraph.qml
         CpuPage.qml
         GraphCard.qml

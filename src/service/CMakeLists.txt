@@ -34,6 +34,8 @@ add_executable(MsiControlCenterService
   fantargetcontroller.cpp
   softwareparameter.h
   softwareparameter.cpp
+  supportconfig.h
+  supportconfig.cpp
   resources.qrc
 )
 

@@ -1,12 +1,11 @@
 #include "esproxy.h"
 
-#include "ecinterface.h"
-
 #include <QDateTime>
 #include <QSet>
 #include <QVector>
-
 #include <algorithm>
+
+#include "ecinterface.h"
 
 namespace {
 constexpr int writeConfirmRetryMs = 140;
@@ -45,6 +44,20 @@ EsProxy::EsProxy(QObject* parent) : QObject(parent) {
                     return;
                 handleRemoteValue(paramName, paramValue);
             });
+    connect(mEcInterface, &ComMsiEcInterface::supportedDeviceProfilesChanged, this, [this]() {
+        refreshDeviceProfiles();
+    });
+    connect(mEcInterface, &ComMsiEcInterface::availableParametersChanged, this, [this]() {
+        mPendingWrites.clear();
+        mInFlightWrites.clear();
+        mConfirmingWrites.clear();
+        mWriteFlushTimer.stop();
+        for (auto& param : mProxyParameters) {
+            param->setIsPending(false);
+            param->setIsValid(false);
+        }
+        init();
+    });
 
     QDBusServiceWatcher* serviceWatcher =
         new QDBusServiceWatcher("com.msi.ec",
@@ -60,6 +73,10 @@ EsProxy::EsProxy(QObject* parent) : QObject(parent) {
             mInFlightWrites.clear();
             mConfirmingWrites.clear();
             mWriteFlushTimer.stop();
+            mDeviceProfiles.clear();
+            mActiveDeviceProfile.clear();
+            emit deviceProfilesChanged();
+            emit activeDeviceProfileChanged();
             for (auto& param : mProxyParameters) {
                 param->setIsPending(false);
             }
@@ -92,6 +109,9 @@ EsProxy::EsProxy(QObject* parent) : QObject(parent) {
 }
 
 void EsProxy::init() {
+    refreshDeviceProfiles();
+    refreshActiveDeviceProfile();
+
     QDBusPendingCallWatcher* watcher = new QDBusPendingCallWatcher(mEcInterface->availableParameters(), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
         if (watcher->isError()) {
@@ -176,6 +196,18 @@ bool EsProxy::isConnected() const {
     return mIsConnected;
 }
 
+QVariantList EsProxy::deviceProfiles() const {
+    return mDeviceProfiles;
+}
+
+QVariantMap EsProxy::activeDeviceProfile() const {
+    return mActiveDeviceProfile;
+}
+
+QString EsProxy::deviceProfileStatus() const {
+    return mDeviceProfileStatus;
+}
+
 ProxyParameter* EsProxy::getProxyParameter(const Msi::Parametr& name) const {
     if (mProxyParameters.contains(name)) {
         return mProxyParameters[name];
@@ -226,6 +258,146 @@ void EsProxy::setCpuGovernor(const QString& governor) {
     param->setValue(QVariant::fromValue(config));
 }
 
+void EsProxy::refreshDeviceProfiles() {
+    if (!mIsConnected || !mEcInterface)
+        return;
+
+    auto* watcher = new QDBusPendingCallWatcher(mEcInterface->supportedDeviceProfiles(), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
+        if (watcher->isError()) {
+            qWarning() << "Failed to fetch supported device profiles:" << watcher->error();
+            setDeviceProfileStatus(tr("Failed to load profiles"));
+            watcher->deleteLater();
+            return;
+        }
+
+        const auto arguments = watcher->reply().arguments();
+        if (!arguments.isEmpty()) {
+            mDeviceProfiles = qdbus_cast<Msi::Msg>(arguments.at(0).value<QDBusVariant>().variant()).variant.toList();
+            emit deviceProfilesChanged();
+        }
+        watcher->deleteLater();
+    });
+}
+
+void EsProxy::saveDeviceProfile(const QVariantMap& profile) {
+    if (!mIsConnected || !mEcInterface) {
+        setDeviceProfileStatus(tr("Service is disconnected"));
+        return;
+    }
+
+    auto* watcher = new QDBusPendingCallWatcher(
+        mEcInterface->saveSupportedDeviceProfile(QDBusVariant(QVariant::fromValue(Msi::Msg(profile)))),
+        this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
+        bool ok = false;
+        QString errorMessage;
+        if (watcher->isError()) {
+            errorMessage = watcher->error().message();
+        } else {
+            const auto arguments = watcher->reply().arguments();
+            if (!arguments.isEmpty()) {
+                const QVariantMap result =
+                    qdbus_cast<Msi::Msg>(arguments.at(0).value<QDBusVariant>().variant()).variant.toMap();
+                ok = result.value(QStringLiteral("ok")).toBool();
+                errorMessage = result.value(QStringLiteral("error")).toString();
+            }
+        }
+
+        setDeviceProfileStatus(ok ? tr("Profile saved and applied") : errorMessage);
+        refreshDeviceProfiles();
+        watcher->deleteLater();
+    });
+}
+
+void EsProxy::removeDeviceProfile(const QString& profileId) {
+    if (!mIsConnected || !mEcInterface) {
+        setDeviceProfileStatus(tr("Service is disconnected"));
+        return;
+    }
+
+    auto* watcher = new QDBusPendingCallWatcher(
+        mEcInterface->removeSupportedDeviceProfile(QDBusVariant(QVariant::fromValue(Msi::Msg(profileId)))),
+        this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
+        bool ok = false;
+        QString errorMessage;
+        if (watcher->isError()) {
+            errorMessage = watcher->error().message();
+        } else {
+            const auto arguments = watcher->reply().arguments();
+            if (!arguments.isEmpty()) {
+                const QVariantMap result =
+                    qdbus_cast<Msi::Msg>(arguments.at(0).value<QDBusVariant>().variant()).variant.toMap();
+                ok = result.value(QStringLiteral("ok")).toBool();
+                errorMessage = result.value(QStringLiteral("error")).toString();
+            }
+        }
+
+        setDeviceProfileStatus(ok ? tr("Profile removed and applied") : errorMessage);
+        refreshDeviceProfiles();
+        watcher->deleteLater();
+    });
+}
+
+QVariantMap EsProxy::readEcMemory(int offset, int length) const {
+    if (!mIsConnected || !mEcInterface) {
+        return {{QStringLiteral("ok"), false}, {QStringLiteral("error"), tr("Service is disconnected")}};
+    }
+
+    auto reply = mEcInterface->readEcMemory(QDBusVariant(QVariant::fromValue(Msi::Msg(offset))),
+                                            QDBusVariant(QVariant::fromValue(Msi::Msg(length))));
+    return ecMemoryReplyToMap(reply);
+}
+
+QVariantMap EsProxy::writeEcMemory(int offset, const QVariantList& bytes) {
+    if (!mIsConnected || !mEcInterface) {
+        return {{QStringLiteral("ok"), false}, {QStringLiteral("error"), tr("Service is disconnected")}};
+    }
+
+    auto reply = mEcInterface->writeEcMemory(QDBusVariant(QVariant::fromValue(Msi::Msg(offset))),
+                                             QDBusVariant(QVariant::fromValue(Msi::Msg(bytes))));
+    return ecMemoryReplyToMap(reply);
+}
+
+QVariantMap EsProxy::writeEcMemoryBits(int offset, int mask, int value) {
+    if (!mIsConnected || !mEcInterface) {
+        return {{QStringLiteral("ok"), false}, {QStringLiteral("error"), tr("Service is disconnected")}};
+    }
+
+    auto reply = mEcInterface->writeEcMemoryBits(QDBusVariant(QVariant::fromValue(Msi::Msg(offset))),
+                                                 QDBusVariant(QVariant::fromValue(Msi::Msg(mask))),
+                                                 QDBusVariant(QVariant::fromValue(Msi::Msg(value))));
+    return ecMemoryReplyToMap(reply);
+}
+
+QVariantMap EsProxy::ecMemoryReplyToMap(QDBusPendingReply<QDBusVariant>& reply) const {
+    reply.waitForFinished();
+    if (reply.isError()) {
+        return {{QStringLiteral("ok"), false}, {QStringLiteral("error"), reply.error().message()}};
+    }
+
+    return qdbus_cast<Msi::Msg>(reply.argumentAt<0>().variant()).variant.toMap();
+}
+
+void EsProxy::refreshActiveDeviceProfile() {
+    if (!mIsConnected || !mEcInterface)
+        return;
+
+    auto* watcher = new QDBusPendingCallWatcher(mEcInterface->activeDeviceProfile(), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
+        if (!watcher->isError()) {
+            const auto arguments = watcher->reply().arguments();
+            if (!arguments.isEmpty()) {
+                mActiveDeviceProfile =
+                    qdbus_cast<Msi::Msg>(arguments.at(0).value<QDBusVariant>().variant()).variant.toMap();
+                emit activeDeviceProfileChanged();
+            }
+        }
+        watcher->deleteLater();
+    });
+}
+
 ProxyParameter* EsProxy::cpuControlWriteParameter() const {
     if (auto it = mProxyParameters.find(Msi::Parametr::CpuControlConfig); it != mProxyParameters.end()) {
         const Msi::CpuConfig config = it.value()->value().value<Msi::CpuConfig>();
@@ -240,6 +412,14 @@ ProxyParameter* EsProxy::cpuControlWriteParameter() const {
     }
 
     return nullptr;
+}
+
+void EsProxy::setDeviceProfileStatus(const QString& status) {
+    if (mDeviceProfileStatus == status)
+        return;
+
+    mDeviceProfileStatus = status;
+    emit deviceProfileStatusChanged();
 }
 
 void EsProxy::applyRemoteValue(Msi::Parametr param, const QVariant& value, bool markValid) {
@@ -315,9 +495,9 @@ void EsProxy::flushPendingWrites() {
     if (batchParams.isEmpty())
         return;
 
-    auto* watcher = new QDBusPendingCallWatcher(
-        mEcInterface->writeParameters(QDBusVariant(QVariant::fromValue(Msi::Msg(updates)))),
-        this);
+    auto* watcher =
+        new QDBusPendingCallWatcher(mEcInterface->writeParameters(QDBusVariant(QVariant::fromValue(Msi::Msg(updates)))),
+                                    this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, batchParams, watcher]() {
         QSet<Msi::Parametr> confirmedParams;
         if (watcher->isError()) {
@@ -366,9 +546,9 @@ void EsProxy::refreshParameter(Msi::Parametr param) {
     if (!mIsConnected || !mEcInterface)
         return;
 
-    auto* watcher = new QDBusPendingCallWatcher(
-        mEcInterface->readParameter(QDBusVariant(QVariant::fromValue(Msi::Msg(param)))),
-        this);
+    auto* watcher =
+        new QDBusPendingCallWatcher(mEcInterface->readParameter(QDBusVariant(QVariant::fromValue(Msi::Msg(param)))),
+                                    this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, param, watcher]() {
         if (watcher->isError()) {
             qWarning() << "Failed to refresh" << param << ":" << watcher->error();

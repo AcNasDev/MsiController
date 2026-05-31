@@ -9,6 +9,12 @@ if(NOT MSICONTROLLER_PACKAGE_RELEASE)
     set(MSICONTROLLER_PACKAGE_RELEASE "1")
 endif()
 string(REGEX REPLACE "[^A-Za-z0-9.+~]" "." MSICONTROLLER_PACKAGE_RELEASE "${MSICONTROLLER_PACKAGE_RELEASE}")
+set(MSICONTROLLER_PACKAGE_REPOSITORY_ENABLE ON CACHE BOOL "Install the Forgejo package repository during DEB/RPM installation")
+set(MSICONTROLLER_PACKAGE_REPOSITORY_BASE_URL "https://forgejo.acnas.net" CACHE STRING "Forgejo instance base URL for package repository setup")
+set(MSICONTROLLER_PACKAGE_REPOSITORY_OWNER "app" CACHE STRING "Forgejo package owner used by apt/dnf repository setup")
+set(MSICONTROLLER_PACKAGE_DEBIAN_DISTRIBUTION "stable" CACHE STRING "Forgejo Debian package distribution")
+set(MSICONTROLLER_PACKAGE_DEBIAN_COMPONENT "main" CACHE STRING "Forgejo Debian package component")
+set(MSICONTROLLER_PACKAGE_RPM_GROUP "" CACHE STRING "Forgejo RPM package group")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CPACK_PACKAGE_NAME}")
 set(CPACK_PACKAGE_RELOCATABLE OFF)
 set(CPACK_GENERATOR "DEB;RPM")
@@ -56,14 +62,14 @@ set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${CPACK_PACKAGE_CONTACT}")
 set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
 set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
 if(MSICONTROLLER_BUNDLE_QT_RUNTIME)
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "dkms, kmod, systemd, linux-headers-generic | linux-headers-amd64")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "ca-certificates, curl, dkms, kmod, systemd, linux-headers-generic | linux-headers-amd64")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS
         "${CMAKE_INSTALL_PREFIX}/lib"
         "${CMAKE_INSTALL_PREFIX}/qt/lib"
     )
 else()
     set(CPACK_DEBIAN_PACKAGE_DEPENDS
-        "dkms, kmod, systemd, linux-headers-generic | linux-headers-amd64, qt6-qpa-plugins, qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-shapes, qml6-module-qtquick-effects, qml6-module-qtcharts, qml6-module-qt-labs-platform, qml6-module-qt-labs-settings, qml6-module-qtcore"
+        "ca-certificates, curl, dkms, kmod, systemd, linux-headers-generic | linux-headers-amd64, qt6-qpa-plugins, qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-shapes, qml6-module-qtquick-effects, qml6-module-qtcharts, qml6-module-qt-labs-platform, qml6-module-qt-labs-settings, qml6-module-qtcore"
     )
 endif()
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
@@ -78,10 +84,10 @@ set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/System")
 set(CPACK_RPM_PACKAGE_RELOCATABLE OFF)
 if(MSICONTROLLER_BUNDLE_QT_RUNTIME)
-    set(CPACK_RPM_PACKAGE_REQUIRES "dkms, kmod, systemd, kernel-devel")
+    set(CPACK_RPM_PACKAGE_REQUIRES "ca-certificates, dkms, kmod, systemd, kernel-devel")
 else()
     set(CPACK_RPM_PACKAGE_REQUIRES
-        "dkms, kmod, systemd, kernel-devel, qt6-qtbase-gui, qt6-qtdeclarative, qt6-qtcharts"
+        "ca-certificates, dkms, kmod, systemd, kernel-devel, qt6-qtbase-gui, qt6-qtdeclarative, qt6-qtcharts"
     )
 endif()
 set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${_packaging_script_dir}/rpm/postinstall")
