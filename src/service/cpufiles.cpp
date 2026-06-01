@@ -1,6 +1,10 @@
 #include "cpufiles.h"
 
 #include <QDebug>
+#include <QDBusArgument>
+#include <QDBusInterface>
+#include <QDBusReply>
+#include <QDBusVariant>
 #include <QDir>
 #include <QFile>
 #include <QRegularExpression>
@@ -17,9 +21,129 @@ static const char* cpuinfoFreqMaxPath = "/cpufreq/cpuinfo_max_freq";
 static const char* cpuinfoFreqMinPath = "/cpufreq/cpuinfo_min_freq";
 static const char* scalingGovernorPath = "/cpufreq/scaling_governor";
 static const char* availableGovernorsPath = "/cpufreq/scaling_available_governors";
+static const char* powerProfilesService = "org.freedesktop.UPower.PowerProfiles";
+static const char* powerProfilesPath = "/org/freedesktop/UPower/PowerProfiles";
+static const char* dbusPropertiesInterface = "org.freedesktop.DBus.Properties";
 
 QString cpuPath(const QString& cpuDir, const char* filePath) {
     return QString::fromLatin1(rootPath) + cpuDir + QString::fromLatin1(filePath);
+}
+
+QString normalizePowerProfile(const QString& value) {
+    const QString normalized = value.trimmed().toLower();
+    if (normalized == QStringLiteral("powersave") || normalized == QStringLiteral("power_saver") ||
+        normalized == QStringLiteral("power saver")) {
+        return QStringLiteral("power-saver");
+    }
+    if (normalized == QStringLiteral("balanced") || normalized == QStringLiteral("performance") ||
+        normalized == QStringLiteral("power-saver")) {
+        return normalized;
+    }
+    return value.trimmed();
+}
+
+QStringList defaultPowerProfiles(const QString& activeProfile) {
+    QStringList profiles{QStringLiteral("power-saver"), QStringLiteral("balanced"), QStringLiteral("performance")};
+    if (!activeProfile.isEmpty() && !profiles.contains(activeProfile)) {
+        profiles.prepend(activeProfile);
+    }
+    return profiles;
+}
+
+QStringList parsePowerProfileList(const QVariant& value) {
+    QStringList profiles;
+    if (!value.canConvert<QDBusArgument>()) {
+        const QVariantList list = value.toList();
+        for (const QVariant& item : list) {
+            const QVariantMap map = item.toMap();
+            const QString profile = map.value(QStringLiteral("Profile")).toString();
+            if (!profile.isEmpty() && !profiles.contains(profile)) {
+                profiles.append(profile);
+            }
+        }
+        return profiles;
+    }
+
+    QDBusArgument argument = value.value<QDBusArgument>();
+    argument.beginArray();
+    while (!argument.atEnd()) {
+        QString profile;
+        argument.beginMap();
+        while (!argument.atEnd()) {
+            QString key;
+            QDBusVariant entryValue;
+            argument.beginMapEntry();
+            argument >> key >> entryValue;
+            argument.endMapEntry();
+            if (key == QStringLiteral("Profile")) {
+                profile = entryValue.variant().toString();
+            }
+        }
+        argument.endMap();
+
+        if (!profile.isEmpty() && !profiles.contains(profile)) {
+            profiles.append(profile);
+        }
+    }
+    argument.endArray();
+    return profiles;
+}
+
+struct PowerProfileState {
+    bool available{false};
+    QString activeProfile;
+    QStringList profiles;
+};
+
+PowerProfileState readPowerProfiles() {
+    PowerProfileState state;
+    QDBusInterface properties(QString::fromLatin1(powerProfilesService),
+                              QString::fromLatin1(powerProfilesPath),
+                              QString::fromLatin1(dbusPropertiesInterface),
+                              QDBusConnection::systemBus());
+
+    QDBusReply<QDBusVariant> activeReply =
+        properties.call(QStringLiteral("Get"), QString::fromLatin1(powerProfilesService), QStringLiteral("ActiveProfile"));
+    if (!activeReply.isValid()) {
+        return state;
+    }
+
+    state.available = true;
+    state.activeProfile = activeReply.value().variant().toString();
+
+    QDBusReply<QDBusVariant> profilesReply =
+        properties.call(QStringLiteral("Get"), QString::fromLatin1(powerProfilesService), QStringLiteral("Profiles"));
+    if (profilesReply.isValid()) {
+        state.profiles = parsePowerProfileList(profilesReply.value().variant());
+    }
+    if (state.profiles.isEmpty()) {
+        state.profiles = defaultPowerProfiles(state.activeProfile);
+    }
+    if (!state.activeProfile.isEmpty() && !state.profiles.contains(state.activeProfile)) {
+        state.profiles.prepend(state.activeProfile);
+    }
+    return state;
+}
+
+bool writePowerProfile(const QString& profile) {
+    const QString normalizedProfile = normalizePowerProfile(profile);
+    if (normalizedProfile.isEmpty()) {
+        return false;
+    }
+
+    QDBusInterface properties(QString::fromLatin1(powerProfilesService),
+                              QString::fromLatin1(powerProfilesPath),
+                              QString::fromLatin1(dbusPropertiesInterface),
+                              QDBusConnection::systemBus());
+    QDBusReply<void> reply = properties.call(QStringLiteral("Set"),
+                                             QString::fromLatin1(powerProfilesService),
+                                             QStringLiteral("ActiveProfile"),
+                                             QVariant::fromValue(QDBusVariant(normalizedProfile)));
+    if (!reply.isValid()) {
+        qWarning() << "Failed to set power profile:" << normalizedProfile << reply.error();
+        return false;
+    }
+    return true;
 }
 } // namespace
 
@@ -71,9 +195,15 @@ Msi::Cpu CpuFiles::readControl(const QString& cpuDir, const Msi::Cpu* fallback) 
 Msi::CpuConfig CpuFiles::readControls(const QVector<QString>& cpuDirs, const Msi::CpuConfig& fallback) {
     Msi::CpuConfig config;
     const bool hasFallback = fallback.cpus.size() == cpuDirs.size();
+    const PowerProfileState powerProfiles = readPowerProfiles();
     for (int i = 0; i < cpuDirs.size(); ++i) {
         const Msi::Cpu* previous = hasFallback ? &fallback.cpus.at(i) : nullptr;
-        config.cpus.append(readControl(cpuDirs.at(i), previous));
+        Msi::Cpu cpu = readControl(cpuDirs.at(i), previous);
+        if (powerProfiles.available) {
+            cpu.availableGovernor = powerProfiles.activeProfile;
+            cpu.availableGovernors = powerProfiles.profiles;
+        }
+        config.cpus.append(cpu);
     }
     return config;
 }
@@ -82,6 +212,20 @@ bool CpuFiles::writeControls(const QVector<QString>& cpuDirs,
                              const Msi::CpuConfig& desired,
                              const Msi::CpuConfig& current) {
     bool success = true;
+    const PowerProfileState powerProfiles = readPowerProfiles();
+    QString desiredPowerProfile;
+    if (powerProfiles.available) {
+        for (const Msi::Cpu& cpu : desired.cpus) {
+            const QString profile = normalizePowerProfile(cpu.availableGovernor);
+            if (!profile.isEmpty() && powerProfiles.profiles.contains(profile)) {
+                desiredPowerProfile = profile;
+                break;
+            }
+        }
+        if (!desiredPowerProfile.isEmpty() && desiredPowerProfile != powerProfiles.activeProfile) {
+            success = writePowerProfile(desiredPowerProfile) && success;
+        }
+    }
 
     for (int i = 0; i < desired.cpus.size() && i < cpuDirs.size(); ++i) {
         const Msi::Cpu& cpu = desired.cpus.at(i);
@@ -108,7 +252,8 @@ bool CpuFiles::writeControls(const QVector<QString>& cpuDirs,
         if (!currentCpu || currentCpu->scalingMaxFreq != cpu.scalingMaxFreq) {
             writeText(cpuPath(cpuDir, scalingFreqMaxPath), QString::number(cpu.scalingMaxFreq));
         }
-        if (!cpu.availableGovernor.isEmpty() && (!currentCpu || currentCpu->availableGovernor != cpu.availableGovernor)) {
+        if (!powerProfiles.available && !cpu.availableGovernor.isEmpty() &&
+            (!currentCpu || currentCpu->availableGovernor != cpu.availableGovernor)) {
             writeText(cpuPath(cpuDir, scalingGovernorPath), cpu.availableGovernor);
         }
     }

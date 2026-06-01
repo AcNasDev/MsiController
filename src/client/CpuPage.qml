@@ -123,6 +123,12 @@ Flickable {
             cpuParameter.value = config
     }
 
+    function governorLabel(value) {
+        if (value === "power-saver")
+            return qsTr("powersave")
+        return value
+    }
+
     function controlWritePending() {
         if (root.cpuControlParameter && root.cpuControlParameter.isValid)
             return root.cpuControlParameter.isPending
@@ -275,7 +281,7 @@ Flickable {
                         Label {
                             id: governorLabel
                             anchors.centerIn: parent
-                            text: modelData
+                            text: root.governorLabel(modelData)
                             color: parent.selected ? "#ffffff" : root.textColor
                             font.pixelSize: 12
                             font.bold: parent.selected
