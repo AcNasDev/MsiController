@@ -10,6 +10,7 @@ The packaged build is designed for daily use: the application is installed into 
 
 - Dashboard with CPU/GPU temperatures, fan speed, battery state, and live GPU-rendered mini charts.
 - Built-in and user-editable supported-device profiles in JSON format.
+- Developer mode gate for advanced configuration and EC memory tools.
 - Cooling modes: firmware auto, manual fan curve, target temperature, and Cooler Boost.
 - Service-managed target temperature mode for CPU/GPU fan adjustment.
 - Editable CPU and GPU fan curves with temperature-to-speed maps.
@@ -29,11 +30,19 @@ Feature availability depends on the detected firmware configuration in `src/serv
 
 **Dashboard and cooling controls**
 
-![Dashboard and cooling controls](screenshot/Screenshot_20260530_114620.png)
+![Dashboard and cooling controls](screenshot/Screenshot_20260601_081953.png)
 
 **CPU performance and device controls**
 
-![CPU performance and device controls](screenshot/Screenshot_20260530_114644.png)
+![CPU performance and device controls](screenshot/Screenshot_20260601_082011.png)
+
+**Supported device profiles**
+
+![Supported device profiles](screenshot/Screenshot_20260601_082024.png)
+
+**EC memory debugger**
+
+![EC memory debugger](screenshot/Screenshot_20260601_082031.png)
 
 ## Architecture
 
