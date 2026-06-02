@@ -11,6 +11,7 @@ namespace {
 constexpr int writeConfirmRetryMs = 140;
 constexpr int writeConfirmTimeoutMs = 2600;
 constexpr quint32 cpuFrequencyConfirmToleranceKhz = 25000;
+constexpr double gpuPowerConfirmToleranceWatts = 0.75;
 
 qint64 currentTimeMs() {
     return QDateTime::currentMSecsSinceEpoch();
@@ -18,6 +19,53 @@ qint64 currentTimeMs() {
 
 bool frequencyClose(quint32 expected, quint32 actual) {
     return qAbs(static_cast<qint64>(expected) - static_cast<qint64>(actual)) <= cpuFrequencyConfirmToleranceKhz;
+}
+
+bool powerLimitClose(double expected, double actual) {
+    return qAbs(expected - actual) <= gpuPowerConfirmToleranceWatts;
+}
+
+QVariantMap gpuDevicesById(const QVariant& value) {
+    QVariantMap devicesById;
+    for (const QVariant& item : value.toList()) {
+        const QVariantMap device = item.toMap();
+        const QString id = device.value(QStringLiteral("id")).toString();
+        if (!id.isEmpty()) {
+            devicesById.insert(id, device);
+        }
+    }
+    return devicesById;
+}
+
+bool gpuControlMatches(const QVariant& expectedValue, const QVariant& actualValue) {
+    const QVariantMap actualById = gpuDevicesById(actualValue);
+    for (const QVariant& item : expectedValue.toList()) {
+        const QVariantMap expected = item.toMap();
+        const QString id = expected.value(QStringLiteral("id")).toString();
+        if (id.isEmpty()) {
+            continue;
+        }
+
+        const QVariantMap actual = actualById.value(id).toMap();
+        if (actual.isEmpty()) {
+            return false;
+        }
+
+        if (expected.contains(QStringLiteral("performanceLevel")) && actual.contains(QStringLiteral("performanceLevel")) &&
+            expected.value(QStringLiteral("performanceLevel")).toString() != actual.value(QStringLiteral("performanceLevel")).toString()) {
+            return false;
+        }
+        if (expected.contains(QStringLiteral("persistenceMode")) && actual.contains(QStringLiteral("persistenceMode")) &&
+            expected.value(QStringLiteral("persistenceMode")).toBool() != actual.value(QStringLiteral("persistenceMode")).toBool()) {
+            return false;
+        }
+        if (expected.contains(QStringLiteral("powerLimitWatts")) && actual.contains(QStringLiteral("powerLimitWatts")) &&
+            !powerLimitClose(expected.value(QStringLiteral("powerLimitWatts")).toDouble(),
+                             actual.value(QStringLiteral("powerLimitWatts")).toDouble())) {
+            return false;
+        }
+    }
+    return true;
 }
 } // namespace
 
@@ -256,6 +304,33 @@ void EsProxy::setCpuGovernor(const QString& governor) {
         cpu.availableGovernor = governor;
 
     param->setValue(QVariant::fromValue(config));
+}
+
+void EsProxy::setGpuControlValue(const QString& deviceId, const QString& key, const QVariant& value) {
+    if (deviceId.isEmpty() || key.isEmpty())
+        return;
+
+    auto it = mProxyParameters.find(Msi::Parametr::GpuControlConfig);
+    if (it == mProxyParameters.end() || !it.value()->isValid())
+        return;
+
+    const QVariantList devices = it.value()->value().toList();
+    QVariantList updatedDevices;
+    updatedDevices.reserve(devices.size());
+    bool changed = false;
+
+    for (const QVariant& item : devices) {
+        QVariantMap device = item.toMap();
+        if (device.value(QStringLiteral("id")).toString() == deviceId && device.value(key) != value) {
+            device.insert(key, value);
+            changed = true;
+        }
+        updatedDevices.append(device);
+    }
+
+    if (changed) {
+        it.value()->setValue(updatedDevices);
+    }
 }
 
 void EsProxy::refreshDeviceProfiles() {
@@ -622,6 +697,9 @@ void EsProxy::scheduleConfirmationRefresh(Msi::Parametr param) {
 bool EsProxy::confirmationMatches(Msi::Parametr param,
                                   const QVariant& expectedValue,
                                   const QVariant& actualValue) const {
+    if (param == Msi::Parametr::GpuControlConfig)
+        return gpuControlMatches(expectedValue, actualValue);
+
     if (param != Msi::Parametr::CpuConfig && param != Msi::Parametr::CpuControlConfig)
         return expectedValue == actualValue;
 

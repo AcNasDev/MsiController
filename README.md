@@ -16,6 +16,7 @@ The packaged build is designed for daily use: the application is installed into 
 - Editable CPU and GPU fan curves with temperature-to-speed maps.
 - CPU performance view for per-core frequency, usage, and frequency limits.
 - CPU controls for frequency limit and governor selection.
+- Optional NVIDIA/AMD GPU controls for power limit, persistence mode, or AMD performance level when the driver exposes them.
 - Shift mode switching where firmware supports it: Eco, Comfort, Sport, Turbo.
 - Device controls for webcam, USB Power Share, FN/Meta swap, Super Battery, mute state, LEDs, keyboard backlight, and battery charge threshold where available.
 - EC memory debugger for service-mediated hex byte and bit edits.
@@ -295,6 +296,23 @@ The current firmware configuration database contains 56 built-in MSI firmware pr
 | CONF55  | 17G1EMS1.107 | ✔ | ✔ |  |  |  |
 
 Built-in profiles are shipped in `src/service/supported-devices.json`. User profiles and overrides are written by the service to `/etc/MsiController/supported-devices.json` and can be managed from the client via **Supported devices** in the left panel. Saved profile changes are applied live: the service rebuilds the active EC parameter set and the client refreshes without restarting the service.
+
+### Regenerating Device Profiles
+
+The built-in JSON database can be regenerated manually from the C configurations in [BeardOverflow/msi-ec](https://github.com/BeardOverflow/msi-ec):
+
+```sh
+scripts/generate-supported-devices-from-msi-ec.py --dry-run > /tmp/supported-devices.json
+scripts/generate-supported-devices-from-msi-ec.py --output src/service/supported-devices.json
+```
+
+To use an already cloned upstream repository:
+
+```sh
+scripts/generate-supported-devices-from-msi-ec.py --source-dir /path/to/msi-ec --output src/service/supported-devices.json
+```
+
+The script is not part of the application runtime. It parses upstream `msi-ec.c` / `ec_memory_configuration.h`, keeps MsiController-only defaults for battery status and USB power share, and writes explicit EC addresses into every generated profile so unsupported upstream fields do not fall back to stale defaults.
 
 ## Contact / Support
 

@@ -133,6 +133,7 @@ ApplicationWindow {
     property var fanControlModeParam: proxy.getProxyParameter(Msi.Parametr.FanControlMode)
     property var fanTargetCpuTempParam: proxy.getProxyParameter(Msi.Parametr.FanTargetCpuTemp)
     property var fanTargetGpuTempParam: proxy.getProxyParameter(Msi.Parametr.FanTargetGpuTemp)
+    property var gpuControlParam: proxy.getProxyParameter(Msi.Parametr.GpuControlConfig)
     readonly property bool coolerBoostActive: binaryChecked(coolerBoostParam)
     readonly property bool targetFanModeActive: fanControlModeValue() === 1
     readonly property bool manualFanCurveActive: !coolerBoostActive && !targetFanModeActive && fanModeValue() === 3
@@ -1139,6 +1140,19 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.preferredHeight: implicitHeight
                     embedded: true
+                    proxy: proxy
+                    surfaceColor: mainWindow.theme.surface
+                    elevatedColor: mainWindow.theme.elevated
+                    borderColor: mainWindow.theme.border
+                    textColor: mainWindow.theme.text
+                    mutedTextColor: mainWindow.theme.muted
+                    accentColor: mainWindow.theme.accent
+                    secondaryAccentColor: mainWindow.theme.accent2
+                }
+
+                GpuControlsCard {
+                    Layout.fillWidth: true
+                    parameter: gpuControlParam
                     proxy: proxy
                     surfaceColor: mainWindow.theme.surface
                     elevatedColor: mainWindow.theme.elevated

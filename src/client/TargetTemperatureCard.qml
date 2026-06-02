@@ -24,7 +24,9 @@ AppCard {
     readonly property bool twoColumnTargets: width > 380
     property var pendingHardwareMode: null
 
-    implicitHeight: targetControlsVisible && !twoColumnTargets ? 206 : 154
+    implicitHeight: Math.max(154,
+                             28 + 36 + 10 + modeFlow.implicitHeight +
+                             (targetControlsVisible ? 10 + targetGrid.implicitHeight : 0))
 
     function modeValue() {
         if (!modeParameter || modeParameter.value === undefined || modeParameter.value === null)
@@ -132,6 +134,8 @@ AppCard {
     }
 
     Flow {
+        id: modeFlow
+
         Layout.fillWidth: true
         spacing: 8
 
@@ -191,6 +195,8 @@ AppCard {
     }
 
     GridLayout {
+        id: targetGrid
+
         Layout.fillWidth: true
         columns: root.twoColumnTargets ? 2 : 1
         columnSpacing: 12

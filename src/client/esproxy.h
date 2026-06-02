@@ -32,6 +32,7 @@ public:
     Q_INVOKABLE ProxyParameter* getProxyParameter(const Msi::Parametr& name) const;
     Q_INVOKABLE void setCpuScalingMaxFrequencies(const QVariantList& frequenciesKhz);
     Q_INVOKABLE void setCpuGovernor(const QString& governor);
+    Q_INVOKABLE void setGpuControlValue(const QString& deviceId, const QString& key, const QVariant& value);
     Q_INVOKABLE void refreshDeviceProfiles();
     Q_INVOKABLE void saveDeviceProfile(const QVariantMap& profile);
     Q_INVOKABLE void removeDeviceProfile(const QString& profileId);

@@ -12,6 +12,7 @@
 #include "ecadaptor.h"
 #include "ecservice.h"
 #include "fantargetcontroller.h"
+#include "gpucontrolparameter.h"
 #include "ioparameter.h"
 #include "softwareparameter.h"
 #include "struct.h"
@@ -104,6 +105,7 @@ int main(int argc, char* argv[]) {
 
     registerMetaType();
     registerEsSys(service, *supportConfig);
+    service.registerParameter(new GpuControlParameter(QVariant::fromValue(Msi::Parametr::GpuControlConfig), &service));
 
     return app.exec();
 }

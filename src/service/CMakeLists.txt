@@ -30,6 +30,8 @@ add_executable(MsiControlCenterService
   cpuparameter.cpp
   cpucontrolparameter.h
   cpucontrolparameter.cpp
+  gpucontrolparameter.h
+  gpucontrolparameter.cpp
   fantargetcontroller.h
   fantargetcontroller.cpp
   softwareparameter.h
