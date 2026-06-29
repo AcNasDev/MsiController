@@ -28,6 +28,7 @@ Item {
     property int selectedOriginalValue: 0
     property int selectedDraftValue: 0
     property string statusText: ""
+    property string pendingWriteMode: ""
     property bool autoRefresh: false
     readonly property int rowCount: Math.ceil(bytes.length / bytesPerRow)
 
@@ -241,6 +242,26 @@ Item {
         statusText = qsTr("Bits written ") + hex(selectedAddress, 2)
     }
 
+    function requestWriteSelectedByte() {
+        if (selectedAddress < 0)
+            return
+        setDraftValue(parseNumber(byteValueField.text, selectedDraftValue))
+        pendingWriteMode = "byte"
+        writeConfirmDialog.open()
+    }
+
+    function requestApplySelectedBits() {
+        if (selectedAddress < 0)
+            return
+        var mask = selectedOriginalValue ^ selectedDraftValue
+        if (mask === 0) {
+            statusText = qsTr("No bit changes")
+            return
+        }
+        pendingWriteMode = "bits"
+        writeConfirmDialog.open()
+    }
+
     Component.onCompleted: {
         if (active)
             readRange(false)
@@ -275,6 +296,37 @@ Item {
         interval: 250
         repeat: true
         onTriggered: root.pruneChangedAddresses()
+    }
+
+    Dialog {
+        id: writeConfirmDialog
+
+        modal: true
+        focus: true
+        title: qsTr("Confirm EC write")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        width: Math.min(430, root.width - 40)
+        x: Math.round((root.width - width) / 2)
+        y: Math.round((root.height - height) / 2)
+        onAccepted: {
+            if (root.pendingWriteMode === "bits")
+                root.applySelectedBits()
+            else
+                root.writeSelectedByte()
+            root.pendingWriteMode = ""
+        }
+        onRejected: root.pendingWriteMode = ""
+
+        contentItem: Label {
+            width: parent.width
+            text: qsTr("Write EC address ") + root.hex(root.selectedAddress, 2) +
+                  qsTr(" from ") + root.hex(root.selectedOriginalValue, 2) +
+                  qsTr(" to ") + root.hex(root.selectedDraftValue, 2) +
+                  qsTr(". Wrong EC writes can freeze the laptop or break cooling until reboot.")
+            color: root.textColor
+            wrapMode: Text.WordWrap
+            font.pixelSize: 12
+        }
     }
 
     ColumnLayout {
@@ -481,7 +533,7 @@ Item {
                             enabled: selectedAddress >= 0
                             text: "00"
                             inputMethodHints: Qt.ImhPreferUppercase | Qt.ImhNoPredictiveText
-                            onAccepted: root.writeSelectedByte()
+                            onAccepted: root.requestWriteSelectedByte()
                             onEditingFinished: root.setDraftValue(root.parseNumber(text, root.selectedDraftValue))
                         }
 
@@ -489,7 +541,7 @@ Item {
                             text: qsTr("Write")
                             accent: true
                             enabled: selectedAddress >= 0
-                            onClicked: root.writeSelectedByte()
+                            onClicked: root.requestWriteSelectedByte()
                         }
                     }
 
@@ -525,7 +577,7 @@ Item {
                             text: qsTr("Apply bits")
                             accent: true
                             enabled: selectedAddress >= 0
-                            onClicked: root.applySelectedBits()
+                            onClicked: root.requestApplySelectedBits()
                         }
 
                         StyledButton {

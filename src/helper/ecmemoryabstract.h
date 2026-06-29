@@ -11,6 +11,7 @@ public:
     ~EcMemoryAbstract() override = default;
 
 public slots:
+    Q_SCRIPTABLE virtual int apiVersion() const = 0;
     Q_SCRIPTABLE virtual QDBusVariant readEcMemory(const QDBusVariant& offset, const QDBusVariant& length) const = 0;
     Q_SCRIPTABLE virtual QDBusVariant writeEcMemory(const QDBusVariant& offset, const QDBusVariant& bytes) = 0;
     Q_SCRIPTABLE virtual QDBusVariant

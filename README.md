@@ -10,8 +10,11 @@ The packaged build is designed for daily use: the application is installed into 
 
 - Dashboard with CPU/GPU temperatures, fan speed, battery state, and live GPU-rendered mini charts.
 - Built-in and user-editable supported-device profiles in JSON format.
+- Profile import/export from the desktop client for sharing or backing up firmware configurations.
 - Developer mode gate for advanced configuration and EC memory tools.
 - Cooling modes: firmware auto, manual fan curve, target temperature, and Cooler Boost.
+- Optional automatic shift-mode selection based on battery state and CPU/GPU temperature.
+- Behavior presets for Silent, Balanced, Performance, and Adaptive device behavior.
 - Service-managed target temperature mode for CPU/GPU fan adjustment.
 - Editable CPU and GPU fan curves with temperature-to-speed maps.
 - CPU performance view for per-core frequency, usage, and frequency limits.
@@ -19,9 +22,13 @@ The packaged build is designed for daily use: the application is installed into 
 - Optional NVIDIA/AMD GPU controls for power limit, persistence mode, or AMD performance level when the driver exposes them.
 - Shift mode switching where firmware supports it: Eco, Comfort, Sport, Turbo.
 - Device controls for webcam, USB Power Share, FN/Meta swap, Super Battery, mute state, LEDs, keyboard backlight, and battery charge threshold where available.
-- EC memory debugger for service-mediated hex byte and bit edits.
-- Multiple UI themes, desktop entry, autostart entry, and system tray integration.
-- System service over D-Bus with systemd integration.
+- EC memory debugger for service-mediated hex byte and bit edits with explicit confirmation, service-side allowlist checks, and audit logging.
+- Diagnostics page with service/client API version checks, degraded-state reporting, support bundle export, settings import/export, and telemetry history export.
+- Multiple UI themes, desktop entry, autostart entry, and system tray integration with live telemetry status.
+- Versioned system service over D-Bus with systemd integration.
+- Fake EC backend for development, demos, and repeatable tests without MSI hardware.
+- `msicontroller-doctor` CLI for install/service/module/D-Bus diagnostics.
+- Russian UI translation (`ru_RU`) when the system locale is Russian.
 - DEB/RPM packaging with DKMS-managed kernel module installation.
 - Forgejo CI package artifacts, release uploads, and apt/dnf package registry publishing.
 
@@ -54,7 +61,11 @@ Feature availability depends on the detected firmware configuration in `src/serv
 - `cmake/packaging` - DEB/RPM, DKMS, Docker, and Qt runtime bundling helpers.
 - `scripts` - package build and package install test entry points.
 
-The client does not talk to EC hardware directly. It talks to the service, and the service owns hardware access, CPU control readback, fan target control, and state synchronization. The service API is split into focused D-Bus objects for parameters, raw EC memory, and supported-device profiles.
+The client does not talk to EC hardware directly. It talks to the service, and the service owns hardware access, CPU control readback, fan target control, and state synchronization. The service API is split into focused D-Bus objects for parameters, raw EC memory, supported-device profiles, and health/diagnostics.
+
+The D-Bus contract is versioned by the shared helper library. Client and service code use the same API constants and typed message codec so generated D-Bus bindings stay isolated from UI and hardware logic.
+
+Raw EC memory writes are guarded in the service. The active supported-device profile produces the write allowlist, and every accepted or rejected raw write is added to the diagnostics audit log. Regular parameter writes still go through their typed parameter classes.
 
 ## Installation
 
@@ -108,9 +119,20 @@ After installation:
 ```sh
 systemctl status msi-ec-service
 /opt/msicontroller/bin/msicontroller-client
+/opt/msicontroller/bin/msicontroller-doctor
 ```
 
 The desktop launcher is named **MSI Control Center**.
+
+After an upgrade, restart any already running desktop client so it reconnects with the updated service/API contract. Package post-install scripts restart the service and log a warning when an old client process is still running.
+
+For development without MSI hardware:
+
+```sh
+MSICONTROLLER_FAKE_EC=1 build/src/service/MsiControlCenterService --fake-ec
+```
+
+The fake backend uses a built-in firmware profile and changing simulated telemetry. It is intended for development and tests, not for package-managed production service units.
 
 ## Building Packages
 
@@ -160,11 +182,14 @@ Fast unit tests are built by default with CMake and can be run with:
 ctest --test-dir build --output-on-failure
 ```
 
+The test suite covers parameter-registry behavior, the service D-Bus contract on a temporary session-bus name, and a QML smoke test that loads the client proxy path and verifies typed parameter creation.
+It also covers fake EC backend/profile wiring and a headless runtime smoke test of the real GUI binary with a nonblank frame check.
+
 ## Forgejo CI
 
-Forgejo builds the project on pushes to `main`, has a dedicated package job, and runs package install smoke tests against the generated artifacts. Download ready-to-install packages from the workflow artifact named `msicontroller-packages`.
+Forgejo builds the project on pushes to `main` and release tags, runs the CTest suite, has a dedicated package job, and runs package install smoke tests against the generated artifacts. Download ready-to-install packages from the workflow artifact named `msicontroller-packages`.
 
-When a tag matching `v*` is pushed, packages are published only after the install smoke tests pass. The release job creates or updates the matching Forgejo Release and uploads:
+When a tag matching `v*` is pushed, packages are published only after the build/test gate and install smoke tests pass. The release job creates or updates the matching Forgejo Release and uploads:
 
 - `msicontroller_amd64.deb`
 - `msicontroller_x86_64.rpm`
@@ -232,7 +257,10 @@ cmake -S . -B build-package -G Ninja \
 systemctl status msi-ec-service
 journalctl -u msi-ec-service -f
 /opt/msicontroller/bin/msicontroller-client
+/opt/msicontroller/bin/msicontroller-doctor --json
 ```
+
+Use the **Diagnostics** page in the client to inspect service health, API compatibility, detected firmware, module status, EC write safety state, and system details. The same page can write a support bundle JSON file that includes service diagnostics, supported-device profile data, host command snapshots, client telemetry history, and app settings metadata.
 
 For a non-packaged source install, the client binary is usually available as:
 
@@ -303,7 +331,7 @@ The current firmware configuration database contains 56 built-in MSI firmware pr
 | CONF54  | 16R8IMS2.112 | ✔ | ✔ | ✔ | ✔ |  |
 | CONF55  | 17G1EMS1.107 | ✔ | ✔ |  |  |  |
 
-Built-in profiles are shipped in `src/service/supported-devices.json`. User profiles and overrides are written by the service to `/etc/MsiController/supported-devices.json` and can be managed from the client via **Supported devices** in the left panel. Saved profile changes are applied live: the service rebuilds the active EC parameter set and the client refreshes without restarting the service.
+Built-in profiles are shipped in `src/service/supported-devices.json`. User profiles and overrides are written by the service to `/etc/MsiController/supported-devices.json` and can be managed from the client via **Supported devices** in the left panel. Profiles can also be imported from and exported to JSON files from the same page. Saved profile changes are applied live: the service rebuilds the active EC parameter set, refreshes the raw-write safety allowlist, and the client refreshes without restarting the service. User profile files are schema-versioned for forward-compatible migrations.
 
 ### Regenerating Device Profiles
 

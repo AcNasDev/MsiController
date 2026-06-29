@@ -48,6 +48,7 @@ add_subdirectory(src/helper)
 add_subdirectory(src/module)
 add_subdirectory(src/service)
 add_subdirectory(src/client)
+add_subdirectory(src/doctor)
 
 if(MSICONTROLLER_BUILD_TESTS)
     enable_testing()
@@ -64,7 +65,7 @@ if(MSICONTROLLER_BUNDLE_QT_RUNTIME)
 endif()
 
 add_custom_target(uninstall
-    DEPENDS uninstall_module uninstall_client uninstall_service uninstall_helper
+    DEPENDS uninstall_module uninstall_client uninstall_service uninstall_helper uninstall_doctor
 )
 
 include(cmake/packaging/PackageConfig.cmake)

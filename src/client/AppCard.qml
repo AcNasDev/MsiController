@@ -12,11 +12,15 @@ Pane {
     property color textColor: "#f3f6fb"
     property color mutedTextColor: "#9aa6b6"
     property int cardRadius: 8
+    readonly property int contentMargin: 14
+    readonly property int contentSpacing: 10
     default property alias content: body.data
 
     padding: 0
     implicitWidth: 280
-    implicitHeight: header.visible ? 154 : 124
+    implicitHeight: Math.max(header.visible ? 154 : 124,
+                             contentMargin * 2 + body.implicitHeight +
+                             (header.visible ? header.implicitHeight + contentSpacing : 0))
 
     background: Rectangle {
         color: root.surfaceColor
@@ -27,8 +31,8 @@ Pane {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 14
-        spacing: 10
+        anchors.margins: root.contentMargin
+        spacing: root.contentSpacing
 
         ColumnLayout {
             id: header

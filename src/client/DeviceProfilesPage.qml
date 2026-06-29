@@ -181,6 +181,24 @@ Item {
             proxy.removeDeviceProfile(selectedProfile.id)
     }
 
+    function importProfile() {
+        if (!proxy)
+            return
+        var result = proxy.importDeviceProfile(profileFileField.text)
+        statusLabel.text = result && result.ok
+                           ? qsTr("Profile import queued")
+                           : (result && result.error ? result.error : qsTr("Profile import failed"))
+    }
+
+    function exportProfile() {
+        if (!proxy)
+            return
+        var result = proxy.exportDeviceProfile(selectedProfile, profileFileField.text)
+        statusLabel.text = result && result.ok
+                           ? qsTr("Profile exported to ") + result.path
+                           : (result && result.error ? result.error : qsTr("Profile export failed"))
+    }
+
     Component.onCompleted: {
         if (proxy)
             proxy.refreshDeviceProfiles()
@@ -242,6 +260,29 @@ Item {
                 text: qsTr("Clone")
                 enabled: !!selectedProfile && !!selectedProfile.values
                 onClicked: cloneProfile()
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            SearchField {
+                id: profileFileField
+                Layout.fillWidth: true
+                placeholderText: qsTr("Profile JSON path")
+                text: "/tmp/msicontroller-profile.json"
+            }
+
+            StyledButton {
+                text: qsTr("Import")
+                onClicked: importProfile()
+            }
+
+            StyledButton {
+                text: qsTr("Export")
+                enabled: !!selectedProfile && !!selectedProfile.id
+                onClicked: exportProfile()
             }
         }
 

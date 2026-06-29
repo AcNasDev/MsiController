@@ -10,6 +10,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Qml Quick DBus Widgets)
+set(MSICONTROLLER_QT_DIR_VAR "Qt${QT_VERSION_MAJOR}_DIR")
+get_filename_component(MSICONTROLLER_QT_PREFIX "${${MSICONTROLLER_QT_DIR_VAR}}/../../.." ABSOLUTE)
+find_program(MSICONTROLLER_QT_LRELEASE
+    NAMES lrelease
+    PATHS
+        /usr/lib/qt6/bin
+        "${MSICONTROLLER_QT_PREFIX}/bin"
+    NO_DEFAULT_PATH
+)
+if(MSICONTROLLER_QT_LRELEASE)
+    set(QT_LRELEASE_EXECUTABLE "${MSICONTROLLER_QT_LRELEASE}" CACHE FILEPATH "Qt lrelease executable" FORCE)
+else()
+    find_program(QT_LRELEASE_EXECUTABLE lrelease)
+endif()
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -17,12 +31,22 @@ add_executable(MsiControlCenterClient
     main.cpp
     esproxy.cpp
     esproxy.h
+    autoprofilecontroller.h
+    autoprofilecontroller.cpp
+    behaviorprofilecontroller.h
+    behaviorprofilecontroller.cpp
+    telemetryhistorycontroller.h
+    telemetryhistorycontroller.cpp
+    appsettingscontroller.h
+    appsettingscontroller.cpp
     parameterclient.h
     parameterclient.cpp
     deviceprofileclient.h
     deviceprofileclient.cpp
     ecmemoryclient.h
     ecmemoryclient.cpp
+    diagnosticsclient.h
+    diagnosticsclient.cpp
     proxyparameter.h
     proxyparameter.cpp
     curveutils.cpp
@@ -43,8 +67,10 @@ qt_add_qml_module(MsiControlCenterClient
         MetricTile.qml
         ToggleTile.qml
         OptionGroup.qml
+        CurrentBehaviorCard.qml
         TargetTemperatureCard.qml
         GpuControlsCard.qml
+        DiagnosticsPage.qml
         DeviceProfilesPage.qml
         MemoryDebugPage.qml
         CpuPerformanceGraph.qml
@@ -54,6 +80,24 @@ qt_add_qml_module(MsiControlCenterClient
         Sensor.qml
     
 )
+
+if(QT_LRELEASE_EXECUTABLE)
+    set(MSICONTROLLER_RU_TS "${CMAKE_CURRENT_SOURCE_DIR}/translations/msicontroller_ru_RU.ts")
+    set(MSICONTROLLER_RU_QM "${CMAKE_CURRENT_BINARY_DIR}/msicontroller_ru_RU.qm")
+    add_custom_command(
+        OUTPUT "${MSICONTROLLER_RU_QM}"
+        COMMAND "${QT_LRELEASE_EXECUTABLE}" "${MSICONTROLLER_RU_TS}" -qm "${MSICONTROLLER_RU_QM}"
+        DEPENDS "${MSICONTROLLER_RU_TS}"
+        VERBATIM
+    )
+    set_source_files_properties("${MSICONTROLLER_RU_QM}" PROPERTIES
+        QT_RESOURCE_ALIAS "msicontroller_ru_RU.qm"
+    )
+    qt_add_resources(MsiControlCenterClient "translations"
+        PREFIX "/i18n"
+        FILES "${MSICONTROLLER_RU_QM}"
+    )
+endif()
 
 set_target_properties(MsiControlCenterClient PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}

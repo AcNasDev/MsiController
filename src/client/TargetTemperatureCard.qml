@@ -151,7 +151,7 @@ AppCard {
         }
 
         ModeButton {
-            text: qsTr("Target temp")
+            text: qsTr("Target")
             checked: !root.boostMode && root.targetMode
             buttonEnabled: root.active
             onClicked: root.selectTargetMode()

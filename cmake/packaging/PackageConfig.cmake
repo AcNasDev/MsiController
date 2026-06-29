@@ -29,6 +29,11 @@ file(MAKE_DIRECTORY
     "${_packaging_script_dir}/rpm"
 )
 configure_file(
+    "${CMAKE_SOURCE_DIR}/cmake/packaging/scripts/deb/preinst.in"
+    "${_packaging_script_dir}/deb/preinst"
+    @ONLY
+)
+configure_file(
     "${CMAKE_SOURCE_DIR}/cmake/packaging/scripts/deb/postinst.in"
     "${_packaging_script_dir}/deb/postinst"
     @ONLY
@@ -36,6 +41,11 @@ configure_file(
 configure_file(
     "${CMAKE_SOURCE_DIR}/cmake/packaging/scripts/deb/prerm.in"
     "${_packaging_script_dir}/deb/prerm"
+    @ONLY
+)
+configure_file(
+    "${CMAKE_SOURCE_DIR}/cmake/packaging/scripts/rpm/preinstall.in"
+    "${_packaging_script_dir}/rpm/preinstall"
     @ONLY
 )
 configure_file(
@@ -49,8 +59,10 @@ configure_file(
     @ONLY
 )
 execute_process(COMMAND chmod 0755
+    "${_packaging_script_dir}/deb/preinst"
     "${_packaging_script_dir}/deb/postinst"
     "${_packaging_script_dir}/deb/prerm"
+    "${_packaging_script_dir}/rpm/preinstall"
     "${_packaging_script_dir}/rpm/postinstall"
     "${_packaging_script_dir}/rpm/preuninstall"
 )
@@ -74,7 +86,7 @@ else()
 endif()
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
-    "${_packaging_script_dir}/deb/postinst;${_packaging_script_dir}/deb/prerm"
+    "${_packaging_script_dir}/deb/preinst;${_packaging_script_dir}/deb/postinst;${_packaging_script_dir}/deb/prerm"
 )
 
 set(CPACK_RPM_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
@@ -90,6 +102,7 @@ else()
         "ca-certificates, dkms, kmod, systemd, kernel-devel, qt6-qtbase-gui, qt6-qtdeclarative, qt6-qtcharts"
     )
 endif()
+set(CPACK_RPM_PRE_INSTALL_SCRIPT_FILE "${_packaging_script_dir}/rpm/preinstall")
 set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${_packaging_script_dir}/rpm/postinstall")
 set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE "${_packaging_script_dir}/rpm/preuninstall")
 set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION

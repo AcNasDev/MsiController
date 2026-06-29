@@ -1,0 +1,9 @@
+#pragma once
+
+#include <QLoggingCategory>
+
+Q_DECLARE_LOGGING_CATEGORY(msiServiceLog)
+Q_DECLARE_LOGGING_CATEGORY(msiDbusLog)
+Q_DECLARE_LOGGING_CATEGORY(msiClientLog)
+Q_DECLARE_LOGGING_CATEGORY(msiProfileLog)
+Q_DECLARE_LOGGING_CATEGORY(msiDiagnosticsLog)

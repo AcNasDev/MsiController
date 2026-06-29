@@ -11,6 +11,7 @@ public:
     ~EcParametersAbstract() override = default;
 
 public slots:
+    Q_SCRIPTABLE virtual int apiVersion() const = 0;
     Q_SCRIPTABLE virtual QDBusVariant availableParameters() const = 0;
     Q_SCRIPTABLE virtual QDBusVariant readParameter(const QDBusVariant& name) const = 0;
     Q_SCRIPTABLE virtual bool writeParameter(const QDBusVariant& name, const QDBusVariant& value) = 0;

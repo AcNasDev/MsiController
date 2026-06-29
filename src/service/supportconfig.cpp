@@ -15,6 +15,7 @@
 namespace {
 constexpr auto builtinConfigPath = ":/supported-devices.json";
 constexpr auto userConfigPath = "/etc/MsiController/supported-devices.json";
+constexpr int currentConfigSchemaVersion = 2;
 
 QVariantMap objectToVariantMap(const QJsonObject& object) {
     return object.toVariantMap();
@@ -219,6 +220,15 @@ bool SupportConfigRepository::loadFile(const QString& path,
     }
 
     const QJsonObject root = document.object();
+    const int schemaVersion = root.value(QStringLiteral("schemaVersion")).toInt(1);
+    if (schemaVersion > currentConfigSchemaVersion) {
+        if (errorMessage) {
+            *errorMessage =
+                QStringLiteral("Unsupported device config schema %1 in %2").arg(schemaVersion).arg(path);
+        }
+        return false;
+    }
+
     if (defaults && root.value(QStringLiteral("defaults")).isObject()) {
         *defaults = objectToVariantMap(root.value(QStringLiteral("defaults")).toObject());
     }
@@ -260,7 +270,7 @@ bool SupportConfigRepository::writeUserProfiles(QString* errorMessage) const {
     }
 
     QJsonObject root;
-    root.insert(QStringLiteral("schemaVersion"), 1);
+    root.insert(QStringLiteral("schemaVersion"), currentConfigSchemaVersion);
     root.insert(QStringLiteral("profiles"), profiles);
 
     QSaveFile file(userPath());

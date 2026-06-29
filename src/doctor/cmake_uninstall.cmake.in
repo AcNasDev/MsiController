@@ -1,0 +1,4 @@
+file(REMOVE
+    "@CMAKE_INSTALL_FULL_BINDIR@/MsiControllerDoctor"
+    "@CMAKE_INSTALL_FULL_BINDIR@/msicontroller-doctor"
+)

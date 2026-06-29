@@ -1,16 +1,12 @@
 #include "ecmemoryclient.h"
 
+#include "dbusapi.h"
+#include "dbuscodec.h"
 #include "ecmemoryinterface.h"
-#include "struct.h"
-
-namespace {
-constexpr auto serviceName = "com.msi.ec";
-constexpr auto memoryPath = "/Memory";
-} // namespace
 
 EcMemoryClient::EcMemoryClient(const QDBusConnection& connection, QObject* parent) : QObject(parent) {
-    mMemoryInterface = new ComMsiEcMemoryInterface(QString::fromLatin1(serviceName),
-                                                   QString::fromLatin1(memoryPath),
+    mMemoryInterface = new ComMsiEcMemoryInterface(QString::fromLatin1(MsiDbusApi::serviceName),
+                                                   QString::fromLatin1(MsiDbusApi::memoryPath),
                                                    connection,
                                                    this);
 }
@@ -24,8 +20,7 @@ QVariantMap EcMemoryClient::readEcMemory(int offset, int length) const {
         return {{QStringLiteral("ok"), false}, {QStringLiteral("error"), tr("Service is disconnected")}};
     }
 
-    auto reply = mMemoryInterface->readEcMemory(QDBusVariant(QVariant::fromValue(Msi::Msg(offset))),
-                                                QDBusVariant(QVariant::fromValue(Msi::Msg(length))));
+    auto reply = mMemoryInterface->readEcMemory(MsiDbusCodec::wrap(offset), MsiDbusCodec::wrap(length));
     return ecMemoryReplyToMap(reply);
 }
 
@@ -34,8 +29,7 @@ QVariantMap EcMemoryClient::writeEcMemory(int offset, const QVariantList& bytes)
         return {{QStringLiteral("ok"), false}, {QStringLiteral("error"), tr("Service is disconnected")}};
     }
 
-    auto reply = mMemoryInterface->writeEcMemory(QDBusVariant(QVariant::fromValue(Msi::Msg(offset))),
-                                                 QDBusVariant(QVariant::fromValue(Msi::Msg(bytes))));
+    auto reply = mMemoryInterface->writeEcMemory(MsiDbusCodec::wrap(offset), MsiDbusCodec::wrap(bytes));
     return ecMemoryReplyToMap(reply);
 }
 
@@ -44,9 +38,9 @@ QVariantMap EcMemoryClient::writeEcMemoryBits(int offset, int mask, int value) {
         return {{QStringLiteral("ok"), false}, {QStringLiteral("error"), tr("Service is disconnected")}};
     }
 
-    auto reply = mMemoryInterface->writeEcMemoryBits(QDBusVariant(QVariant::fromValue(Msi::Msg(offset))),
-                                                     QDBusVariant(QVariant::fromValue(Msi::Msg(mask))),
-                                                     QDBusVariant(QVariant::fromValue(Msi::Msg(value))));
+    auto reply = mMemoryInterface->writeEcMemoryBits(MsiDbusCodec::wrap(offset),
+                                                     MsiDbusCodec::wrap(mask),
+                                                     MsiDbusCodec::wrap(value));
     return ecMemoryReplyToMap(reply);
 }
 
@@ -56,5 +50,5 @@ QVariantMap EcMemoryClient::ecMemoryReplyToMap(QDBusPendingReply<QDBusVariant>& 
         return {{QStringLiteral("ok"), false}, {QStringLiteral("error"), reply.error().message()}};
     }
 
-    return qdbus_cast<Msi::Msg>(reply.argumentAt<0>().variant()).variant.toMap();
+    return MsiDbusCodec::unwrap(reply.argumentAt<0>()).toMap();
 }

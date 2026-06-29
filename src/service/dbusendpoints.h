@@ -2,11 +2,13 @@
 
 #include <QDBusVariant>
 
+#include "echealthabstract.h"
 #include "ecmemoryabstract.h"
 #include "ecparametersabstract.h"
 #include "ecprofilesabstract.h"
 
 class DeviceProfileService;
+class DiagnosticsService;
 class EcMemoryService;
 class ParameterRegistry;
 
@@ -15,6 +17,7 @@ class EcParametersEndpoint : public EcParametersAbstract {
 public:
     explicit EcParametersEndpoint(ParameterRegistry* registry, QObject* parent = nullptr);
 
+    int apiVersion() const override;
     QDBusVariant availableParameters() const override;
     QDBusVariant readParameter(const QDBusVariant& name) const override;
     bool writeParameter(const QDBusVariant& name, const QDBusVariant& value) override;
@@ -30,6 +33,7 @@ class EcMemoryEndpoint : public EcMemoryAbstract {
 public:
     explicit EcMemoryEndpoint(EcMemoryService* memoryService, QObject* parent = nullptr);
 
+    int apiVersion() const override;
     QDBusVariant readEcMemory(const QDBusVariant& offset, const QDBusVariant& length) const override;
     QDBusVariant writeEcMemory(const QDBusVariant& offset, const QDBusVariant& bytes) override;
     QDBusVariant
@@ -44,6 +48,7 @@ class EcProfilesEndpoint : public EcProfilesAbstract {
 public:
     explicit EcProfilesEndpoint(DeviceProfileService* profileService, QObject* parent = nullptr);
 
+    int apiVersion() const override;
     QDBusVariant supportedDeviceProfiles() const override;
     QDBusVariant activeDeviceProfile() const override;
     QDBusVariant saveSupportedDeviceProfile(const QDBusVariant& profile) override;
@@ -51,4 +56,17 @@ public:
 
 private:
     DeviceProfileService* mProfileService{nullptr};
+};
+
+class EcHealthEndpoint : public EcHealthAbstract {
+    Q_OBJECT
+public:
+    explicit EcHealthEndpoint(DiagnosticsService* diagnosticsService, QObject* parent = nullptr);
+
+    int apiVersion() const override;
+    QDBusVariant diagnostics() const override;
+    QDBusVariant supportBundle() const override;
+
+private:
+    DiagnosticsService* mDiagnosticsService{nullptr};
 };

@@ -21,8 +21,16 @@ add_executable(MsiControlCenterService
   parameterregistry.cpp
   ecmemoryservice.h
   ecmemoryservice.cpp
+  ecmemorybackend.h
+  ecmemorybackend.cpp
+  ecwritepolicy.h
+  ecwritepolicy.cpp
   deviceprofileservice.h
   deviceprofileservice.cpp
+  diagnosticsservice.h
+  diagnosticsservice.cpp
+  servicehealthnotifier.h
+  servicehealthnotifier.cpp
   dbusendpoints.h
   dbusendpoints.cpp
   parameter.h

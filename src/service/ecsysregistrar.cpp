@@ -1,10 +1,12 @@
 #include "ecsysregistrar.h"
 
 #include <QDebug>
+#include <memory>
 
 #include "cpucontrolparameter.h"
 #include "cpuparameter.h"
 #include "deviceprofileapplier.h"
+#include "ecmemorybackend.h"
 #include "ecparameterfactory.h"
 #include "ecservice.h"
 #include "iobuffer.h"
@@ -25,20 +27,37 @@ QString findEcBuffer(SystemAccess& access) {
                            1000);
     return access.files().exists(bufferName) ? bufferName : QString();
 }
+
+bool fakeEcEnabled() {
+    const QString value = qEnvironmentVariable("MSICONTROLLER_FAKE_EC").trimmed().toLower();
+    return value == QStringLiteral("1") || value == QStringLiteral("true") || value == QStringLiteral("yes");
+}
+
+IOBuffer* createIoBuffer(EcService& service, SystemAccess& access) {
+    if (fakeEcEnabled()) {
+        return new IOBuffer(std::make_unique<SimulatedEcMemoryBackend>(), &service);
+    }
+
+    const QString bufferName = findEcBuffer(access);
+    if (bufferName.isEmpty()) {
+        qWarning() << "EC sysfs path does not exist";
+        return nullptr;
+    }
+    return new IOBuffer(bufferName, &service);
+}
 } // namespace
 
 bool registerEcSys(EcService& service, SupportConfigRepository& supportConfig, SystemAccess* systemAccess) {
     SystemAccess& access = systemAccess ? *systemAccess : defaultSystemAccess();
-    const QString bufferName = findEcBuffer(access);
-    if (bufferName.isEmpty()) {
-        qWarning() << "EC sysfs path does not exist";
+    IOBuffer* ioBuffer = createIoBuffer(service, access);
+    if (!ioBuffer) {
         return false;
     }
 
-    IOBuffer* ioBuffer = new IOBuffer(bufferName, &service);
     service.setIoBuffer(ioBuffer);
     const bool isIoBufferReady = ioBuffer->buffer().size() > 0;
-    qDebug() << "IOBuffer size:" << ioBuffer->buffer().size() << ioBuffer->buffer().mid(0xa0, 12);
+    qDebug() << "IOBuffer backend:" << ioBuffer->backendDiagnostics() << "size:" << ioBuffer->buffer().size()
+             << ioBuffer->buffer().mid(0xa0, 12);
 
     if (isIoBufferReady) {
         EcParameterFactory factory(ioBuffer);

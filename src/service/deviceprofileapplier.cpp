@@ -2,8 +2,10 @@
 
 #include <QDebug>
 
+#include "ecmemoryservice.h"
 #include "ecparameterfactory.h"
 #include "ecservice.h"
+#include "ecwritepolicy.h"
 #include "parameter.h"
 #include "struct.h"
 #include "supportconfig.h"
@@ -37,6 +39,7 @@ bool DeviceProfileApplier::apply(QString* errorMessage) {
     }
 
     mService->clearProfileScope();
+    mService->memory()->writePolicy()->setAllowedRanges(EcWritePolicy::rangesFromProfileConfig(config));
     EcService::ProfileRegistrationScope profileRegistration(*mService->parameters());
     EcParameterFactory(mIoBuffer).registerProfileParameters(*mService, config);
     return true;

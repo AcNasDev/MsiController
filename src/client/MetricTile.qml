@@ -29,7 +29,7 @@ Pane {
     padding: 0
     clip: true
     implicitWidth: 240
-    implicitHeight: chartEnabled ? 116 : 96
+    implicitHeight: chartEnabled ? 104 : 88
 
     Component.onCompleted: appendChartValue()
 
@@ -60,7 +60,7 @@ Pane {
 
     GpuLineChart {
         anchors.fill: parent
-        anchors.margins: 8
+        anchors.margins: 7
         visible: root.chartEnabled
         values: internal.history
         minValue: root.chartMin
@@ -68,7 +68,7 @@ Pane {
         sampleCapacity: root.maxHistoryLength
         leftPadding: 12
         rightPadding: 4
-        topPadding: Math.max(26, height * 0.28)
+        topPadding: Math.max(24, height * 0.28)
         bottomPadding: 5
         gridRows: 1
         gridColumns: 0
@@ -81,7 +81,7 @@ Pane {
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: 10
+        anchors.margins: 9
         spacing: 8
 
         Rectangle {
@@ -111,7 +111,7 @@ Pane {
                 Label {
                     text: root.value
                     color: root.textColor
-                    font.pixelSize: 24
+                    font.pixelSize: 22
                     font.bold: true
                     elide: Text.ElideRight
                 }

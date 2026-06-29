@@ -5,6 +5,7 @@
 #include <functional>
 
 #include "deviceprofileservice.h"
+#include "diagnosticsservice.h"
 #include "ecmemoryservice.h"
 #include "parameterregistry.h"
 
@@ -23,6 +24,7 @@ public:
     const ParameterRegistry* parameters() const;
     EcMemoryService* memory();
     DeviceProfileService* profiles();
+    DiagnosticsService* diagnostics();
 
     void registerParameter(Parameter* param);
     void registerProfileObject(QObject* object);
@@ -37,4 +39,5 @@ private:
     ParameterRegistry mParameters;
     EcMemoryService mMemory;
     DeviceProfileService mProfiles;
+    DiagnosticsService mDiagnostics;
 };

@@ -2,7 +2,9 @@
 
 #include <utility>
 
-EcService::EcService(QObject* parent) : QObject(parent), mParameters(this), mMemory(this), mProfiles(this) {
+EcService::EcService(QObject* parent)
+    : QObject(parent), mParameters(this), mMemory(this), mProfiles(this),
+      mDiagnostics(&mParameters, &mMemory, &mProfiles, this) {
     connect(&mProfiles,
             &DeviceProfileService::supportProfileApplied,
             &mParameters,
@@ -23,6 +25,10 @@ EcMemoryService* EcService::memory() {
 
 DeviceProfileService* EcService::profiles() {
     return &mProfiles;
+}
+
+DiagnosticsService* EcService::diagnostics() {
+    return &mDiagnostics;
 }
 
 void EcService::registerParameter(Parameter* param) {

@@ -5,11 +5,12 @@
 #include <QSet>
 #include <algorithm>
 
+#include "dbusapi.h"
+#include "dbuscodec.h"
 #include "ecparametersinterface.h"
+#include "logging.h"
 
 namespace {
-constexpr auto serviceName = "com.msi.ec";
-constexpr auto parametersPath = "/Parameters";
 constexpr int writeConfirmRetryMs = 140;
 constexpr int writeConfirmTimeoutMs = 2600;
 constexpr quint32 cpuFrequencyConfirmToleranceKhz = 25000;
@@ -77,8 +78,8 @@ bool gpuControlMatches(const QVariant& expectedValue, const QVariant& actualValu
 } // namespace
 
 ParameterClient::ParameterClient(const QDBusConnection& connection, QObject* parent) : QObject(parent) {
-    mParametersInterface = new ComMsiEcParametersInterface(QString::fromLatin1(serviceName),
-                                                           QString::fromLatin1(parametersPath),
+    mParametersInterface = new ComMsiEcParametersInterface(QString::fromLatin1(MsiDbusApi::serviceName),
+                                                           QString::fromLatin1(MsiDbusApi::parametersPath),
                                                            connection,
                                                            this);
     mWriteFlushTimer.setSingleShot(true);
@@ -89,10 +90,8 @@ ParameterClient::ParameterClient(const QDBusConnection& connection, QObject* par
             &ComMsiEcParametersInterface::parameterChanged,
             this,
             [this](const QDBusVariant& name, const QDBusVariant& value) {
-                auto msgName = qdbus_cast<Msi::Msg>(name.variant());
-                Msi::Parametr paramName = msgName.variant.value<Msi::Parametr>();
-                auto msgValue = qdbus_cast<Msi::Msg>(value.variant());
-                QVariant paramValue = msgValue.variant;
+                Msi::Parametr paramName = MsiDbusCodec::unwrap(name).value<Msi::Parametr>();
+                QVariant paramValue = MsiDbusCodec::unwrap(value);
                 if (hasQueuedWrite(paramName)) {
                     return;
                 }
@@ -106,6 +105,7 @@ ParameterClient::ParameterClient(const QDBusConnection& connection, QObject* par
     for (int i = 0; i < static_cast<int>(Msi::Parametr::CountEs); ++i) {
         Msi::Parametr param = static_cast<Msi::Parametr>(i);
         mProxyParameters[param] = new ProxyParameter(this);
+        mProxyParameters[param]->setParameter(param);
         mProxyParameters[param]->setIsValid(false);
 
         connect(mProxyParameters[param], &ProxyParameter::valueEdited, this, [this, param]() {
@@ -139,20 +139,19 @@ void ParameterClient::init() {
     QDBusPendingCallWatcher* watcher = new QDBusPendingCallWatcher(mParametersInterface->availableParameters(), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher]() {
         if (watcher->isError()) {
-            qWarning() << "Failed to fetch available parameters:" << watcher->error();
+            qCWarning(msiClientLog) << "Failed to fetch available parameters:" << watcher->error();
             watcher->deleteLater();
             return;
         }
 
         const auto availableArguments = watcher->reply().arguments();
         if (availableArguments.isEmpty()) {
-            qWarning() << "Empty available parameters reply";
+            qCWarning(msiClientLog) << "Empty available parameters reply";
             watcher->deleteLater();
             return;
         }
 
-        auto args = qdbus_cast<Msi::Msg>(availableArguments.at(0).value<QDBusVariant>().variant())
-                        .variant.value<QVariantList>();
+        auto args = MsiDbusCodec::unwrapReplyArgument(availableArguments.at(0)).value<QVariantList>();
         QVector<Msi::Parametr> params;
         for (auto& a : args) {
             if (auto it{mProxyParameters.find(a.value<Msi::Parametr>())}; it != mProxyParameters.end()) {
@@ -168,45 +167,43 @@ void ParameterClient::init() {
         watcher->deleteLater();
 
         for (auto& name : params) {
-            QDBusPendingCall valueCall =
-                mParametersInterface->availableValues(QDBusVariant(QVariant::fromValue(Msi::Msg(name))));
+            QDBusPendingCall valueCall = mParametersInterface->availableValues(MsiDbusCodec::wrapValue(name));
             QDBusPendingCallWatcher* valueWatcher = new QDBusPendingCallWatcher(valueCall, this);
             connect(valueWatcher, &QDBusPendingCallWatcher::finished, this, [this, name, valueWatcher]() {
                 if (valueWatcher->isError()) {
-                    qWarning() << "Failed to fetch values for" << name << ":" << valueWatcher->error();
+                    qCWarning(msiClientLog) << "Failed to fetch values for" << name << ":" << valueWatcher->error();
                     valueWatcher->deleteLater();
                     return;
                 }
                 const auto arguments = valueWatcher->reply().arguments();
                 if (arguments.isEmpty()) {
-                    qWarning() << "Empty available values reply for" << name;
+                    qCWarning(msiClientLog) << "Empty available values reply for" << name;
                     valueWatcher->deleteLater();
                     return;
                 }
-                auto reply = qdbus_cast<Msi::Msg>(arguments.at(0).value<QDBusVariant>().variant()).variant;
+                auto reply = MsiDbusCodec::unwrapReplyArgument(arguments.at(0));
                 if (auto it{mProxyParameters.find(name)}; it != mProxyParameters.end()) {
                     it.value()->setAvailableValues(reply);
                 }
                 valueWatcher->deleteLater();
             });
 
-            QDBusPendingCall readCall =
-                mParametersInterface->readParameter(QDBusVariant(QVariant::fromValue(Msi::Msg(name))));
+            QDBusPendingCall readCall = mParametersInterface->readParameter(MsiDbusCodec::wrapValue(name));
             QDBusPendingCallWatcher* readWatcher = new QDBusPendingCallWatcher(readCall, this);
             connect(readWatcher, &QDBusPendingCallWatcher::finished, this, [this, name, readWatcher]() {
                 if (readWatcher->isError()) {
-                    qWarning() << "Failed to read" << name << ":" << readWatcher->error();
+                    qCWarning(msiClientLog) << "Failed to read" << name << ":" << readWatcher->error();
                     readWatcher->deleteLater();
                     return;
                 }
                 const auto arguments = readWatcher->reply().arguments();
                 if (arguments.isEmpty()) {
-                    qWarning() << "Empty read reply for" << name;
+                    qCWarning(msiClientLog) << "Empty read reply for" << name;
                     readWatcher->deleteLater();
                     return;
                 }
                 if (!hasQueuedWrite(name)) {
-                    auto value = qdbus_cast<Msi::Msg>(arguments.at(0).value<QDBusVariant>().variant()).variant;
+                    auto value = MsiDbusCodec::unwrapReplyArgument(arguments.at(0));
                     handleRemoteValue(name, value, true);
                 }
                 readWatcher->deleteLater();
@@ -391,22 +388,20 @@ void ParameterClient::flushPendingWrites() {
         return;
     }
 
-    auto* watcher = new QDBusPendingCallWatcher(
-        mParametersInterface->writeParameters(QDBusVariant(QVariant::fromValue(Msi::Msg(updates)))),
-        this);
+    auto* watcher =
+        new QDBusPendingCallWatcher(mParametersInterface->writeParameters(MsiDbusCodec::wrap(updates)), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, batchParams, watcher]() {
         QSet<Msi::Parametr> confirmedParams;
         if (watcher->isError()) {
-            qWarning() << "Failed to write parameter batch:" << watcher->error();
+            qCWarning(msiClientLog) << "Failed to write parameter batch:" << watcher->error();
         } else {
             const auto arguments = watcher->reply().arguments();
             if (arguments.isEmpty()) {
-                qWarning() << "Empty batch write reply";
+                qCWarning(msiClientLog) << "Empty batch write reply";
             } else {
-                const auto values =
-                    qdbus_cast<Msi::Msg>(arguments.at(0).value<QDBusVariant>().variant()).variant.toList();
+                const auto values = MsiDbusCodec::unwrapReplyArgument(arguments.at(0)).toList();
                 if (values.size() % 2 != 0) {
-                    qWarning() << "Invalid batch write reply size:" << values.size();
+                    qCWarning(msiClientLog) << "Invalid batch write reply size:" << values.size();
                 }
                 for (qsizetype i = 0; i + 1 < values.size(); i += 2) {
                     const auto param = values.at(i).value<Msi::Parametr>();
@@ -444,12 +439,11 @@ void ParameterClient::refreshParameter(Msi::Parametr param) {
         return;
     }
 
-    auto* watcher = new QDBusPendingCallWatcher(
-        mParametersInterface->readParameter(QDBusVariant(QVariant::fromValue(Msi::Msg(param)))),
-        this);
+    auto* watcher =
+        new QDBusPendingCallWatcher(mParametersInterface->readParameter(MsiDbusCodec::wrapValue(param)), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, param, watcher]() {
         if (watcher->isError()) {
-            qWarning() << "Failed to refresh" << param << ":" << watcher->error();
+            qCWarning(msiClientLog) << "Failed to refresh" << param << ":" << watcher->error();
             if (!hasQueuedWrite(param)) {
                 if (auto confirmation = mConfirmingWrites.find(param); confirmation != mConfirmingWrites.end()) {
                     if (confirmationExpired(confirmation.value())) {
@@ -469,7 +463,7 @@ void ParameterClient::refreshParameter(Msi::Parametr param) {
         if (!hasQueuedWrite(param)) {
             const auto arguments = watcher->reply().arguments();
             if (arguments.isEmpty()) {
-                qWarning() << "Empty refresh reply for" << param;
+                qCWarning(msiClientLog) << "Empty refresh reply for" << param;
                 if (auto confirmation = mConfirmingWrites.find(param); confirmation != mConfirmingWrites.end()) {
                     if (confirmationExpired(confirmation.value())) {
                         mConfirmingWrites.erase(confirmation);
@@ -483,7 +477,7 @@ void ParameterClient::refreshParameter(Msi::Parametr param) {
                 watcher->deleteLater();
                 return;
             }
-            auto value = qdbus_cast<Msi::Msg>(arguments.at(0).value<QDBusVariant>().variant()).variant;
+            auto value = MsiDbusCodec::unwrapReplyArgument(arguments.at(0));
             handleRemoteValue(param, value, true);
         }
         watcher->deleteLater();

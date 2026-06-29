@@ -3,11 +3,20 @@ Description=Msi EC Control Service
 After=network.target
 
 [Service]
-Type=simple
+Type=notify
 ExecStartPre=/sbin/modprobe msiecmodule
 ExecStart=@MSICONTROLLER_SERVICE_EXEC@
 Restart=on-failure
+RestartSec=2s
+WatchdogSec=30s
+TimeoutStartSec=20s
 User=root
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectClock=true
+ProtectHostname=true
+LockPersonality=true
+RestrictRealtime=true
 
 [Install]
 WantedBy=multi-user.target

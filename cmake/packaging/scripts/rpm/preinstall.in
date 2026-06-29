@@ -1,0 +1,51 @@
+#!/bin/sh
+set -e
+cd /
+
+CLIENT_EXEC="@MSICONTROLLER_CLIENT_EXEC@"
+CLIENT_BINARY="@MSICONTROLLER_CLIENT_BINARY@"
+CLIENT_PROCESS_PATTERN="(^|[[:space:]])@CMAKE_INSTALL_FULL_BINDIR@/(msicontroller-client|MsiControlCenterClient)([[:space:]]|$)"
+
+client_running() {
+    command -v pgrep >/dev/null 2>&1 || return 1
+    pgrep -f "$CLIENT_PROCESS_PATTERN" >/dev/null 2>&1
+}
+
+request_client_shutdown() {
+    if [ -x "$CLIENT_EXEC" ]; then
+        "$CLIENT_EXEC" --quit-existing >/dev/null 2>&1 || true
+    elif [ -x "$CLIENT_BINARY" ]; then
+        "$CLIENT_BINARY" --quit-existing >/dev/null 2>&1 || true
+    fi
+}
+
+wait_for_client_exit() {
+    for _ in 1 2 3 4 5; do
+        client_running || return 0
+        sleep 1
+    done
+    return 1
+}
+
+terminate_legacy_client() {
+    command -v pkill >/dev/null 2>&1 || return 1
+    pkill -TERM -f "$CLIENT_PROCESS_PATTERN" >/dev/null 2>&1 || true
+}
+
+shutdown_running_client() {
+    request_client_shutdown
+    wait_for_client_exit && return 0
+
+    terminate_legacy_client || true
+    wait_for_client_exit && return 0
+
+    message="msicontroller: warning: desktop client is still running; close it before starting the updated version"
+    echo "$message" >&2
+    if command -v logger >/dev/null 2>&1; then
+        logger -t msicontroller "$message" || true
+    fi
+}
+
+shutdown_running_client
+
+exit 0

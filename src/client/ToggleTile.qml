@@ -56,11 +56,30 @@ Pane {
             }
         }
 
-        Switch {
-            id: switchControl
-            checked: root.checked
-            enabled: root.active
-            onToggled: root.toggled(switchControl.checked)
+        Rectangle {
+            Layout.preferredWidth: 38
+            Layout.preferredHeight: 20
+            radius: 10
+            color: root.checked ? root.accentColor : root.surfaceColor
+            border.color: root.checked ? root.accentColor : root.borderColor
+            border.width: 1
+
+            Rectangle {
+                width: 16
+                height: 16
+                radius: 8
+                anchors.verticalCenter: parent.verticalCenter
+                x: root.checked ? parent.width - width - 2 : 2
+                color: root.checked ? "#ffffff" : root.mutedTextColor
+            }
         }
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        enabled: root.active
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: root.toggled(!root.checked)
     }
 }

@@ -24,10 +24,12 @@ ApplicationWindow {
     property bool developerMode: false
     readonly property var navigationPages: developerMode ? [
         {label: qsTr("Dashboard"), page: 0},
-        {label: qsTr("Supported devices"), page: 1},
-        {label: qsTr("Memory debug"), page: 2}
+        {label: qsTr("Diagnostics"), page: 1},
+        {label: qsTr("Supported devices"), page: 2},
+        {label: qsTr("Memory debug"), page: 3}
     ] : [
-        {label: qsTr("Dashboard"), page: 0}
+        {label: qsTr("Dashboard"), page: 0},
+        {label: qsTr("Diagnostics"), page: 1}
     ]
 
     QtCore.Settings {
@@ -56,8 +58,8 @@ ApplicationWindow {
         },
         webshare: {
             window: "#030101", surface: "#100607", elevated: "#16090b", text: "#f7f0f0",
-            muted: "#9ca8bd", accent: "#f23d45", accent2: "#ff5a61", good: "#29cf86",
-            warn: "#fbbf24", danger: "#b91c1c", border: "#321113", track: "#241315"
+            muted: "#9ca8bd", accent: "#2f9cff", accent2: "#24d0c2", good: "#29cf86",
+            warn: "#fbbf24", danger: "#ef4444", border: "#321113", track: "#241315"
         },
         daylight: {
             window: "#f4f6f8", surface: "#ffffff", elevated: "#eef2f6", text: "#17202c",
@@ -96,7 +98,7 @@ ApplicationWindow {
 
     onCurrentThemeChanged: appSettings.savedTheme = currentTheme
     onDeveloperModeChanged: {
-        if (!developerMode && currentPage > 0)
+        if (!developerMode && currentPage > 1)
             currentPage = 0
     }
     onClosing: function(close) {
@@ -183,6 +185,23 @@ ApplicationWindow {
         return value.toFixed(decimals)
     }
 
+    function parameterDetail(parameter, readyText) {
+        if (!proxy.isConnected)
+            return qsTr("Service disconnected")
+        if (!parameter)
+            return qsTr("Parameter object missing")
+        if (!parameter.isValid)
+            return qsTr("Unavailable on this firmware")
+        return readyText
+    }
+
+    function trayTooltip() {
+        return qsTr("MSI Control Center") + "\n" +
+               qsTr("CPU ") + valueText(cpuTemp, "°C", 0) + (cpuTemp && cpuTemp.isValid ? "°C" : "") + "\n" +
+               qsTr("GPU ") + valueText(gpuTemp, "°C", 0) + (gpuTemp && gpuTemp.isValid ? "°C" : "") + "\n" +
+               (proxy.autoProfileEnabled ? proxy.autoProfileStatus : qsTr("Auto profile off"))
+    }
+
     function themeIndex(key) {
         for (var i = 0; i < themeChoices.length; i++) {
             if (themeChoices[i].key === key)
@@ -209,6 +228,25 @@ ApplicationWindow {
     function enumText(value, enumName) {
         var text = EnumHelper.enumToString(value, enumName)
         return text && text !== "Unknown" ? text : "N/A"
+    }
+
+    function displayEnumText(value, enumName) {
+        var text = enumText(value, enumName)
+        if (enumName === "ChargingStatus") {
+            if (text === "BatteryCharging")
+                return qsTr("Charging")
+            if (text === "BatteryDischarging")
+                return qsTr("Discharging")
+            if (text === "BatteryNotCharging")
+                return qsTr("Not charging")
+            if (text === "BatteryFullyCharged")
+                return qsTr("Fully charged")
+            if (text === "BatteryFullyChargedNoPower")
+                return qsTr("Fully charged, no AC")
+        }
+        if (text === "TargetTemperature")
+            return qsTr("Target temperature")
+        return text
     }
 
     function binaryChecked(parameter) {
@@ -244,7 +282,7 @@ ApplicationWindow {
     function batteryStatusText() {
         if (!batteryStatus || !batteryStatus.isValid)
             return qsTr("Unknown")
-        return enumText(batteryStatus.value, "ChargingStatus")
+        return displayEnumText(batteryStatus.value, "ChargingStatus")
     }
 
     function exitApplication() {
@@ -264,12 +302,18 @@ ApplicationWindow {
     Platform.SystemTrayIcon {
         visible: true
         icon.source: "qrc:/resources/icon/logo.svg"
+        tooltip: mainWindow.trayTooltip()
         onActivated: {
             mainWindow.show()
             mainWindow.raise()
             mainWindow.requestActivate()
         }
         menu: Platform.Menu {
+            Platform.MenuItem {
+                text: mainWindow.trayTooltip()
+                enabled: false
+            }
+            Platform.MenuSeparator {}
             Platform.MenuItem {
                 text: qsTr("Show")
                 onTriggered: {
@@ -839,6 +883,31 @@ ApplicationWindow {
                             }
                         }
 
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 42
+                            radius: 8
+                            visible: !proxy.isConnected || proxy.restartRequired
+                            color: proxy.restartRequired
+                                   ? Qt.rgba(mainWindow.theme.warn.r, mainWindow.theme.warn.g, mainWindow.theme.warn.b, 0.16)
+                                   : Qt.rgba(mainWindow.theme.danger.r, mainWindow.theme.danger.g, mainWindow.theme.danger.b, 0.14)
+                            border.color: proxy.restartRequired ? mainWindow.theme.warn : mainWindow.theme.danger
+
+                            Label {
+                                anchors.fill: parent
+                                anchors.leftMargin: 12
+                                anchors.rightMargin: 12
+                                verticalAlignment: Text.AlignVCenter
+                                text: proxy.restartRequired
+                                      ? qsTr("Client and service versions differ. Restart the client after updating the package.")
+                                      : qsTr("EC service is disconnected. Diagnostics page can help locate the failure.")
+                                color: mainWindow.theme.text
+                                font.pixelSize: 12
+                                font.bold: true
+                                elide: Text.ElideRight
+                            }
+                        }
+
                         GridLayout {
                             Layout.fillWidth: true
                             columns: width >= 920 ? 3 : width >= 600 ? 2 : 1
@@ -849,11 +918,11 @@ ApplicationWindow {
 
                             MetricTile {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 116
+                                Layout.preferredHeight: 104
                                 title: qsTr("CPU temperature")
                                 value: valueText(cpuTemp, "°C", 0)
                                 unit: cpuTemp && cpuTemp.isValid ? "°C" : ""
-                                detail: qsTr("Embedded controller")
+                                detail: parameterDetail(cpuTemp, qsTr("Embedded controller"))
                                 chartEnabled: cpuTemp && cpuTemp.isValid
                                 chartValue: cpuTemp && cpuTemp.isValid ? Number(cpuTemp.value || 0) : 0
                                 chartMin: 0
@@ -867,11 +936,11 @@ ApplicationWindow {
 
                             MetricTile {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 116
+                                Layout.preferredHeight: 104
                                 title: qsTr("GPU temperature")
                                 value: valueText(gpuTemp, "°C", 0)
                                 unit: gpuTemp && gpuTemp.isValid ? "°C" : ""
-                                detail: qsTr("Embedded controller")
+                                detail: parameterDetail(gpuTemp, qsTr("Embedded controller"))
                                 chartEnabled: gpuTemp && gpuTemp.isValid
                                 chartValue: gpuTemp && gpuTemp.isValid ? Number(gpuTemp.value || 0) : 0
                                 chartMin: 0
@@ -885,14 +954,14 @@ ApplicationWindow {
 
                             MetricTile {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 116
+                                Layout.preferredHeight: 104
                                 title: qsTr("CPU fan")
                                 value: valueText(fanCpu, "%", 0)
                                 unit: fanCpu && fanCpu.isValid ? "%" : ""
-                                detail: coolerBoostActive ? qsTr("Cooler Boost") :
-                                                               (targetFanModeActive ? qsTr("Target temp") :
-                                                               (fanModeParam && fanModeParam.isValid ? enumText(fanModeParam.value, "FanMode") : qsTr("Fan mode"))
-                                                               )
+                                detail: parameterDetail(fanCpu,
+                                                        coolerBoostActive ? qsTr("Cooler Boost") :
+                                                        (targetFanModeActive ? qsTr("Target temperature") :
+                                                        (fanModeParam && fanModeParam.isValid ? displayEnumText(fanModeParam.value, "FanMode") : qsTr("Fan mode"))))
                                 chartEnabled: fanCpu && fanCpu.isValid
                                 chartValue: fanCpu && fanCpu.isValid ? Number(fanCpu.value || 0) : 0
                                 chartMin: 0
@@ -906,12 +975,13 @@ ApplicationWindow {
 
                             MetricTile {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 116
+                                Layout.preferredHeight: 104
                                 title: qsTr("GPU fan")
                                 value: valueText(fanGpu, "%", 0)
                                 unit: fanGpu && fanGpu.isValid ? "%" : ""
-                                detail: coolerBoostActive ? qsTr("Cooler Boost") :
-                                                            (targetFanModeActive ? qsTr("Target temp") : qsTr("Fan curve"))
+                                detail: parameterDetail(fanGpu,
+                                                        coolerBoostActive ? qsTr("Cooler Boost") :
+                                                        (targetFanModeActive ? qsTr("Target temperature") : qsTr("Fan curve")))
                                 chartEnabled: fanGpu && fanGpu.isValid
                                 chartValue: fanGpu && fanGpu.isValid ? Number(fanGpu.value || 0) : 0
                                 chartMin: 0
@@ -925,11 +995,11 @@ ApplicationWindow {
 
                             MetricTile {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 116
+                                Layout.preferredHeight: 104
                                 title: qsTr("Battery")
                                 value: valueText(batteryCharge, "%", 0)
                                 unit: batteryCharge && batteryCharge.isValid ? "%" : ""
-                                detail: batteryStatusText()
+                                detail: parameterDetail(batteryCharge, batteryStatusText())
                                 chartEnabled: batteryCharge && batteryCharge.isValid
                                 chartValue: batteryCharge && batteryCharge.isValid ? Number(batteryCharge.value || 0) : 0
                                 chartMin: 0
@@ -950,13 +1020,15 @@ ApplicationWindow {
                             uniformCellWidths: true
                             uniformCellHeights: true
 
-                            OptionGroup {
+                            CurrentBehaviorCard {
                                 Layout.fillWidth: true
-                                title: qsTr("Shift mode")
-                                subtitle: qsTr("Laptop performance profile")
-                                parameter: shiftModeParam
-                                enumName: "ShiftMode"
+                                Layout.preferredHeight: implicitHeight
+                                title: qsTr("Current behavior")
+                                subtitle: proxy.behaviorProfileStatus || qsTr("Preset, shift mode and automation")
+                                proxy: proxy
+                                shiftModeParameter: shiftModeParam
                                 accentColor: mainWindow.theme.accent
+                                elevatedColor: mainWindow.theme.elevated
                                 surfaceColor: mainWindow.theme.surface
                                 borderColor: mainWindow.theme.border
                                 textColor: mainWindow.theme.text
@@ -984,7 +1056,7 @@ ApplicationWindow {
                                 borderColor: mainWindow.theme.border
                                 textColor: mainWindow.theme.text
                                 mutedTextColor: mainWindow.theme.muted
-                                accentColor: mainWindow.theme.warn
+                                accentColor: mainWindow.theme.accent
                             }
                         }
 
@@ -1291,6 +1363,21 @@ ApplicationWindow {
                     }
                 }
 
+                DiagnosticsPage {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    proxy: proxy
+                    surfaceColor: mainWindow.theme.surface
+                    elevatedColor: mainWindow.theme.elevated
+                    borderColor: mainWindow.theme.border
+                    textColor: mainWindow.theme.text
+                    mutedTextColor: mainWindow.theme.muted
+                    accentColor: mainWindow.theme.accent
+                    goodColor: mainWindow.theme.good
+                    warnColor: mainWindow.theme.warn
+                    dangerColor: mainWindow.theme.danger
+                }
+
                 DeviceProfilesPage {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -1308,7 +1395,7 @@ ApplicationWindow {
                 MemoryDebugPage {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    active: mainWindow.developerMode && mainWindow.currentPage === 2
+                    active: mainWindow.developerMode && mainWindow.currentPage === 3
                     proxy: proxy
                     surfaceColor: mainWindow.theme.surface
                     elevatedColor: mainWindow.theme.elevated

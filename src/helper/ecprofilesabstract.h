@@ -11,6 +11,7 @@ public:
     ~EcProfilesAbstract() override = default;
 
 public slots:
+    Q_SCRIPTABLE virtual int apiVersion() const = 0;
     Q_SCRIPTABLE virtual QDBusVariant supportedDeviceProfiles() const = 0;
     Q_SCRIPTABLE virtual QDBusVariant activeDeviceProfile() const = 0;
     Q_SCRIPTABLE virtual QDBusVariant saveSupportedDeviceProfile(const QDBusVariant& profile) = 0;

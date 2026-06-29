@@ -44,11 +44,27 @@ qt_add_dbus_interface(ecservice_SRCS
                     ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Profiles.xml
                     ecprofilesinterface)
 
+qt_generate_dbus_interface(${CMAKE_CURRENT_SOURCE_DIR}/echealthabstract.h
+                           ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Health.xml
+                           OPTIONS -m -s -p)
+qt_add_dbus_adaptor(ecservice_SRCS
+                   ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Health.xml
+                   echealthabstract.h
+                   EcHealthAbstract)
+qt_add_dbus_interface(ecservice_SRCS
+                    ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Health.xml
+                    echealthinterface)
+
 add_library(helper SHARED
     struct.h
+    dbusapi.h
+    dbuscodec.h
+    logging.h
+    logging.cpp
     ecparametersabstract.h
     ecmemoryabstract.h
     ecprofilesabstract.h
+    echealthabstract.h
     ${ecservice_SRCS}
 )
 

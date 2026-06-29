@@ -1,22 +1,26 @@
 #pragma once
 
 #include <QByteArray>
-#include <QFuture>
-#include <QFutureWatcher>
 #include <QMap>
 #include <QObject>
 #include <QString>
 #include <QTimer>
-#include <QtConcurrent/QtConcurrentRun>
+#include <QVariantMap>
+#include <memory>
+
+class EcMemoryBackend;
 
 class IOBuffer : public QObject {
     Q_OBJECT
 public:
     IOBuffer(const QString& fileName, QObject* parent = nullptr);
+    IOBuffer(std::unique_ptr<EcMemoryBackend> backend, QObject* parent = nullptr);
     ~IOBuffer() = default;
 
     const QByteArray& buffer() const;
     bool writeBytes(const QByteArray& bytes, uint address = 0);
+    QVariantMap backendDiagnostics() const;
+    bool isSimulator() const;
 
     template <typename T>
     bool write(const T& value, uint address = 0) {
@@ -28,9 +32,8 @@ signals:
     void bufferChanged(const QByteArray& newBuffer);
 
 private:
-    QString mFileName;
+    std::unique_ptr<EcMemoryBackend> mBackend;
     QByteArray mBuffer;
-    QFutureWatcher<QByteArray>* mWatcher{nullptr};
     QMap<uint, QByteArray> mDataCache;
     QTimer mPollTimer;
 

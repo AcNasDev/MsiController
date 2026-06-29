@@ -21,6 +21,8 @@ public:
     void refreshActiveDeviceProfile();
     void saveDeviceProfile(const QVariantMap& profile);
     void removeDeviceProfile(const QString& profileId);
+    QVariantMap importDeviceProfile(const QString& pathOrUrl);
+    QVariantMap exportDeviceProfile(const QVariantMap& profile, const QString& pathOrUrl);
 
 signals:
     void deviceProfilesChanged();
@@ -35,4 +37,5 @@ private:
     QString mStatus;
 
     void setStatus(const QString& status);
+    QString normalizeFilePath(const QString& pathOrUrl) const;
 };

@@ -48,10 +48,22 @@ bool validateMemoryRange(int offset, int length, int bufferSize, QString* errorM
 }
 } // namespace
 
-EcMemoryService::EcMemoryService(QObject* parent) : QObject(parent) {}
+EcMemoryService::EcMemoryService(QObject* parent) : QObject(parent), mWritePolicy(this) {}
 
 void EcMemoryService::setIoBuffer(IOBuffer* buffer) {
     mIoBuffer = buffer;
+}
+
+IOBuffer* EcMemoryService::ioBuffer() const {
+    return mIoBuffer;
+}
+
+EcWritePolicy* EcMemoryService::writePolicy() {
+    return &mWritePolicy;
+}
+
+const EcWritePolicy* EcMemoryService::writePolicy() const {
+    return &mWritePolicy;
 }
 
 QVariantMap EcMemoryService::readMemory(int offset, int length) const {
@@ -83,9 +95,18 @@ QVariantMap EcMemoryService::writeMemory(int offset, const QByteArray& bytes) {
     if (!validateMemoryRange(offset, bytes.size(), bufferSize, &errorMessage)) {
         return memoryResult(false, errorMessage, bufferSize);
     }
+    if (!mWritePolicy.allows(offset, bytes.size(), &errorMessage)) {
+        mWritePolicy.recordWrite(QStringLiteral("writeBytes"), offset, bytes, false, errorMessage);
+        return memoryResult(false, errorMessage, bufferSize);
+    }
 
     const QByteArray previousBytes = mIoBuffer->buffer().mid(offset, bytes.size());
     const bool queued = mIoBuffer->writeBytes(bytes, static_cast<uint>(offset));
+    mWritePolicy.recordWrite(QStringLiteral("writeBytes"),
+                             offset,
+                             bytes,
+                             queued,
+                             queued ? QString() : QStringLiteral("Failed to queue EC write"));
 
     QVariantMap result =
         memoryResult(queued, queued ? QString() : QStringLiteral("Failed to queue EC write"), bufferSize);
@@ -110,6 +131,11 @@ QVariantMap EcMemoryService::writeMemoryBits(int offset, int mask, int value) {
     if (mask < 0 || mask > 0xff || value < 0 || value > 0xff) {
         return memoryResult(false, QStringLiteral("Mask and value must be in range 0x00..0xff"), bufferSize);
     }
+    if (!mWritePolicy.allows(offset, 1, &errorMessage)) {
+        const QByteArray rejectedBytes(1, static_cast<char>(value & mask));
+        mWritePolicy.recordWrite(QStringLiteral("writeBits"), offset, rejectedBytes, false, errorMessage);
+        return memoryResult(false, errorMessage, bufferSize);
+    }
 
     const auto currentByte = static_cast<quint8>(mIoBuffer->buffer().at(offset));
     const auto maskByte = static_cast<quint8>(mask);
@@ -117,6 +143,11 @@ QVariantMap EcMemoryService::writeMemoryBits(int offset, int mask, int value) {
     const auto nextByte = static_cast<quint8>((currentByte & static_cast<quint8>(~maskByte)) | (valueByte & maskByte));
     const QByteArray rawBytes(1, static_cast<char>(nextByte));
     const bool queued = mIoBuffer->writeBytes(rawBytes, static_cast<uint>(offset));
+    mWritePolicy.recordWrite(QStringLiteral("writeBits"),
+                             offset,
+                             rawBytes,
+                             queued,
+                             queued ? QString() : QStringLiteral("Failed to queue EC bit write"));
 
     QVariantMap result =
         memoryResult(queued, queued ? QString() : QStringLiteral("Failed to queue EC bit write"), bufferSize);
@@ -129,4 +160,8 @@ QVariantMap EcMemoryService::writeMemoryBits(int offset, int mask, int value) {
     result.insert(QStringLiteral("bytes"), bytesToVariantList(rawBytes));
     result.insert(QStringLiteral("queued"), queued);
     return result;
+}
+
+QVariantMap EcMemoryService::backendDiagnostics() const {
+    return mIoBuffer ? mIoBuffer->backendDiagnostics() : QVariantMap{};
 }

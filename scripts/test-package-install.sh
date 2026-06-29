@@ -39,8 +39,10 @@ validate_layout() {
 
   require_executable /opt/msicontroller/bin/MsiControlCenterClient
   require_executable /opt/msicontroller/bin/MsiControlCenterService
+  require_executable /opt/msicontroller/bin/MsiControllerDoctor
   require_executable /opt/msicontroller/bin/msicontroller-client
   require_executable /opt/msicontroller/bin/msicontroller-service
+  require_executable /opt/msicontroller/bin/msicontroller-doctor
   require_file /opt/msicontroller/lib/libhelper.so
   require_file /opt/msicontroller/qt/lib/libQt6Core.so.6
   require_file /usr/share/applications/msi-control-center.desktop
@@ -65,6 +67,7 @@ validate_runtime_links() {
   ldd_output="$(
     LD_LIBRARY_PATH=/opt/msicontroller/lib:/opt/msicontroller/qt/lib \
       ldd /opt/msicontroller/bin/MsiControlCenterClient
+      ldd /opt/msicontroller/bin/MsiControllerDoctor
   )"
   printf '%s\n' "${ldd_output}"
 
