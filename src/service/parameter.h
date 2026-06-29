@@ -3,13 +3,19 @@
 #include <QObject>
 #include <QVariant>
 
+class SettingsStore;
+
 class Parameter : public QObject {
     Q_OBJECT
 public:
+    enum class Persistence { Persistent, Volatile };
+
     explicit Parameter(const QVariant& name,
                        const QVariant& available,
                        bool isReadOnly,
-                       QObject* parent = nullptr);
+                       QObject* parent = nullptr,
+                       SettingsStore* settingsStore = nullptr,
+                       Persistence persistence = Persistence::Persistent);
     ~Parameter() override = default;
 
     virtual QVariant value() const;
@@ -32,4 +38,6 @@ private:
     QVariant mAvailable;
     bool mIsReadOnly{false};
     QVariant mValue;
+    SettingsStore* mSettingsStore{nullptr};
+    Persistence mPersistence{Persistence::Persistent};
 };

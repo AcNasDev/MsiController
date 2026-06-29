@@ -27,6 +27,7 @@ add_definitions(-DCMAKE_TOOLS_GIT_TAG_MINOR="${CMAKE_TOOLS_GIT_TAG_MINOR}")
 add_definitions(-DCMAKE_TOOLS_GIT_TAG_PATCH="${CMAKE_TOOLS_GIT_TAG_PATCH}")
 
 option(MSICONTROLLER_BUNDLE_QT_RUNTIME "Bundle Qt runtime libraries, plugins and QML modules into the package" OFF)
+option(MSICONTROLLER_BUILD_TESTS "Build unit tests" ON)
 
 set(MSICONTROLLER_PACKAGE_NAME "msicontroller")
 set(MSICONTROLLER_DKMS_MODULE_NAME "msiecmodule")
@@ -47,6 +48,11 @@ add_subdirectory(src/helper)
 add_subdirectory(src/module)
 add_subdirectory(src/service)
 add_subdirectory(src/client)
+
+if(MSICONTROLLER_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 if(MSICONTROLLER_BUNDLE_QT_RUNTIME)
     install(CODE "

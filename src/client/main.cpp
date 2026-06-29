@@ -10,10 +10,10 @@
 #include <QWindow>
 
 #include "curveutils.h"
-#include "ecinterface.h"
 #include "esproxy.h"
 #include "gpucpuperformancegraph.h"
 #include "gpulinechart.h"
+#include "proxyparameter.h"
 #include "struct.h"
 
 const char* UNIQUE_KEY = "MsiControlCenterUniqueKey";
@@ -80,7 +80,10 @@ int main(int argc, char* argv[]) {
     app.setOrganizationDomain("acnas.net");
     app.setWindowIcon(QIcon(":/resources/icon/logo.svg"));
     qmlRegisterUncreatableMetaObject(Msi::staticMetaObject, "Msi", 1, 0, "Msi", "Enums only");
+    qRegisterMetaType<ProxyParameter*>("ProxyParameter*");
     qmlRegisterType<EsProxy>("MsiController", 1, 0, "EsProxy");
+    qmlRegisterUncreatableType<ProxyParameter>(
+        "MsiController", 1, 0, "ProxyParameter", "ProxyParameter instances are provided by EsProxy");
     qmlRegisterType<GpuCpuPerformanceGraph>("MsiController", 1, 0, "GpuCpuPerformanceGraph");
     qmlRegisterType<GpuLineChart>("MsiController", 1, 0, "GpuLineChart");
     qmlRegisterType<CurveUtils>("CurveUtils", 1, 0, "CurveUtils");

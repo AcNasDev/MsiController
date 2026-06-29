@@ -31,8 +31,8 @@ public:
     bool isPending() const;
     void setIsPending(bool pending);
 
-    void setBlockSignalsForEsProxy(bool block) { mBlockSignalsForEsProxy = block; }
-    bool blockSignalsForEsProxy() const { return mBlockSignalsForEsProxy; }
+    void setSuppressWriteSignal(bool suppress) { mSuppressWriteSignal = suppress; }
+    bool suppressWriteSignal() const { return mSuppressWriteSignal; }
 
 signals:
     void parameterChanged();
@@ -40,7 +40,7 @@ signals:
     void availableValuesChanged();
     void isValidChanged();
     void isPendingChanged();
-    void valueChangedForEsProxy();
+    void valueEdited();
 
 private:
     Msi::Parametr mParameter{Msi::Parametr::CountEs};
@@ -48,5 +48,5 @@ private:
     QVariant mAvailableValues;
     bool mIsValid{false};
     bool mIsPending{false};
-    bool mBlockSignalsForEsProxy{false};
+    bool mSuppressWriteSignal{false};
 };

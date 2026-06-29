@@ -1,20 +1,16 @@
 #pragma once
 
-#include <QAbstractListModel>
-#include <QDBusPendingReply>
-#include <QMap>
 #include <QObject>
-#include <QSet>
-#include <QStringList>
-#include <QTimer>
-#include <QVariant>
 #include <QVariantList>
 #include <QVariantMap>
 
-#include "proxyparameter.h"
 #include "struct.h"
 
-class ComMsiEcInterface;
+class DeviceProfileClient;
+class EcMemoryClient;
+class ParameterClient;
+class ProxyParameter;
+
 class EsProxy : public QObject {
     Q_OBJECT
     Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectionChanged)
@@ -23,7 +19,7 @@ class EsProxy : public QObject {
     Q_PROPERTY(QString deviceProfileStatus READ deviceProfileStatus NOTIFY deviceProfileStatusChanged)
 public:
     explicit EsProxy(QObject* parent = nullptr);
-    virtual ~EsProxy() = default;
+    ~EsProxy() override = default;
 
     Q_INVOKABLE bool isConnected() const;
     QVariantList deviceProfiles() const;
@@ -47,38 +43,10 @@ signals:
     void deviceProfileStatusChanged();
 
 private:
-    struct PendingConfirmation {
-        QVariant expectedValue;
-        qint64 startedAtMs{0};
-        int retryCount{0};
-        bool refreshScheduled{false};
-    };
-
-    ComMsiEcInterface* mEcInterface{nullptr};
     bool mIsConnected{false};
-    QMap<Msi::Parametr, ProxyParameter*> mProxyParameters;
-    QMap<Msi::Parametr, QVariant> mPendingWrites;
-    QMap<Msi::Parametr, QVariant> mInFlightWrites;
-    QMap<Msi::Parametr, PendingConfirmation> mConfirmingWrites;
-    QTimer mWriteFlushTimer;
-    QVariantList mDeviceProfiles;
-    QVariantMap mActiveDeviceProfile;
-    QString mDeviceProfileStatus;
+    ParameterClient* mParameters{nullptr};
+    DeviceProfileClient* mProfiles{nullptr};
+    EcMemoryClient* mMemory{nullptr};
 
-    void init();
-    QVariantMap ecMemoryReplyToMap(QDBusPendingReply<QDBusVariant>& reply) const;
-    void refreshActiveDeviceProfile();
-    ProxyParameter* cpuControlWriteParameter() const;
-    void setDeviceProfileStatus(const QString& status);
-    void applyRemoteValue(Msi::Parametr param, const QVariant& value, bool markValid = false);
-    void handleRemoteValue(Msi::Parametr param, const QVariant& value, bool markValid = false);
-    void queueWrite(Msi::Parametr param, const QVariant& value);
-    void flushPendingWrites();
-    void refreshParameter(Msi::Parametr param);
-    void beginConfirmation(Msi::Parametr param, const QVariant& expectedValue);
-    void scheduleConfirmationRefresh(Msi::Parametr param);
-    bool confirmationMatches(Msi::Parametr param, const QVariant& expectedValue, const QVariant& actualValue) const;
-    bool confirmationExpired(const PendingConfirmation& confirmation) const;
-    bool hasQueuedWrite(Msi::Parametr param) const;
-    bool hasWriteInProgress(Msi::Parametr param) const;
+    void setConnected(bool connected);
 };

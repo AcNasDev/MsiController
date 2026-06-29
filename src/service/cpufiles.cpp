@@ -1,16 +1,15 @@
 #include "cpufiles.h"
 
-#include <QDebug>
 #include <QDBusArgument>
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QDBusVariant>
-#include <QDir>
-#include <QFile>
+#include <QDebug>
 #include <QRegularExpression>
 #include <QStringList>
-
 #include <algorithm>
+
+#include "systemaccess.h"
 
 namespace {
 static const char* rootPath = "/sys/devices/system/cpu/";
@@ -64,7 +63,7 @@ QStringList parsePowerProfileList(const QVariant& value) {
         return profiles;
     }
 
-    QDBusArgument argument = value.value<QDBusArgument>();
+    const QDBusArgument argument = value.value<QDBusArgument>();
     argument.beginArray();
     while (!argument.atEnd()) {
         QString profile;
@@ -102,8 +101,9 @@ PowerProfileState readPowerProfiles() {
                               QString::fromLatin1(dbusPropertiesInterface),
                               QDBusConnection::systemBus());
 
-    QDBusReply<QDBusVariant> activeReply =
-        properties.call(QStringLiteral("Get"), QString::fromLatin1(powerProfilesService), QStringLiteral("ActiveProfile"));
+    QDBusReply<QDBusVariant> activeReply = properties.call(QStringLiteral("Get"),
+                                                           QString::fromLatin1(powerProfilesService),
+                                                           QStringLiteral("ActiveProfile"));
     if (!activeReply.isValid()) {
         return state;
     }
@@ -147,15 +147,17 @@ bool writePowerProfile(const QString& profile) {
 }
 } // namespace
 
-QVector<QString> CpuFiles::discoverCpuDirs() {
-    QDir dir(rootPath);
-    if (!dir.exists()) {
+CpuFiles::LinuxCpuBackend::LinuxCpuBackend(SystemAccess* systemAccess)
+    : mSystemAccess(systemAccess ? systemAccess : &defaultSystemAccess()) {}
+
+QVector<QString> CpuFiles::LinuxCpuBackend::discoverCpuDirs() const {
+    if (!mSystemAccess->files().exists(QString::fromLatin1(rootPath))) {
         qWarning() << "CPU directory does not exist:" << rootPath;
         return {};
     }
 
     static const QRegularExpression cpuRegex("^cpu[0-9]+$");
-    QStringList cpuDirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot).filter(cpuRegex);
+    QStringList cpuDirs = mSystemAccess->files().entryList(QString::fromLatin1(rootPath), {}, true).filter(cpuRegex);
     std::sort(cpuDirs.begin(), cpuDirs.end(), [](const QString& a, const QString& b) {
         return QStringView{a}.mid(3).toInt() < QStringView{b}.mid(3).toInt();
     });
@@ -167,32 +169,32 @@ QVector<QString> CpuFiles::discoverCpuDirs() {
     return result;
 }
 
-QString CpuFiles::readText(const QString& filePath) {
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+QString CpuFiles::LinuxCpuBackend::readText(const QString& filePath) const {
+    const QString text = mSystemAccess->files().readText(filePath);
+    if (text.isEmpty()) {
         qWarning() << "Failed to open file:" << filePath;
-        return {};
     }
-    return QString::fromUtf8(file.readAll().trimmed());
+    return text;
 }
 
-quint32 CpuFiles::readCurrentFreq(const QString& cpuDir) {
+quint32 CpuFiles::LinuxCpuBackend::readCurrentFreq(const QString& cpuDir) const {
     return readText(cpuPath(cpuDir, scalingCurFreqPath)).toUInt();
 }
 
-Msi::Cpu CpuFiles::readControl(const QString& cpuDir, const Msi::Cpu* fallback) {
+Msi::Cpu CpuFiles::LinuxCpuBackend::readControl(const QString& cpuDir, const Msi::Cpu* fallback) const {
     Msi::Cpu cpu = fallback ? *fallback : Msi::Cpu{};
     cpu.minFreq = readText(cpuPath(cpuDir, cpuinfoFreqMinPath)).toUInt();
     cpu.maxFreq = readText(cpuPath(cpuDir, cpuinfoFreqMaxPath)).toUInt();
     cpu.scalingMinFreq = readText(cpuPath(cpuDir, scalingFreqMinPath)).toUInt();
     cpu.scalingMaxFreq = readText(cpuPath(cpuDir, scalingFreqMaxPath)).toUInt();
     cpu.availableGovernor = readText(cpuPath(cpuDir, scalingGovernorPath));
-    cpu.availableGovernors = readText(cpuPath(cpuDir, availableGovernorsPath))
-                                  .split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    cpu.availableGovernors =
+        readText(cpuPath(cpuDir, availableGovernorsPath)).split(QLatin1Char(' '), Qt::SkipEmptyParts);
     return cpu;
 }
 
-Msi::CpuConfig CpuFiles::readControls(const QVector<QString>& cpuDirs, const Msi::CpuConfig& fallback) {
+Msi::CpuConfig CpuFiles::LinuxCpuBackend::readControls(const QVector<QString>& cpuDirs,
+                                                       const Msi::CpuConfig& fallback) const {
     Msi::CpuConfig config;
     const bool hasFallback = fallback.cpus.size() == cpuDirs.size();
     const PowerProfileState powerProfiles = readPowerProfiles();
@@ -208,9 +210,9 @@ Msi::CpuConfig CpuFiles::readControls(const QVector<QString>& cpuDirs, const Msi
     return config;
 }
 
-bool CpuFiles::writeControls(const QVector<QString>& cpuDirs,
-                             const Msi::CpuConfig& desired,
-                             const Msi::CpuConfig& current) {
+bool CpuFiles::LinuxCpuBackend::writeControls(const QVector<QString>& cpuDirs,
+                                              const Msi::CpuConfig& desired,
+                                              const Msi::CpuConfig& current) const {
     bool success = true;
     const PowerProfileState powerProfiles = readPowerProfiles();
     QString desiredPowerProfile;
@@ -233,15 +235,10 @@ bool CpuFiles::writeControls(const QVector<QString>& cpuDirs,
         const Msi::Cpu* currentCpu = hasCurrent ? &current.cpus.at(i) : nullptr;
         const QString& cpuDir = cpuDirs.at(i);
 
-        auto writeText = [&success](const QString& fileName, const QString& value) {
-            QFile file(fileName);
-            if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-                qWarning() << "Failed to open file for writing:" << fileName;
-                success = false;
-                return;
-            }
-            if (file.write(value.toUtf8()) == -1) {
-                qWarning() << "Failed to write to file:" << fileName;
+        auto writeText = [this, &success](const QString& fileName, const QString& value) {
+            QString errorMessage;
+            if (!mSystemAccess->files().writeText(fileName, value, &errorMessage)) {
+                qWarning() << "Failed to write file:" << fileName << errorMessage;
                 success = false;
             }
         };
@@ -259,4 +256,68 @@ bool CpuFiles::writeControls(const QVector<QString>& cpuDirs,
     }
 
     return success;
+}
+
+QVector<CpuFiles::CoreStat> CpuFiles::LinuxCpuBackend::readCoreStats() const {
+    QVector<CoreStat> stats;
+    static const QRegularExpression rx("^cpu([0-9]+)\\s+");
+    const QString content = readText(QStringLiteral("/proc/stat"));
+    QRegularExpressionMatch match;
+    for (const QString& strLine : content.split('\n', Qt::SkipEmptyParts)) {
+        match = rx.match(strLine.trimmed());
+        if (match.hasMatch()) {
+            QStringList parts = strLine.simplified().split(' ');
+            if (parts.size() < 5) {
+                continue;
+            }
+            quint64 user = parts[1].toULongLong();
+            quint64 nice = parts[2].toULongLong();
+            quint64 system = parts[3].toULongLong();
+            quint64 idle = parts[4].toULongLong();
+            quint64 iowait = parts.value(5, "0").toULongLong();
+            quint64 irq = parts.value(6, "0").toULongLong();
+            quint64 softirq = parts.value(7, "0").toULongLong();
+            quint64 steal = parts.value(8, "0").toULongLong();
+            CoreStat stat;
+            stat.idle = idle + iowait;
+            stat.total = user + nice + system + idle + iowait + irq + softirq + steal;
+            stats.append(stat);
+        }
+    }
+    return stats;
+}
+
+CpuFiles::CpuBackend& CpuFiles::defaultBackend() {
+    static LinuxCpuBackend backend;
+    return backend;
+}
+
+QVector<QString> CpuFiles::discoverCpuDirs() {
+    return defaultBackend().discoverCpuDirs();
+}
+
+QString CpuFiles::readText(const QString& filePath) {
+    return defaultBackend().readText(filePath);
+}
+
+quint32 CpuFiles::readCurrentFreq(const QString& cpuDir) {
+    return defaultBackend().readCurrentFreq(cpuDir);
+}
+
+Msi::Cpu CpuFiles::readControl(const QString& cpuDir, const Msi::Cpu* fallback) {
+    return defaultBackend().readControl(cpuDir, fallback);
+}
+
+Msi::CpuConfig CpuFiles::readControls(const QVector<QString>& cpuDirs, const Msi::CpuConfig& fallback) {
+    return defaultBackend().readControls(cpuDirs, fallback);
+}
+
+bool CpuFiles::writeControls(const QVector<QString>& cpuDirs,
+                             const Msi::CpuConfig& desired,
+                             const Msi::CpuConfig& current) {
+    return defaultBackend().writeControls(cpuDirs, desired, current);
+}
+
+QVector<CpuFiles::CoreStat> CpuFiles::readCoreStats() {
+    return defaultBackend().readCoreStats();
 }

@@ -1,18 +1,29 @@
 #include "parameter.h"
 
 #include <QCoreApplication>
-#include <QSettings>
 #include <QTimer>
 
-Parameter::Parameter(const QVariant& name, const QVariant& available, bool isReadOnly, QObject* parent)
-    : QObject(parent), mName(name), mAvailable(available), mIsReadOnly(isReadOnly) {
+#include "settingsstore.h"
+
+namespace {
+constexpr auto parameterSettingsGroup = "Parameters";
+} // namespace
+
+Parameter::Parameter(const QVariant& name,
+                     const QVariant& available,
+                     bool isReadOnly,
+                     QObject* parent,
+                     SettingsStore* settingsStore,
+                     Persistence persistence)
+    : QObject(parent), mName(name), mAvailable(available), mIsReadOnly(isReadOnly),
+      mSettingsStore(settingsStore ? settingsStore : &defaultSettingsStore()), mPersistence(persistence) {
     QTimer::singleShot(0, this, [this]() {
-        QSettings settings("/etc/MsiController/settings.ini", QSettings::IniFormat);
-        settings.beginGroup("Parameters");
-        if (settings.contains(mName.toString())) {
-            setValue(settings.value(mName.toString()));
+        if (mPersistence != Persistence::Persistent || !mSettingsStore) {
+            return;
         }
-        settings.endGroup();
+        if (mSettingsStore->contains(QString::fromLatin1(parameterSettingsGroup), mName.toString())) {
+            setValue(mSettingsStore->value(QString::fromLatin1(parameterSettingsGroup), mName.toString()));
+        }
     });
 }
 
@@ -28,10 +39,9 @@ void Parameter::setValue(const QVariant& value) {
 
     bool success{writeValue(value)};
     if (success) {
-        QSettings settings("/etc/MsiController/settings.ini", QSettings::IniFormat);
-        settings.beginGroup("Parameters");
-        settings.setValue(mName.toString(), value);
-        settings.endGroup();
+        if (mPersistence == Persistence::Persistent && mSettingsStore) {
+            mSettingsStore->setValue(QString::fromLatin1(parameterSettingsGroup), mName.toString(), value);
+        }
         if (qEnvironmentVariableIsSet("MSICONTROLLER_DEBUG_WRITES")) {
             qDebug() << "Value set for parameter:" << mName;
         }

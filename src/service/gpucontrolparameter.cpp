@@ -1,37 +1,25 @@
 #include "gpucontrolparameter.h"
 
 #include <QDebug>
-#include <QDir>
-#include <QFile>
-#include <QFileInfo>
-#include <QProcess>
-#include <QStandardPaths>
-
 #include <algorithm>
 #include <optional>
 #include <utility>
+
+#include "systemaccess.h"
 
 namespace {
 constexpr int gpuControlRefreshIntervalMs = 5000;
 constexpr qint64 milliunitsPerUnit = 1000;
 constexpr qint64 microwattPerWatt = 1000000;
 
-QString readText(const QString& filePath) {
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return {};
-    }
-    return QString::fromUtf8(file.readAll().trimmed());
+QString readText(const SystemAccess& access, const QString& filePath) {
+    return access.files().readText(filePath);
 }
 
-bool writeText(const QString& filePath, const QString& value) {
-    QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "Failed to open GPU control for writing:" << filePath;
-        return false;
-    }
-    if (file.write(value.toUtf8()) == -1) {
-        qWarning() << "Failed to write GPU control:" << filePath;
+bool writeText(const SystemAccess& access, const QString& filePath, const QString& value) {
+    QString errorMessage;
+    if (!access.files().writeText(filePath, value, &errorMessage)) {
+        qWarning() << "Failed to write GPU control:" << filePath << errorMessage;
         return false;
     }
     return true;
@@ -52,20 +40,20 @@ std::optional<double> parseDoubleField(QString value) {
     return parsed;
 }
 
-double readScaledInteger(const QString& filePath, qint64 scale) {
+double readScaledInteger(const SystemAccess& access, const QString& filePath, qint64 scale) {
     bool ok = false;
-    const qint64 value = readText(filePath).toLongLong(&ok);
+    const qint64 value = readText(access, filePath).toLongLong(&ok);
     return ok ? static_cast<double>(value) / static_cast<double>(scale) : 0.0;
 }
 
-QString canonicalPath(const QString& filePath) {
-    const QString path = QFileInfo(filePath).canonicalFilePath();
-    return path.isEmpty() ? QFileInfo(filePath).absoluteFilePath() : path;
+QString canonicalPath(const SystemAccess& access, const QString& filePath) {
+    const QString path = access.files().canonicalPath(filePath);
+    return path.isEmpty() ? access.files().absolutePath(filePath) : path;
 }
 
-QString driverName(const QString& devicePath) {
-    const QString path = QFileInfo(devicePath + QStringLiteral("/driver")).canonicalFilePath();
-    return path.isEmpty() ? QString() : QFileInfo(path).fileName();
+QString driverName(const SystemAccess& access, const QString& devicePath) {
+    const QString path = access.files().canonicalPath(devicePath + QStringLiteral("/driver"));
+    return path.isEmpty() ? QString() : access.files().fileName(path);
 }
 
 QString normalizePciBusId(QString busId) {
@@ -97,22 +85,24 @@ QStringList splitCsvLine(const QString& line) {
     return result;
 }
 
-QVariantMap readNvidiaSmiDevices() {
+QVariantMap readNvidiaSmiDevices(const SystemAccess& access) {
     QVariantMap resultByBusId;
-    const QString nvidiaSmi = QStandardPaths::findExecutable(QStringLiteral("nvidia-smi"));
+    const QString nvidiaSmi = access.processes().findExecutable(QStringLiteral("nvidia-smi"));
     if (nvidiaSmi.isEmpty()) {
         return resultByBusId;
     }
 
-    QProcess process;
-    process.start(nvidiaSmi,
-                  {QStringLiteral("--query-gpu=index,pci.bus_id,name,temperature.gpu,power.draw,power.limit,power.min_limit,power.max_limit,persistence_mode"),
-                   QStringLiteral("--format=csv,noheader,nounits")});
-    if (!process.waitForFinished(1500) || process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+    const ProcessResult process =
+        access.processes().run(nvidiaSmi,
+                               {QStringLiteral("--query-gpu=index,pci.bus_id,name,temperature.gpu,power.draw,power."
+                                               "limit,power.min_limit,power.max_limit,persistence_mode"),
+                                QStringLiteral("--format=csv,noheader,nounits")},
+                               1500);
+    if (!process.ok()) {
         return resultByBusId;
     }
 
-    const QString output = QString::fromUtf8(process.readAllStandardOutput());
+    const QString output = QString::fromUtf8(process.standardOutput);
     for (const QString& rawLine : output.split(QLatin1Char('\n'), Qt::SkipEmptyParts)) {
         const QStringList fields = splitCsvLine(rawLine);
         if (fields.size() < 9) {
@@ -141,29 +131,31 @@ QVariantMap readNvidiaSmiDevices() {
         if (const auto value = parseDoubleField(fields.at(7))) {
             gpu.insert(QStringLiteral("maxPowerLimitWatts"), *value);
         }
-        gpu.insert(QStringLiteral("persistenceMode"), fields.at(8).compare(QStringLiteral("Enabled"), Qt::CaseInsensitive) == 0);
+        gpu.insert(QStringLiteral("persistenceMode"),
+                   fields.at(8).compare(QStringLiteral("Enabled"), Qt::CaseInsensitive) == 0);
         resultByBusId.insert(normalizePciBusId(fields.at(1)), gpu);
     }
     return resultByBusId;
 }
 
-QString firstHwmonDir(const QString& devicePath) {
-    QDir dir(devicePath + QStringLiteral("/hwmon"));
-    const QStringList entries = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+QString firstHwmonDir(const SystemAccess& access, const QString& devicePath) {
+    const QString hwmonPath = devicePath + QStringLiteral("/hwmon");
+    const QStringList entries = access.files().entryList(hwmonPath, {}, true);
     if (entries.isEmpty()) {
         return {};
     }
-    return dir.filePath(entries.first());
+    return hwmonPath + QLatin1Char('/') + entries.first();
 }
 
-QVariantMap readDrmGpu(const QString& cardName, const QVariantMap& nvidiaDevicesByBusId) {
-    const QString devicePath = canonicalPath(QStringLiteral("/sys/class/drm/") + cardName + QStringLiteral("/device"));
-    const QString vendorId = readText(devicePath + QStringLiteral("/vendor")).toLower();
+QVariantMap readDrmGpu(const SystemAccess& access, const QString& cardName, const QVariantMap& nvidiaDevicesByBusId) {
+    const QString devicePath =
+        canonicalPath(access, QStringLiteral("/sys/class/drm/") + cardName + QStringLiteral("/device"));
+    const QString vendorId = readText(access, devicePath + QStringLiteral("/vendor")).toLower();
     if (devicePath.isEmpty() || vendorId.isEmpty()) {
         return {};
     }
 
-    const QString pciBusId = QFileInfo(devicePath).fileName().toLower();
+    const QString pciBusId = access.files().fileName(devicePath).toLower();
     const bool isNvidia = vendorId == QStringLiteral("0x10de");
     const bool isAmd = vendorId == QStringLiteral("0x1002") || vendorId == QStringLiteral("0x1022");
     if (!isNvidia && !isAmd) {
@@ -174,49 +166,55 @@ QVariantMap readDrmGpu(const QString& cardName, const QVariantMap& nvidiaDevices
     gpu.insert(QStringLiteral("id"), cardName);
     gpu.insert(QStringLiteral("pciBusId"), pciBusId);
     gpu.insert(QStringLiteral("vendor"), isNvidia ? QStringLiteral("NVIDIA") : QStringLiteral("AMD"));
-    gpu.insert(QStringLiteral("driver"), driverName(devicePath));
+    gpu.insert(QStringLiteral("driver"), driverName(access, devicePath));
 
-    const QString hwmonDir = firstHwmonDir(devicePath);
+    const QString hwmonDir = firstHwmonDir(access, devicePath);
     if (!hwmonDir.isEmpty()) {
-        const QString name = readText(hwmonDir + QStringLiteral("/name"));
+        const QString name = readText(access, hwmonDir + QStringLiteral("/name"));
         if (!name.isEmpty()) {
             gpu.insert(QStringLiteral("name"), name);
         }
 
-        const double temperature = readScaledInteger(hwmonDir + QStringLiteral("/temp1_input"), milliunitsPerUnit);
+        const double temperature =
+            readScaledInteger(access, hwmonDir + QStringLiteral("/temp1_input"), milliunitsPerUnit);
         if (temperature > 0.0) {
             gpu.insert(QStringLiteral("temperatureC"), temperature);
         }
-        double powerDraw = readScaledInteger(hwmonDir + QStringLiteral("/power1_average"), microwattPerWatt);
+        double powerDraw = readScaledInteger(access, hwmonDir + QStringLiteral("/power1_average"), microwattPerWatt);
         if (powerDraw <= 0.0) {
-            powerDraw = readScaledInteger(hwmonDir + QStringLiteral("/power1_input"), microwattPerWatt);
+            powerDraw = readScaledInteger(access, hwmonDir + QStringLiteral("/power1_input"), microwattPerWatt);
         }
         if (powerDraw > 0.0) {
             gpu.insert(QStringLiteral("powerDrawWatts"), powerDraw);
         }
 
         const QString powerCapPath = hwmonDir + QStringLiteral("/power1_cap");
-        const double powerLimit = readScaledInteger(powerCapPath, microwattPerWatt);
+        const double powerLimit = readScaledInteger(access, powerCapPath, microwattPerWatt);
         if (powerLimit > 0.0) {
-            const double minPowerLimit = readScaledInteger(hwmonDir + QStringLiteral("/power1_cap_min"), microwattPerWatt);
-            const double maxPowerLimit = readScaledInteger(hwmonDir + QStringLiteral("/power1_cap_max"), microwattPerWatt);
+            const double minPowerLimit =
+                readScaledInteger(access, hwmonDir + QStringLiteral("/power1_cap_min"), microwattPerWatt);
+            const double maxPowerLimit =
+                readScaledInteger(access, hwmonDir + QStringLiteral("/power1_cap_max"), microwattPerWatt);
             gpu.insert(QStringLiteral("powerLimitWatts"), powerLimit);
             gpu.insert(QStringLiteral("minPowerLimitWatts"), minPowerLimit > 0.0 ? minPowerLimit : powerLimit);
             gpu.insert(QStringLiteral("maxPowerLimitWatts"), maxPowerLimit > 0.0 ? maxPowerLimit : powerLimit);
             gpu.insert(QStringLiteral("powerLimitPath"), powerCapPath);
-            gpu.insert(QStringLiteral("canSetPowerLimit"), QFileInfo(powerCapPath).isWritable());
+            gpu.insert(QStringLiteral("canSetPowerLimit"), access.files().isWritable(powerCapPath));
         }
     }
 
     if (isAmd) {
         const QString performancePath = devicePath + QStringLiteral("/power_dpm_force_performance_level");
-        const QString performanceLevel = readText(performancePath);
+        const QString performanceLevel = readText(access, performancePath);
         if (!performanceLevel.isEmpty()) {
             gpu.insert(QStringLiteral("performanceLevel"), performanceLevel);
             gpu.insert(QStringLiteral("availablePerformanceLevels"),
-                       QStringList{QStringLiteral("auto"), QStringLiteral("low"), QStringLiteral("high"), QStringLiteral("manual")});
+                       QStringList{QStringLiteral("auto"),
+                                   QStringLiteral("low"),
+                                   QStringLiteral("high"),
+                                   QStringLiteral("manual")});
             gpu.insert(QStringLiteral("performanceLevelPath"), performancePath);
-            gpu.insert(QStringLiteral("canSetPerformanceLevel"), QFileInfo(performancePath).isWritable());
+            gpu.insert(QStringLiteral("canSetPerformanceLevel"), access.files().isWritable(performancePath));
         }
     }
 
@@ -236,22 +234,23 @@ QVariantMap readDrmGpu(const QString& cardName, const QVariantMap& nvidiaDevices
     }
 
     if (!gpu.contains(QStringLiteral("name"))) {
-        gpu.insert(QStringLiteral("name"), gpu.value(QStringLiteral("vendor")).toString() + QStringLiteral(" ") + pciBusId);
+        gpu.insert(QStringLiteral("name"),
+                   gpu.value(QStringLiteral("vendor")).toString() + QStringLiteral(" ") + pciBusId);
     }
     return gpu;
 }
 
-QVariantList readGpuDevices() {
-    const QVariantMap nvidiaDevicesByBusId = readNvidiaSmiDevices();
-    QDir drmDir(QStringLiteral("/sys/class/drm"));
-    QStringList cards = drmDir.entryList(QStringList{QStringLiteral("card[0-9]*")}, QDir::Dirs | QDir::NoDotAndDotDot);
+QVariantList readGpuDevices(const SystemAccess& access) {
+    const QVariantMap nvidiaDevicesByBusId = readNvidiaSmiDevices(access);
+    QStringList cards =
+        access.files().entryList(QStringLiteral("/sys/class/drm"), QStringList{QStringLiteral("card[0-9]*")}, true);
     std::sort(cards.begin(), cards.end(), [](const QString& left, const QString& right) {
         return QStringView{left}.mid(4).toInt() < QStringView{right}.mid(4).toInt();
     });
 
     QVariantList devices;
     for (const QString& card : std::as_const(cards)) {
-        QVariantMap gpu = readDrmGpu(card, nvidiaDevicesByBusId);
+        QVariantMap gpu = readDrmGpu(access, card, nvidiaDevicesByBusId);
         const bool hasControls = gpu.value(QStringLiteral("canSetPowerLimit")).toBool() ||
                                  gpu.value(QStringLiteral("canSetPerformanceLevel")).toBool() ||
                                  gpu.value(QStringLiteral("canSetPersistenceMode")).toBool();
@@ -271,8 +270,8 @@ QVariantMap mapById(const QVariantList& devices) {
     return result;
 }
 
-bool writeNvidiaPowerLimit(const QVariantMap& gpu, double watts) {
-    const QString nvidiaSmi = QStandardPaths::findExecutable(QStringLiteral("nvidia-smi"));
+bool writeNvidiaPowerLimit(const SystemAccess& access, const QVariantMap& gpu, double watts) {
+    const QString nvidiaSmi = access.processes().findExecutable(QStringLiteral("nvidia-smi"));
     if (nvidiaSmi.isEmpty()) {
         return false;
     }
@@ -282,17 +281,19 @@ bool writeNvidiaPowerLimit(const QVariantMap& gpu, double watts) {
         return false;
     }
 
-    QProcess process;
-    process.start(nvidiaSmi, {QStringLiteral("-i"), QString::number(index), QStringLiteral("-pl"), QString::number(qRound(watts))});
-    if (!process.waitForFinished(2500) || process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
-        qWarning() << "Failed to set NVIDIA power limit:" << process.readAllStandardError();
+    const ProcessResult process = access.processes().run(
+        nvidiaSmi,
+        {QStringLiteral("-i"), QString::number(index), QStringLiteral("-pl"), QString::number(qRound(watts))},
+        2500);
+    if (!process.ok()) {
+        qWarning() << "Failed to set NVIDIA power limit:" << process.standardError;
         return false;
     }
     return true;
 }
 
-bool writeNvidiaPersistence(const QVariantMap& gpu, bool enabled) {
-    const QString nvidiaSmi = QStandardPaths::findExecutable(QStringLiteral("nvidia-smi"));
+bool writeNvidiaPersistence(const SystemAccess& access, const QVariantMap& gpu, bool enabled) {
+    const QString nvidiaSmi = access.processes().findExecutable(QStringLiteral("nvidia-smi"));
     if (nvidiaSmi.isEmpty()) {
         return false;
     }
@@ -302,40 +303,29 @@ bool writeNvidiaPersistence(const QVariantMap& gpu, bool enabled) {
         return false;
     }
 
-    QProcess process;
-    process.start(nvidiaSmi, {QStringLiteral("-i"), QString::number(index), QStringLiteral("-pm"), enabled ? QStringLiteral("1") : QStringLiteral("0")});
-    if (!process.waitForFinished(2500) || process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
-        qWarning() << "Failed to set NVIDIA persistence mode:" << process.readAllStandardError();
+    const ProcessResult process = access.processes().run(nvidiaSmi,
+                                                         {QStringLiteral("-i"),
+                                                          QString::number(index),
+                                                          QStringLiteral("-pm"),
+                                                          enabled ? QStringLiteral("1") : QStringLiteral("0")},
+                                                         2500);
+    if (!process.ok()) {
+        qWarning() << "Failed to set NVIDIA persistence mode:" << process.standardError;
         return false;
     }
     return true;
 }
 } // namespace
 
-GpuControlParameter::GpuControlParameter(const QVariant& name, QObject* parent)
-    : Parameter(name, QVariant(), false, parent) {
-    updateConfig();
-    connect(&mTimer, &QTimer::timeout, this, &GpuControlParameter::updateConfig);
-    mTimer.start(gpuControlRefreshIntervalMs);
+LinuxGpuControlBackend::LinuxGpuControlBackend(SystemAccess* systemAccess)
+    : mSystemAccess(systemAccess ? systemAccess : &defaultSystemAccess()) {}
+
+QVariantList LinuxGpuControlBackend::readDevices() const {
+    return readGpuDevices(*mSystemAccess);
 }
 
-void GpuControlParameter::setValue(const QVariant& value) {
-    if (value == QVariant::fromValue(mDevices)) {
-        return;
-    }
-    if (!writeValue(value)) {
-        qWarning() << "Failed to apply one or more GPU controls";
-    }
-    updateConfig();
-}
-
-QVariant GpuControlParameter::readValue() const {
-    return mDevices;
-}
-
-bool GpuControlParameter::writeValue(const QVariant& value) {
-    const QVariantList desiredDevices = value.toList();
-    const QVariantMap currentById = mapById(readGpuDevices());
+bool LinuxGpuControlBackend::writeDevices(const QVariantList& desiredDevices) const {
+    const QVariantMap currentById = mapById(readGpuDevices(*mSystemAccess));
     bool success = true;
 
     for (const QVariant& item : desiredDevices) {
@@ -347,8 +337,10 @@ bool GpuControlParameter::writeValue(const QVariant& value) {
         }
 
         if (current.value(QStringLiteral("canSetPerformanceLevel")).toBool() &&
-            desired.value(QStringLiteral("performanceLevel")).toString() != current.value(QStringLiteral("performanceLevel")).toString()) {
-            success = writeText(current.value(QStringLiteral("performanceLevelPath")).toString(),
+            desired.value(QStringLiteral("performanceLevel")).toString() !=
+                current.value(QStringLiteral("performanceLevel")).toString()) {
+            success = writeText(*mSystemAccess,
+                                current.value(QStringLiteral("performanceLevelPath")).toString(),
                                 desired.value(QStringLiteral("performanceLevel")).toString()) &&
                       success;
         }
@@ -363,24 +355,54 @@ bool GpuControlParameter::writeValue(const QVariant& value) {
                 requestedWatts = std::clamp(requestedWatts, minWatts, maxWatts);
             }
             if (current.contains(QStringLiteral("powerLimitPath"))) {
-                success = writeText(current.value(QStringLiteral("powerLimitPath")).toString(),
+                success = writeText(*mSystemAccess,
+                                    current.value(QStringLiteral("powerLimitPath")).toString(),
                                     QString::number(qRound64(requestedWatts * microwattPerWatt))) &&
                           success;
             } else if (current.contains(QStringLiteral("nvidiaIndex"))) {
-                success = writeNvidiaPowerLimit(current, requestedWatts) && success;
+                success = writeNvidiaPowerLimit(*mSystemAccess, current, requestedWatts) && success;
             }
         }
 
         if (current.value(QStringLiteral("canSetPersistenceMode")).toBool() &&
-            desired.value(QStringLiteral("persistenceMode")).toBool() != current.value(QStringLiteral("persistenceMode")).toBool()) {
-            success = writeNvidiaPersistence(current, desired.value(QStringLiteral("persistenceMode")).toBool()) && success;
+            desired.value(QStringLiteral("persistenceMode")).toBool() !=
+                current.value(QStringLiteral("persistenceMode")).toBool()) {
+            success = writeNvidiaPersistence(*mSystemAccess,
+                                             current,
+                                             desired.value(QStringLiteral("persistenceMode")).toBool()) &&
+                      success;
         }
     }
     return success;
 }
 
+GpuControlBackend& defaultGpuControlBackend() {
+    static LinuxGpuControlBackend backend;
+    return backend;
+}
+
+GpuControlParameter::GpuControlParameter(const QVariant& name, QObject* parent, GpuControlBackend* backend)
+    : Parameter(name, QVariant(), false, parent, nullptr, Parameter::Persistence::Volatile),
+      mBackend(backend ? backend : &defaultGpuControlBackend()) {
+    updateConfig();
+    connect(&mTimer, &QTimer::timeout, this, &GpuControlParameter::updateConfig);
+    mTimer.start(gpuControlRefreshIntervalMs);
+}
+
+QVariant GpuControlParameter::readValue() const {
+    return mDevices;
+}
+
+bool GpuControlParameter::writeValue(const QVariant& value) {
+    const bool success = mBackend->writeDevices(value.toList());
+    if (!success) {
+        qWarning() << "Failed to apply one or more GPU controls";
+    }
+    return success;
+}
+
 void GpuControlParameter::updateConfig() {
-    const QVariantList devices = readGpuDevices();
+    const QVariantList devices = mBackend->readDevices();
     if (devices != mDevices) {
         mDevices = devices;
         publishValue(QVariant::fromValue(mDevices));

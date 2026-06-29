@@ -23,8 +23,8 @@ void ProxyParameter::setValue(const QVariant& value) {
     if (changed) {
         emit valueChanged();
     }
-    if (!mBlockSignalsForEsProxy) {
-        emit valueChangedForEsProxy();
+    if (!mSuppressWriteSignal) {
+        emit valueEdited();
     }
 }
 

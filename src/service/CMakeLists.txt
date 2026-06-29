@@ -17,8 +17,20 @@ add_executable(MsiControlCenterService
   main.cpp
   ecservice.cpp
   ecservice.h
+  parameterregistry.h
+  parameterregistry.cpp
+  ecmemoryservice.h
+  ecmemoryservice.cpp
+  deviceprofileservice.h
+  deviceprofileservice.cpp
+  dbusendpoints.h
+  dbusendpoints.cpp
   parameter.h
   parameter.cpp
+  settingsstore.h
+  settingsstore.cpp
+  systemaccess.h
+  systemaccess.cpp
   ioparameter.h
   ioparameter.cpp
   ioparameterimpl.h
@@ -32,6 +44,12 @@ add_executable(MsiControlCenterService
   cpucontrolparameter.cpp
   gpucontrolparameter.h
   gpucontrolparameter.cpp
+  ecparameterfactory.h
+  ecparameterfactory.cpp
+  deviceprofileapplier.h
+  deviceprofileapplier.cpp
+  ecsysregistrar.h
+  ecsysregistrar.cpp
   fantargetcontroller.h
   fantargetcontroller.cpp
   softwareparameter.h

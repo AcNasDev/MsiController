@@ -11,20 +11,44 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core DBus)
 
-qt_generate_dbus_interface(${CMAKE_CURRENT_SOURCE_DIR}/ecserviceabstract.h
-                           ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.xml
+qt_generate_dbus_interface(${CMAKE_CURRENT_SOURCE_DIR}/ecparametersabstract.h
+                           ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Parameters.xml
                            OPTIONS -m -s -p)
 qt_add_dbus_adaptor(ecservice_SRCS
-                   ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.xml
-                   ecserviceabstract.h
-                   EcServiceAbstract)
+                   ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Parameters.xml
+                   ecparametersabstract.h
+                   EcParametersAbstract)
 qt_add_dbus_interface(ecservice_SRCS
-                    ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.xml
-                    ecinterface)
+                    ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Parameters.xml
+                    ecparametersinterface)
+
+qt_generate_dbus_interface(${CMAKE_CURRENT_SOURCE_DIR}/ecmemoryabstract.h
+                           ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Memory.xml
+                           OPTIONS -m -s -p)
+qt_add_dbus_adaptor(ecservice_SRCS
+                   ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Memory.xml
+                   ecmemoryabstract.h
+                   EcMemoryAbstract)
+qt_add_dbus_interface(ecservice_SRCS
+                    ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Memory.xml
+                    ecmemoryinterface)
+
+qt_generate_dbus_interface(${CMAKE_CURRENT_SOURCE_DIR}/ecprofilesabstract.h
+                           ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Profiles.xml
+                           OPTIONS -m -s -p)
+qt_add_dbus_adaptor(ecservice_SRCS
+                   ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Profiles.xml
+                   ecprofilesabstract.h
+                   EcProfilesAbstract)
+qt_add_dbus_interface(ecservice_SRCS
+                    ${CMAKE_CURRENT_BINARY_DIR}/com.msi.ec.Profiles.xml
+                    ecprofilesinterface)
 
 add_library(helper SHARED
     struct.h
-    ecserviceabstract.h
+    ecparametersabstract.h
+    ecmemoryabstract.h
+    ecprofilesabstract.h
     ${ecservice_SRCS}
 )
 

@@ -54,7 +54,7 @@ Feature availability depends on the detected firmware configuration in `src/serv
 - `cmake/packaging` - DEB/RPM, DKMS, Docker, and Qt runtime bundling helpers.
 - `scripts` - package build and package install test entry points.
 
-The client does not talk to EC hardware directly. It talks to the service, and the service owns hardware access, CPU control readback, fan target control, and state synchronization.
+The client does not talk to EC hardware directly. It talks to the service, and the service owns hardware access, CPU control readback, fan target control, and state synchronization. The service API is split into focused D-Bus objects for parameters, raw EC memory, and supported-device profiles.
 
 ## Installation
 
@@ -151,6 +151,14 @@ Package install smoke tests run the generated DEB/RPM in clean containers and ch
 ```
 
 The test matrix covers Ubuntu 22.04, Ubuntu 24.04, Ubuntu 26.04, Debian 12, and Fedora. DKMS build/load is skipped only inside these container tests with `MSICONTROLLER_SKIP_DKMS=1`; normal user installation still builds and installs the module.
+
+## Unit Tests
+
+Fast unit tests are built by default with CMake and can be run with:
+
+```sh
+ctest --test-dir build --output-on-failure
+```
 
 ## Forgejo CI
 

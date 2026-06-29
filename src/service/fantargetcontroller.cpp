@@ -1,13 +1,12 @@
 #include "fantargetcontroller.h"
 
-#include <QSettings>
 #include <QVector>
 #include <QtMath>
-
 #include <array>
 
 #include "ecservice.h"
 #include "parameter.h"
+#include "settingsstore.h"
 
 namespace {
 constexpr int updateIntervalMs = 2500;
@@ -29,16 +28,14 @@ Msi::Parametr targetParam(FanTargetController::FanSide side) {
 }
 
 Msi::Parametr speedParam(FanTargetController::FanSide side, int index) {
-    const int base = side == FanTargetController::FanSide::Cpu
-                         ? static_cast<int>(Msi::Parametr::FanSetSpeedCpu1Ec)
-                         : static_cast<int>(Msi::Parametr::FanSetSpeedGpu1Ec);
+    const int base = side == FanTargetController::FanSide::Cpu ? static_cast<int>(Msi::Parametr::FanSetSpeedCpu1Ec)
+                                                               : static_cast<int>(Msi::Parametr::FanSetSpeedGpu1Ec);
     return static_cast<Msi::Parametr>(base + index);
 }
 
 Msi::Parametr curveTempParam(FanTargetController::FanSide side, int index) {
-    const int base = side == FanTargetController::FanSide::Cpu
-                         ? static_cast<int>(Msi::Parametr::FanSetTempCpu1Ec)
-                         : static_cast<int>(Msi::Parametr::FanSetTempGpu1Ec);
+    const int base = side == FanTargetController::FanSide::Cpu ? static_cast<int>(Msi::Parametr::FanSetTempCpu1Ec)
+                                                               : static_cast<int>(Msi::Parametr::FanSetTempGpu1Ec);
     return static_cast<Msi::Parametr>(base + index);
 }
 
@@ -51,8 +48,8 @@ bool isValidCurveList(const QVariantList& values) {
 }
 } // namespace
 
-FanTargetController::FanTargetController(EcService* service, QObject* parent)
-    : QObject(parent), mService(service) {
+FanTargetController::FanTargetController(EcService* service, QObject* parent, SettingsStore* settingsStore)
+    : QObject(parent), mService(service), mSettingsStore(settingsStore ? settingsStore : &defaultSettingsStore()) {
     mTimer.setInterval(updateIntervalMs);
     connect(&mTimer, &QTimer::timeout, this, &FanTargetController::apply);
 
@@ -63,9 +60,10 @@ FanTargetController::FanTargetController(EcService* service, QObject* parent)
             apply();
         });
     }
-    for (const auto param :
-         {Msi::Parametr::FanTargetCpuTemp, Msi::Parametr::FanTargetGpuTemp, Msi::Parametr::CpuTempEc,
-          Msi::Parametr::GpuTempEc}) {
+    for (const auto param : {Msi::Parametr::FanTargetCpuTemp,
+                             Msi::Parametr::FanTargetGpuTemp,
+                             Msi::Parametr::CpuTempEc,
+                             Msi::Parametr::GpuTempEc}) {
         if (Parameter* p = parameter(param)) {
             connect(p, &Parameter::valueChanged, this, [this]() { apply(); });
         }
@@ -214,32 +212,28 @@ void FanTargetController::forceAdvancedFanMode() {
 }
 
 bool FanTargetController::hasCurveBackup() const {
-    QSettings settings(QStringLiteral("/etc/MsiController/settings.ini"), QSettings::IniFormat);
-    settings.beginGroup(QStringLiteral("FanTargetController"));
-    const bool hasBackup = settings.contains(backupKey(FanSide::Cpu)) || settings.contains(backupKey(FanSide::Gpu));
-    settings.endGroup();
-    return hasBackup;
+    return mSettingsStore->contains(QStringLiteral("FanTargetController"), backupKey(FanSide::Cpu)) ||
+           mSettingsStore->contains(QStringLiteral("FanTargetController"), backupKey(FanSide::Gpu));
 }
 
 void FanTargetController::saveCurveBackup() {
-    QSettings settings(QStringLiteral("/etc/MsiController/settings.ini"), QSettings::IniFormat);
-    settings.beginGroup(QStringLiteral("FanTargetController"));
-    settings.setValue(backupKey(FanSide::Cpu), readCurve(FanSide::Cpu));
-    settings.setValue(backupKey(FanSide::Gpu), readCurve(FanSide::Gpu));
+    mSettingsStore->setValue(QStringLiteral("FanTargetController"), backupKey(FanSide::Cpu), readCurve(FanSide::Cpu));
+    mSettingsStore->setValue(QStringLiteral("FanTargetController"), backupKey(FanSide::Gpu), readCurve(FanSide::Gpu));
 
     if (Parameter* fanMode = parameter(Msi::Parametr::FanModeEc)) {
-        settings.setValue(QStringLiteral("FanModeBackup"), static_cast<int>(fanMode->value().value<Msi::FanMode>()));
+        mSettingsStore->setValue(QStringLiteral("FanTargetController"),
+                                 QStringLiteral("FanModeBackup"),
+                                 static_cast<int>(fanMode->value().value<Msi::FanMode>()));
     }
-    settings.endGroup();
 }
 
 void FanTargetController::restoreCurveBackup() {
-    QSettings settings(QStringLiteral("/etc/MsiController/settings.ini"), QSettings::IniFormat);
-    settings.beginGroup(QStringLiteral("FanTargetController"));
-    const QVariantList cpuCurve = settings.value(backupKey(FanSide::Cpu)).toList();
-    const QVariantList gpuCurve = settings.value(backupKey(FanSide::Gpu)).toList();
-    const int fanModeBackup = settings.value(QStringLiteral("FanModeBackup"), -1).toInt();
-    settings.endGroup();
+    const QVariantList cpuCurve =
+        mSettingsStore->value(QStringLiteral("FanTargetController"), backupKey(FanSide::Cpu)).toList();
+    const QVariantList gpuCurve =
+        mSettingsStore->value(QStringLiteral("FanTargetController"), backupKey(FanSide::Gpu)).toList();
+    const int fanModeBackup =
+        mSettingsStore->value(QStringLiteral("FanTargetController"), QStringLiteral("FanModeBackup"), -1).toInt();
 
     writeCurve(FanSide::Cpu, cpuCurve);
     writeCurve(FanSide::Gpu, gpuCurve);

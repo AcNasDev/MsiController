@@ -4,13 +4,16 @@
 #include <QVariant>
 #include <QVector>
 
+#include "cpufiles.h"
 #include "parameter.h"
 #include "struct.h"
 
 class CpuControlParameter : public Parameter {
     Q_OBJECT
 public:
-    explicit CpuControlParameter(const QVariant& name, QObject* parent = nullptr);
+    explicit CpuControlParameter(const QVariant& name,
+                                 QObject* parent = nullptr,
+                                 CpuFiles::CpuBackend* backend = nullptr);
     ~CpuControlParameter() override = default;
 
 protected:
@@ -19,6 +22,7 @@ protected:
 
 private:
     QVariant mValue;
+    CpuFiles::CpuBackend* mBackend{nullptr};
     QVector<QString> mCpuDirs;
     QTimer mTimer;
 

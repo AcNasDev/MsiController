@@ -17,6 +17,12 @@ add_executable(MsiControlCenterClient
     main.cpp
     esproxy.cpp
     esproxy.h
+    parameterclient.h
+    parameterclient.cpp
+    deviceprofileclient.h
+    deviceprofileclient.cpp
+    ecmemoryclient.h
+    ecmemoryclient.cpp
     proxyparameter.h
     proxyparameter.cpp
     curveutils.cpp

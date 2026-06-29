@@ -8,16 +8,18 @@
 
 class EcService;
 class Parameter;
+class SettingsStore;
 
 class FanTargetController : public QObject {
     Q_OBJECT
 public:
     enum class FanSide { Cpu, Gpu };
 
-    explicit FanTargetController(EcService* service, QObject* parent = nullptr);
+    explicit FanTargetController(EcService* service, QObject* parent = nullptr, SettingsStore* settingsStore = nullptr);
 
 private:
     EcService* mService{nullptr};
+    SettingsStore* mSettingsStore{nullptr};
     QTimer mTimer;
     bool mHasSeenMode{false};
     Msi::FanControlMode mLastMode{Msi::FanControlMode::Curve};
