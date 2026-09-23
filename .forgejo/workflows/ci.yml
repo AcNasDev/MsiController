@@ -174,15 +174,19 @@ jobs:
       HTTP_PROXY: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
       HTTPS_PROXY: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
     steps:
-      - name: Install action runtime and Arch build dependencies
-        run: |
-          pacman -Syu --noconfirm --needed \
-            nodejs git base-devel cmake ninja python dkms systemd dbus kmod
+      - name: Install action runtime and makepkg
+        run: pacman -Syu --noconfirm --needed nodejs git base-devel
 
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
+
+      - name: Install Arch package dependencies
+        shell: bash
+        run: |
+          source cmake/packaging/arch/PKGBUILD.in
+          pacman -S --noconfirm --needed "${depends[@]}" "${makedepends[@]}"
 
       - name: Install Qt 6.11.1 with aqtinstall
         run: scripts/install-qt-aqt.sh

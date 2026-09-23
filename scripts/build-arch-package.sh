@@ -93,7 +93,7 @@ sed -e "s/@VERSION@/${VERSION}/g" \
     "${PROJECT_ROOT}/cmake/packaging/arch/PKGBUILD.in" > "${BUILD_DIR}/PKGBUILD"
 cp "${PROJECT_ROOT}/cmake/packaging/arch/msicontroller.install" "${BUILD_DIR}/msicontroller.install"
 
-(cd "${BUILD_DIR}" && MSICONTROLLER_QT_HOST_DIR="${QT_HOST_DIR}" makepkg --noconfirm --clean --force)
+(cd "${BUILD_DIR}" && MSICONTROLLER_QT_HOST_DIR="${QT_HOST_DIR}" makepkg --syncdeps --noconfirm --clean --force)
 mkdir -p "${PACKAGE_OUTPUT_DIR}"
 PACKAGE_FILE="msicontroller-${VERSION}-${RELEASE}-x86_64.pkg.tar.zst"
 install -m 0644 "${BUILD_DIR}/${PACKAGE_FILE}" "${PACKAGE_OUTPUT_DIR}/${PACKAGE_FILE}.tmp"

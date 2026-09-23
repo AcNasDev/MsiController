@@ -57,7 +57,7 @@ Update as usual with `sudo apt update && sudo apt upgrade`, `sudo dnf upgrade`, 
 ## Building and Testing
 
 - DEB/RPM: run `./scripts/build-packages-docker.sh` to build with Qt 6.11.1 in Docker. Packages are written to `packages/`.
-- Arch: install `base-devel`, `git`, `cmake`, `ninja`, `python`, `dkms`, `systemd`, `dbus`, and `kmod`, then run `./scripts/build-arch-package.sh` as a regular user. It downloads Qt 6.11.1 with `aqtinstall` into a local cache and writes the package to `packages/`.
+- Arch: install `base-devel`, `git`, and `python`, then run `./scripts/build-arch-package.sh` as a regular user. `makepkg` installs remaining dependencies through pacman; `aqtinstall` downloads Qt 6.11.1 into a local cache. The package is written to `packages/`.
 - Package install tests: run `./scripts/test-packages-docker.sh`.
 - Unit tests: run `ctest --test-dir build --output-on-failure` after a CMake build.
 
