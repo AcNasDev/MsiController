@@ -13,6 +13,7 @@
           "14C1EMS1.012",
           "14C1EMS1.101",
           "14C1EMS1.102",
+          "16S3EMS1.102",
           "16S3EMS1.103"
         ],
         "BatteryThresholdEc": "0xef",
@@ -28,7 +29,8 @@
         "ShiftModeAvailable": [
           "Eco:0xc2",
           "Comfort:0xc1",
-          "Sport:0xc0"
+          "Sport:0xc0",
+          "Turbo:0xc4"
         ],
         "FanModeEc": "0xf4",
         "FanModeAvailable": [
@@ -67,6 +69,7 @@
           "17F3EMS1.103",
           "17F3EMS1.104",
           "17F3EMS2.103",
+          "17F4EMS1.101",
           "17F4EMS2.100",
           "17F5EMS1.102",
           "17F6EMS1.101",
@@ -168,10 +171,12 @@
           "16Q4EMS1.109",
           "16Q4EMS1.110",
           "16V1EMS1.109",
+          "16V1EMS1.111",
           "16V1EMS1.112",
           "16V1EMS1.116",
           "16V1EMS1.118",
-          "16V3EMS1.106"
+          "16V3EMS1.106",
+          "17K2EMS1.104"
         ],
         "BatteryThresholdEc": "0xef",
         "WebCamEc": "0x2e",
@@ -205,6 +210,7 @@
       "id": "CONF_G1_4",
       "values": {
         "AllowedFw": [
+          "16JFEMS1.105",
           "17FKEMS1.108",
           "17FKEMS1.109",
           "17FKEMS1.10A"
@@ -267,7 +273,7 @@
         "ShiftModeAvailable": [
           "Eco:0xc2",
           "Comfort:0xc1",
-          "Turbo:0xc0"
+          "Sport:0xc0"
         ],
         "FanModeEc": "0xf4",
         "FanModeAvailable": [
@@ -294,6 +300,7 @@
           "14DKEMS1.105",
           "14DLEMS1.105",
           "155LEMS1.103",
+          "155LEMS1.104",
           "155LEMS1.105",
           "155LEMS1.106",
           "15HKEMS1.102",
@@ -314,7 +321,7 @@
         "ShiftModeAvailable": [
           "Eco:0xc2",
           "Comfort:0xc1",
-          "Turbo:0xc0"
+          "Sport:0xc0"
         ],
         "FanModeEc": "0xf4",
         "FanModeAvailable": [
@@ -423,12 +430,15 @@
       "id": "CONF_G1_9",
       "values": {
         "AllowedFw": [
+          "17E9EMS1.105",
           "17G1EMS2.106",
           "17G1EMS1.100",
           "17G1EMS1.102",
           "17G1EMS1.107",
+          "17G3EMS1.110",
           "17G3EMS1.113",
-          "17G3EMS1.115"
+          "17G3EMS1.115",
+          "17H1EMS1.103"
         ],
         "BatteryThresholdEc": "0xef",
         "WebCamEc": "0x2e",
@@ -463,7 +473,8 @@
       "values": {
         "AllowedFw": [
           "16P5EMS1.103",
-          "1782EMS1.109"
+          "1782EMS1.109",
+          "1799EMS1.112"
         ],
         "WebCamEc": "0x2e",
         "WebCamBlockEc": "0x2f",
@@ -497,6 +508,7 @@
         "AllowedFw": [
           "158MEMS1.100",
           "158MEMS1.101",
+          "158MEMS1.102",
           "158KEMS1.104",
           "158KEMS1.106",
           "158KEMS1.107",
@@ -541,6 +553,7 @@
       "values": {
         "AllowedFw": [
           "16V2EMS1.104",
+          "16V2EMS1.105",
           "16V2EMS1.106"
         ],
         "BatteryThresholdEc": "0xef",
@@ -556,7 +569,7 @@
         "ShiftModeAvailable": [
           "Eco:0xc2",
           "Comfort:0xc1",
-          "Turbo:0xc0"
+          "Sport:0xc0"
         ],
         "SuperBatteryEc": "0xd5",
         "SuperBatteryMask": "0x0f",
@@ -590,7 +603,12 @@
           "159KIMS1.107",
           "159KIMS1.108",
           "159KIMS1.110",
+          "159KIMS1.111",
+          "15H1IMS1.205",
           "15H1IMS1.214",
+          "15H4IMS1.107",
+          "15H4IMS1.108",
+          "15H4IMS1.117",
           "15H5EMS1.111"
         ],
         "BatteryThresholdEc": "0xd7",
@@ -652,6 +670,7 @@
           "1585EMS1.115",
           "1585EMS2.109",
           "1585EMS2.110",
+          "1585EMS2.111",
           "1585EMS2.115",
           "158NIMS1.109",
           "158NIMS1.10D",
@@ -686,8 +705,10 @@
           "17L3EMS1.109",
           "17L4EMS1.112",
           "17LNIMS1.10E",
+          "17LNIMS1.502",
           "17LNIMS1.505",
           "17LNIMS1.506",
+          "17LNIMS1.507",
           "17M1EMS2.113"
         ],
         "BatteryThresholdEc": "0xd7",
@@ -743,6 +764,7 @@
           "16V4EMS1.114",
           "16V4EMS1.115",
           "16V4EMS1.116",
+          "16V4EMS2.106",
           "16V5EMS1.107",
           "16V5EMS1.108",
           "17K3EMS1.112",
@@ -814,12 +836,17 @@
           "14N1EMS1.104",
           "14N1EMS1.307",
           "13P3EMS1.107",
+          "13P3EMS1.508",
           "13P5EMS1.106",
           "13Q2EMS1.110",
           "13Q3EMS1.111",
+          "14Q2EMS1.301",
           "14QKIMS1.108",
+          "14T2EMS1.110",
           "15A1EMS1.105",
-          "15A3EMS1.104"
+          "15A1EMS1.109",
+          "15A3EMS1.104",
+          "15QKIMS1.506"
         ],
         "BatteryThresholdEc": "0xd7",
         "WebCamEc": "0x2e",
@@ -916,7 +943,10 @@
           "14K2EMS1.104",
           "14K2EMS1.107",
           "14K2EMS1.108",
-          "14K2EMS1.109"
+          "14K2EMS1.109",
+          "15Q3EMS1.106",
+          "15Q3EMS1.107",
+          "15Q3EMS1.108"
         ],
         "BatteryThresholdEc": "0xd7",
         "WebCamEc": "0x2e",
@@ -970,7 +1000,8 @@
           "16R8IMS2.117",
           "16RKIMS1.110",
           "16RKIMS1.111",
-          "16RKIMS2.108"
+          "16RKIMS2.108",
+          "16RKIMS2.111"
         ],
         "BatteryThresholdEc": "0xd7",
         "WebCamEc": "0x2e",
@@ -1015,12 +1046,16 @@
           "1572EMS1.106",
           "1572EMS1.107",
           "1587EMS1.102",
+          "1587EMS1.104",
           "1587EMS1.106",
           "158NIMS1.502",
           "158NIMS1.505",
           "158NIMS1.506",
           "158NIMS1.507",
+          "15B1EMS1.103",
+          "15B1EMS1.105",
           "15F2EMS1.109",
+          "15F3EMS1.104",
           "15F3EMS1.105",
           "15F4EMS1.105",
           "15F4EMS1.106",
@@ -1031,6 +1066,7 @@
           "15FKIMS1.110",
           "15FLIMS1.107",
           "15FMIBA1.102",
+          "15G2EWS1.107",
           "15K2EMS1.106",
           "15K2EMS1.109",
           "15M1IMS1.109",
@@ -1063,6 +1099,7 @@
           "17L5EMS1.111",
           "17L5EMS1.113",
           "17L5EMS1.115",
+          "17L5EMS2.113",
           "17L5EMS2.115",
           "17L7EMS1.102",
           "17L7EMS1.104",
