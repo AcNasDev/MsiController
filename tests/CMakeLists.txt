@@ -57,7 +57,13 @@ target_link_libraries(dbuscontracttest PRIVATE
     helper
 )
 
-add_test(NAME dbuscontracttest COMMAND dbuscontracttest)
+find_program(DBUS_RUN_SESSION_EXECUTABLE dbus-run-session)
+if(NOT DBUS_RUN_SESSION_EXECUTABLE)
+    message(FATAL_ERROR "dbus-run-session is required to run dbuscontracttest")
+endif()
+add_test(NAME dbuscontracttest
+    COMMAND "${DBUS_RUN_SESSION_EXECUTABLE}" -- $<TARGET_FILE:dbuscontracttest>
+)
 
 add_executable(fakeecbackendtest
     service/fakeecbackendtest.cpp
