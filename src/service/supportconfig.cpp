@@ -234,7 +234,7 @@ bool SupportConfigRepository::loadFile(const QString& path,
     }
 
     const QJsonArray profileArray = root.value(QStringLiteral("profiles")).toArray();
-    for (const QJsonValue& value : profileArray) {
+    for (const QJsonValue value : profileArray) {
         if (!value.isObject()) {
             continue;
         }
@@ -279,7 +279,13 @@ bool SupportConfigRepository::writeUserProfiles(QString* errorMessage) const {
             *errorMessage = QStringLiteral("Unable to write %1: %2").arg(userPath(), file.errorString());
         return false;
     }
-    file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+    const QByteArray json = QJsonDocument(root).toJson(QJsonDocument::Indented);
+    if (file.write(json) != json.size()) {
+        if (errorMessage)
+            *errorMessage = QStringLiteral("Unable to write %1: %2").arg(userPath(), file.errorString());
+        file.cancelWriting();
+        return false;
+    }
     if (!file.commit()) {
         if (errorMessage)
             *errorMessage = QStringLiteral("Unable to commit %1: %2").arg(userPath(), file.errorString());

@@ -4,6 +4,7 @@
 #include <QMap>
 #include <QObject>
 #include <QVariantMap>
+#include <optional>
 
 class EcMemoryBackend : public QObject {
     Q_OBJECT
@@ -11,7 +12,7 @@ public:
     explicit EcMemoryBackend(QObject* parent = nullptr);
     ~EcMemoryBackend() override = default;
 
-    virtual QByteArray readAll(const QMap<uint, QByteArray>& pendingWrites) = 0;
+    virtual std::optional<QByteArray> readAll(const QMap<uint, QByteArray>& pendingWrites) = 0;
     virtual QString displayName() const = 0;
     virtual bool isSimulator() const;
     virtual QVariantMap diagnostics() const;
@@ -22,7 +23,7 @@ class FileEcMemoryBackend : public EcMemoryBackend {
 public:
     explicit FileEcMemoryBackend(QString fileName, QObject* parent = nullptr);
 
-    QByteArray readAll(const QMap<uint, QByteArray>& pendingWrites) override;
+    std::optional<QByteArray> readAll(const QMap<uint, QByteArray>& pendingWrites) override;
     QString displayName() const override;
     QVariantMap diagnostics() const override;
 
@@ -35,7 +36,7 @@ class SimulatedEcMemoryBackend : public EcMemoryBackend {
 public:
     explicit SimulatedEcMemoryBackend(QObject* parent = nullptr);
 
-    QByteArray readAll(const QMap<uint, QByteArray>& pendingWrites) override;
+    std::optional<QByteArray> readAll(const QMap<uint, QByteArray>& pendingWrites) override;
     QString displayName() const override;
     bool isSimulator() const override;
     QVariantMap diagnostics() const override;

@@ -11,6 +11,31 @@ env:
   GIT_DEPTH: 0
 
 jobs:
+  legacy-kernel-module:
+    runs-on: docker
+    container:
+      image: ubuntu:16.04
+    env:
+      SOURCE_URL: ${{ forgejo.server_url }}/${{ forgejo.repository }}.git
+      SOURCE_SHA: ${{ forgejo.sha }}
+    steps:
+      - name: Compile DKMS module against Linux 4.4
+        run: |
+          set -eu
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates git gcc make linux-headers-generic
+          git clone --no-checkout "$SOURCE_URL" /tmp/msicontroller
+          git -C /tmp/msicontroller checkout --detach "$SOURCE_SHA"
+          test "$(git -C /tmp/msicontroller rev-parse HEAD)" = "$SOURCE_SHA"
+          build_dir="$(find /lib/modules -mindepth 2 -maxdepth 2 -name build | head -n 1)"
+          test -n "$build_dir"
+          kernel_version="$(basename "$(dirname "$build_dir")")"
+          case "$kernel_version" in 4.4.*) ;; *) echo "Expected Linux 4.4 headers, got $kernel_version" >&2; exit 1 ;; esac
+          mkdir -p /tmp/msicontroller-module
+          cp /tmp/msicontroller/src/module/msiecmodule.c /tmp/msicontroller/cmake/packaging/dkms/Makefile /tmp/msicontroller-module/
+          make -C /tmp/msicontroller-module KERNELRELEASE="$kernel_version"
+          test -s /tmp/msicontroller-module/msiecmodule.ko
+
   all-in-one:
     runs-on: docker
     container:
@@ -137,6 +162,90 @@ jobs:
           name: msicontroller-packages
           path: packages/*
 
+  arch-package:
+    runs-on: docker
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Install action runtime and Arch build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            nodejs git base-devel cmake ninja qt6-base qt6-declarative \
+            qt6-tools dkms systemd dbus kmod
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Build native Arch package
+        run: |
+          useradd -m builder
+          chown -R builder:builder .
+          runuser -u builder -- scripts/build-arch-package.sh
+
+      - name: Upload Arch package
+        uses: actions/upload-artifact@v3
+        with:
+          name: msicontroller-arch-package
+          path: packages/*.pkg.tar.zst
+
+  arch-package-install-tests:
+    needs: arch-package
+    runs-on: docker
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Install action runtime and package dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            nodejs git curl qt6-base qt6-declarative dkms systemd dbus kmod
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Download Arch package
+        uses: actions/download-artifact@v3
+        with:
+          name: msicontroller-arch-package
+          path: packages
+
+      - name: Install package smoke test
+        run: |
+          set -e
+          package_info="$(bsdtar -xOf packages/msicontroller-*.pkg.tar.zst .PKGINFO)"
+          ! printf '%s\n' "$package_info" | grep -Eq '^depend = linux($|[-<>=])'
+          headers=/tmp/linux-lts-headers-5.10.70-1-x86_64.pkg.tar.zst
+          curl -fsSL --retry 3 -o "$headers" \
+            https://archive.archlinux.org/packages/.all/linux-lts-headers-5.10.70-1-x86_64.pkg.tar.zst
+          printf '%s  %s\n' a4a043f37f556b8c36f8feffe9b1a508afe1d507bc5dabd3674863fdacc2177d "$headers" | sha256sum -c -
+          pacman -U --noconfirm "$headers"
+          # The DKMS pacman hook requires the kernel module tree as well as headers.
+          mkdir -p /usr/lib/modules/5.10.70-1-lts/kernel
+          pacman -U --noconfirm packages/msicontroller-*.pkg.tar.zst
+          installed_version="$(pacman -Q msicontroller | awk '{print $2}')"
+          module_version="${installed_version%-*}"
+          test -x /usr/bin/MsiControlCenterClient
+          test -x /usr/bin/MsiControlCenterService
+          test -x /usr/bin/MsiControllerDoctor
+          test -f /usr/src/msiecmodule-${module_version}/dkms.conf
+          grep -Fx "PACKAGE_VERSION=\"${module_version}\"" /usr/src/msiecmodule-${module_version}/dkms.conf
+          dkms status -m msiecmodule -v "$module_version" -k 5.10.70-1-lts | grep -F 'installed'
+          module_file="$(find /usr/lib/modules/5.10.70-1-lts/updates/dkms -maxdepth 1 -name 'msiecmodule.ko*' -print -quit)"
+          test -n "$module_file"
+          modinfo -F vermagic "$module_file" | grep -q '^5\.10\.70-1-lts '
+          test -f /usr/lib/systemd/system/msi-ec-service.service
+          test -f /etc/dbus-1/system.d/msi-ec-service.conf
+          test -f /usr/share/applications/msi-control-center.desktop
+          test ! -e /etc/modules-load.d/msiecmodule.conf
+          doctor_output="$(/usr/bin/MsiControllerDoctor --json || true)"
+          printf '%s\n' "${doctor_output}" | grep -F "\"clientVersion\": \"${module_version}\""
+          for binary in MsiControlCenterClient MsiControlCenterService MsiControllerDoctor; do
+            ! ldd "/usr/bin/${binary}" | grep -q 'not found'
+          done
+          pacman -R --noconfirm msicontroller
+
   package-install-tests:
     needs: packages
     runs-on: docker
@@ -197,6 +306,8 @@ jobs:
       - all-in-one
       - packages
       - package-install-tests
+      - arch-package
+      - arch-package-install-tests
     runs-on: docker
     container:
       image: ubuntu:22.04
@@ -206,7 +317,7 @@ jobs:
           apt-get update
           apt-get install -y curl ca-certificates gnupg
           curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-          apt-get install -y nodejs git python3 rpm
+          apt-get install -y nodejs git python3 rpm libarchive-tools
 
       - uses: actions/checkout@v4
         with:
@@ -219,6 +330,12 @@ jobs:
           name: msicontroller-packages
           path: packages
 
+      - name: Download Arch package
+        uses: actions/download-artifact@v3
+        with:
+          name: msicontroller-arch-package
+          path: packages
+
       - name: Publish Forgejo package registry
         env:
           FORGEJO_API_URL: ${{ forgejo.api_url }}
@@ -229,6 +346,7 @@ jobs:
           MSICONTROLLER_FORGEJO_DEBIAN_DISTRIBUTION: stable
           MSICONTROLLER_FORGEJO_DEBIAN_COMPONENT: main
           MSICONTROLLER_FORGEJO_RPM_GROUP: ""
+          MSICONTROLLER_FORGEJO_ARCH_GROUP: stable
         run: |
           chmod +x scripts/publish-forgejo-packages.sh
           scripts/publish-forgejo-packages.sh packages
@@ -287,7 +405,7 @@ jobs:
             -H "Authorization: token ${FORGEJO_TOKEN}" \
             "${FORGEJO_API_URL}/repos/${FORGEJO_REPOSITORY}/releases/${release_id}/assets")"
 
-          for package in packages/msicontroller_amd64.deb packages/msicontroller_x86_64.rpm; do
+          for package in packages/msicontroller_amd64.deb packages/msicontroller_x86_64.rpm packages/msicontroller-*.pkg.tar.zst; do
             name="$(basename "${package}")"
             asset_id="$(ASSETS_JSON="${assets_json}" ASSET_NAME="${name}" python3 - <<'PY'
           import json
@@ -384,7 +502,7 @@ jobs:
             "${github_headers[@]}" \
             "${github_api}/releases/${release_id}/assets")"
 
-          for package in packages/msicontroller_amd64.deb packages/msicontroller_x86_64.rpm; do
+          for package in packages/msicontroller_amd64.deb packages/msicontroller_x86_64.rpm packages/msicontroller-*.pkg.tar.zst; do
             name="$(basename "${package}")"
             asset_id="$(ASSETS_JSON="${assets_json}" ASSET_NAME="${name}" python3 - <<'PY'
           import json

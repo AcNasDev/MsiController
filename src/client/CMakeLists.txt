@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Qml Quick DBus Widgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 DBus Widgets)
 set(MSICONTROLLER_QT_DIR_VAR "Qt${QT_VERSION_MAJOR}_DIR")
 get_filename_component(MSICONTROLLER_QT_PREFIX "${${MSICONTROLLER_QT_DIR_VAR}}/../../.." ABSOLUTE)
 find_program(MSICONTROLLER_QT_LRELEASE
@@ -108,6 +108,7 @@ set_target_properties(MsiControlCenterClient PROPERTIES
 
 target_link_libraries(MsiControlCenterClient PUBLIC
     Qt${QT_VERSION_MAJOR}::Quick
+    Qt${QT_VERSION_MAJOR}::QuickControls2
     Qt${QT_VERSION_MAJOR}::DBus
     Qt${QT_VERSION_MAJOR}::Core
     Qt${QT_VERSION_MAJOR}::Gui

@@ -11,6 +11,7 @@
 #include <QMetaObject>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickStyle>
 #include <QQuickWindow>
 #include <QTimer>
 #include <QTranslator>
@@ -141,6 +142,8 @@ int main(int argc, char* argv[]) {
     prependEnvPath("QML2_IMPORT_PATH", bundledQmlPath);
 
     QApplication app(argc, argv);
+    // The QML controls provide their own visuals and content items.
+    QQuickStyle::setStyle(QStringLiteral("Basic"));
     QLocalServer server;
     if (!options.smokeTest) {
         if (sendExistingInstanceCommand(QByteArray(INSTANCE_COMMAND_RAISE), 100)) {

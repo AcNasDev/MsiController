@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include <QObject>
 #include <QTimer>
 #include <QVariantList>
@@ -13,7 +15,7 @@ class SettingsStore;
 class FanTargetController : public QObject {
     Q_OBJECT
 public:
-    enum class FanSide { Cpu, Gpu };
+    enum class FanSide : std::uint8_t { Cpu, Gpu };
 
     explicit FanTargetController(EcService* service, QObject* parent = nullptr, SettingsStore* settingsStore = nullptr);
 

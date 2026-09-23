@@ -115,11 +115,13 @@ AppCard {
     }
 
     function rangeMin(parameter, fallback) {
-        return parameter && parameter.availableValues ? Number(parameter.availableValues.min) : fallback
+        var value = parameter && parameter.availableValues ? Number(parameter.availableValues.min) : NaN
+        return isNaN(value) ? fallback : value
     }
 
     function rangeMax(parameter, fallback) {
-        return parameter && parameter.availableValues ? Number(parameter.availableValues.max) : fallback
+        var value = parameter && parameter.availableValues ? Number(parameter.availableValues.max) : NaN
+        return isNaN(value) ? fallback : value
     }
 
     Timer {

@@ -39,30 +39,32 @@ static struct delayed_work ec_cache_work;
 static void ec_cache_tick(struct work_struct* work) {
     unsigned int i;
     u8 value;
+    const unsigned int interval_ms = READ_ONCE(cache_interval_ms);
+    unsigned int chunk = READ_ONCE(cache_chunk);
 
-    if (cache_interval_ms == 0)
+    if (interval_ms == 0)
         return;
 
-    if (cache_chunk == 0)
-        cache_chunk = 1;
-    if (cache_chunk > EC_MEM_SIZE)
-        cache_chunk = EC_MEM_SIZE;
+    if (chunk == 0)
+        chunk = 1;
+    if (chunk > EC_MEM_SIZE)
+        chunk = EC_MEM_SIZE;
 
     /* Don't block if EC is busy (keyboard etc). */
     if (!mutex_trylock(&ec_mutex)) {
-        schedule_delayed_work(&ec_cache_work, msecs_to_jiffies(cache_interval_ms));
+        schedule_delayed_work(&ec_cache_work, msecs_to_jiffies(interval_ms));
         return;
     }
 
-    for (i = 0; i < cache_chunk; i++) {
+    for (i = 0; i < chunk; i++) {
         const u8 addr = (u8)(ec_shadow_pos + i);
         if (ec_read(addr, &value) == 0)
             ec_shadow[addr] = value;
     }
-    ec_shadow_pos = (u8)(ec_shadow_pos + cache_chunk);
+    ec_shadow_pos = (u8)(ec_shadow_pos + chunk);
     mutex_unlock(&ec_mutex);
 
-    schedule_delayed_work(&ec_cache_work, msecs_to_jiffies(cache_interval_ms));
+    schedule_delayed_work(&ec_cache_work, msecs_to_jiffies(interval_ms));
 }
 
 static void ec_shadow_full_refresh(void) {
@@ -83,13 +85,17 @@ static ssize_t ec_raw_bin_read(struct file* filp,
                                char* buf,
                                loff_t off,
                                size_t count) {
+    if (off < 0)
+        return -EINVAL;
     if (off >= EC_MEM_SIZE)
         return 0;
-    if (off + count > EC_MEM_SIZE)
-        count = EC_MEM_SIZE - off;
+    if (count > EC_MEM_SIZE - (size_t)off)
+        count = EC_MEM_SIZE - (size_t)off;
 
-    /* Return cached shadow: avoids EC transactions per userspace read. */
+    /* Return a consistent cached snapshot without new EC transactions. */
+    mutex_lock(&ec_mutex);
     memcpy(buf, ec_shadow + off, count);
+    mutex_unlock(&ec_mutex);
     return count;
 }
 
@@ -100,10 +106,10 @@ static ssize_t ec_raw_bin_write(struct file* filp,
                                 loff_t off,
                                 size_t count) {
     size_t i;
-    if (off >= EC_MEM_SIZE)
+    if (off < 0 || off >= EC_MEM_SIZE)
         return -EINVAL;
-    if (off + count > EC_MEM_SIZE)
-        count = EC_MEM_SIZE - off;
+    if (count > EC_MEM_SIZE - (size_t)off)
+        count = EC_MEM_SIZE - (size_t)off;
     mutex_lock(&ec_mutex);
     for (i = 0; i < count; i++) {
         if (ec_write(off + i, buf[i]) < 0) {

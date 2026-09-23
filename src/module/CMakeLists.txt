@@ -36,6 +36,13 @@ if(MSICONTROLLER_INSTALL_DKMS)
             "${CMAKE_CURRENT_BINARY_DIR}/dkms.conf"
         DESTINATION "/usr/src/${MSICONTROLLER_DKMS_MODULE_NAME}-${MSICONTROLLER_DKMS_VERSION}"
     )
+
+    configure_file(
+        "${CMAKE_SOURCE_DIR}/cmake/packaging/dkms/register-on-install.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/register-on-install.cmake"
+        @ONLY
+    )
+    install(SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/register-on-install.cmake")
 endif()
 
 if(MSICONTROLLER_BUILD_KERNEL_MODULE)

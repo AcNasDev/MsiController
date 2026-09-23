@@ -111,8 +111,8 @@ QVariantList ParameterRegistry::writeParameters(const QVariantList& updates) {
     QVector<QPair<QVariant, QVariant>> requests;
     requests.reserve(updates.size() / 2);
     for (qsizetype i = 0; i < updates.size(); i += 2) {
-        const QVariant name = updates.at(i);
-        const QVariant value = updates.at(i + 1);
+        const QVariant& name = updates.at(i);
+        const QVariant& value = updates.at(i + 1);
         Parameter* param = mParameters.value(name, nullptr);
         if (!param || param->isReadOnly()) {
             qWarning() << "Skipping invalid batch write parameter:" << name;

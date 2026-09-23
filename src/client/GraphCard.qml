@@ -46,7 +46,7 @@ Pane {
     }
 
     function sensorKey(sensor, index) {
-        return sensor.name && sensor.name.length > 0 ? sensor.name : "sensor-" + index
+        return "sensor-" + index + ":" + (sensor && sensor.name ? sensor.name : "")
     }
 
     function historyFor(sensor, index) {
@@ -56,19 +56,17 @@ Pane {
 
     function appendValues() {
         var histories = ({})
-        for (var oldKey in internal.histories)
-            histories[oldKey] = internal.histories[oldKey]
-
+        var capacity = Math.max(1, root.maxHistoryLength)
         for (var i = 0; i < sensorsContainer.children.length; ++i) {
             var sensor = sensorsContainer.children[i]
             if (!sensorEnabled(sensor))
                 continue
 
             var key = sensorKey(sensor, i)
-            var values = histories[key] ? histories[key].slice() : []
+            var values = internal.histories[key] ? internal.histories[key].slice() : []
             values.push(Number(sensor.value || 0))
-            while (values.length > root.maxHistoryLength)
-                values.shift()
+            if (values.length > capacity)
+                values.splice(0, values.length - capacity)
             histories[key] = values
         }
         internal.histories = histories

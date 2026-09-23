@@ -34,7 +34,7 @@ docker_build_args=(
 )
 
 if [[ -n "${MSICONTROLLER_HTTP_PROXY:-}" ]]; then
-  docker_build_args+=(--secret id=msicontroller_http_proxy,env=MSICONTROLLER_HTTP_PROXY)
+  docker_build_args+=(--secret 'id=msicontroller_http_proxy,env=MSICONTROLLER_HTTP_PROXY')
 fi
 
 DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}" docker build "${docker_build_args[@]}" .

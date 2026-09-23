@@ -58,7 +58,7 @@ QString driverName(const SystemAccess& access, const QString& devicePath) {
 
 QString normalizePciBusId(QString busId) {
     busId = busId.trimmed().toLower();
-    const int colon = busId.indexOf(QLatin1Char(':'));
+    const qsizetype colon = busId.indexOf(QLatin1Char(':'));
     if (colon == 8) {
         busId = busId.mid(4);
     }

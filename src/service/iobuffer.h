@@ -7,6 +7,8 @@
 #include <QTimer>
 #include <QVariantMap>
 #include <memory>
+#include <cstring>
+#include <type_traits>
 
 class EcMemoryBackend;
 
@@ -24,7 +26,9 @@ public:
 
     template <typename T>
     bool write(const T& value, uint address = 0) {
-        const QByteArray bytes(reinterpret_cast<const char*>(&value), sizeof(T));
+        static_assert(std::is_integral_v<T> || std::is_enum_v<T>, "EC writes require a scalar value");
+        QByteArray bytes(sizeof(T), '\0');
+        std::memcpy(bytes.data(), &value, sizeof(T));
         return writeBytes(bytes, address);
     }
 

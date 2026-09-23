@@ -27,6 +27,10 @@ qreal clamp01(qreal value) {
     return std::clamp(value, 0.0, 1.0);
 }
 
+void setPoint(QSGGeometry::Point2D& vertex, qreal x, qreal y) {
+    vertex.set(static_cast<float>(x), static_cast<float>(y));
+}
+
 QSGFlatColorMaterial* materialFor(const QColor& color) {
     auto* material = new QSGFlatColorMaterial;
     material->setColor(color);
@@ -328,11 +332,11 @@ void GpuLineChart::setSampleCapacity(int capacity) {
     scheduleUpdate();
 }
 
-bool GpuLineChart::smooth() const {
+bool GpuLineChart::curveSmooth() const {
     return m_smooth;
 }
 
-void GpuLineChart::setSmooth(bool smooth) {
+void GpuLineChart::setCurveSmooth(bool smooth) {
     if (m_smooth == smooth) {
         return;
     }
@@ -552,6 +556,9 @@ QSGGeometryNode* GpuLineChart::createGridNode(const QRectF& plot) const {
         return nullptr;
     }
 
+    if (m_gridRows > std::numeric_limits<int>::max() / 2 - m_gridColumns) {
+        return nullptr;
+    }
     const int vertexCount = 2 * (m_gridRows + m_gridColumns);
     auto* geometry = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), vertexCount);
     geometry->setDrawingMode(QSGGeometry::DrawLines);
@@ -561,14 +568,14 @@ QSGGeometryNode* GpuLineChart::createGridNode(const QRectF& plot) const {
     int index = 0;
     for (int column = 0; column < m_gridColumns; ++column) {
         const qreal x = m_gridColumns <= 1 ? plot.left() : plot.left() + plot.width() * column / qreal(m_gridColumns - 1);
-        vertices[index++].set(x, plot.top());
-        vertices[index++].set(x, plot.bottom());
+        setPoint(vertices[index++], x, plot.top());
+        setPoint(vertices[index++], x, plot.bottom());
     }
 
     for (int row = 0; row < m_gridRows; ++row) {
         const qreal y = m_gridRows <= 1 ? plot.bottom() : plot.top() + plot.height() * row / qreal(m_gridRows - 1);
-        vertices[index++].set(plot.left(), y);
-        vertices[index++].set(plot.right(), y);
+        setPoint(vertices[index++], plot.left(), y);
+        setPoint(vertices[index++], plot.right(), y);
     }
 
     auto* node = new QSGGeometryNode;
@@ -584,14 +591,17 @@ QSGGeometryNode* GpuLineChart::createFillNode(const QVector<QPointF>& points, qr
         return nullptr;
     }
 
-    auto* geometry = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), points.size() * 2);
+    if (points.size() > std::numeric_limits<int>::max() / 2) {
+        return nullptr;
+    }
+    auto* geometry = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), static_cast<int>(points.size()) * 2);
     geometry->setDrawingMode(QSGGeometry::DrawTriangleStrip);
 
     auto* vertices = geometry->vertexDataAsPoint2D();
     int index = 0;
     for (const QPointF& point : points) {
-        vertices[index++].set(point.x(), bottom);
-        vertices[index++].set(point.x(), point.y());
+        setPoint(vertices[index++], point.x(), bottom);
+        setPoint(vertices[index++], point.x(), point.y());
     }
 
     auto* node = new QSGGeometryNode;
@@ -615,7 +625,10 @@ QSGGeometryNode* GpuLineChart::createLineNode(const QVector<QPointF>& points) co
     const qreal innerHalfWidth = std::max<qreal>(0.5, m_lineWidth / 2.0);
     const qreal outerHalfWidth = innerHalfWidth + 0.9;
     const QVector<StrokeSection> sections = strokeSections(filteredPoints, innerHalfWidth, outerHalfWidth);
-    const int segmentCount = filteredPoints.size() - 1;
+    if (filteredPoints.size() - 1 > std::numeric_limits<int>::max() / 18) {
+        return nullptr;
+    }
+    const int segmentCount = static_cast<int>(filteredPoints.size()) - 1;
 
     auto* geometry = new QSGGeometry(QSGGeometry::defaultAttributes_ColoredPoint2D(), segmentCount * 18);
     geometry->setDrawingMode(QSGGeometry::DrawTriangles);

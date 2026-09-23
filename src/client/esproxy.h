@@ -4,6 +4,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include "proxyparameter.h"
 #include "struct.h"
 
 class AutoProfileController;
@@ -13,7 +14,6 @@ class DeviceProfileClient;
 class DiagnosticsClient;
 class EcMemoryClient;
 class ParameterClient;
-class ProxyParameter;
 class TelemetryHistoryController;
 
 class EsProxy : public QObject {

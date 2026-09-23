@@ -75,7 +75,7 @@ Flickable {
 
         var values = root.draftMaxFreqScaling.length === root.cpuControlConfig.cpus.length
             ? root.draftMaxFreqScaling.slice()
-            : Array(root.cpuControlConfig.cpus.length).fill(0)
+            : root.currentMaxFreqScaling()
         values[idx] = Math.round(clampFreq(value, idx))
         root.draftMaxFreqScaling = values
     }

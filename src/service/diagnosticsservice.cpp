@@ -79,7 +79,7 @@ QVariantList hostCommandSnapshots() {
 }
 
 QVariantList currentWarnings(bool moduleLoaded,
-                             int parameterCount,
+                             qsizetype parameterCount,
                              const QVariantMap& activeProfile,
                              const QVariantMap& memoryStatus,
                              bool simulator) {
@@ -112,7 +112,7 @@ DiagnosticsService::DiagnosticsService(ParameterRegistry* parameters,
 
 QVariantMap DiagnosticsService::diagnostics() const {
     const bool moduleLoaded = kernelModuleLoaded();
-    const int parameterCount = mParameters ? mParameters->availableParameterNames().size() : 0;
+    const qsizetype parameterCount = mParameters ? mParameters->availableParameterNames().size() : 0;
     const QVariantMap activeProfile = mProfiles ? mProfiles->activeProfile() : QVariantMap{};
     const QVariantMap memoryStatus = mMemory ? mMemory->readMemory(0, 0) : QVariantMap{};
     const QVariantMap memoryBackend = mMemory ? mMemory->backendDiagnostics() : QVariantMap{};

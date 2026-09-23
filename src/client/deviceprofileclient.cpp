@@ -87,6 +87,8 @@ void DeviceProfileClient::refreshDeviceProfiles() {
         }
         watcher->deleteLater();
     });
+    // The QObject parent owns the watcher until deleteLater runs.
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
 }
 
 void DeviceProfileClient::refreshActiveDeviceProfile() {
@@ -105,6 +107,8 @@ void DeviceProfileClient::refreshActiveDeviceProfile() {
         }
         watcher->deleteLater();
     });
+    // The QObject parent owns the watcher until deleteLater runs.
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
 }
 
 void DeviceProfileClient::saveDeviceProfile(const QVariantMap& profile) {

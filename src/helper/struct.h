@@ -215,6 +215,8 @@ public:
         QDataStream stream(data);
         stream >> msg.variant;
         arg.endStructure();
+        // Qt DBus streaming requires returning its input argument by reference.
+        // NOLINTNEXTLINE(bugprone-return-const-ref-from-parameter)
         return arg;
     }
 };

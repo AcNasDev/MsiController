@@ -25,6 +25,10 @@ qreal snapPixel(qreal value) {
     return std::round(value);
 }
 
+void setPoint(QSGGeometry::Point2D& vertex, qreal x, qreal y) {
+    vertex.set(static_cast<float>(x), static_cast<float>(y));
+}
+
 QSGFlatColorMaterial* materialFor(const QColor& color) {
     auto* material = new QSGFlatColorMaterial;
     material->setColor(color);
@@ -38,7 +42,7 @@ QVector<QPointF> roundedRectPoints(const QRectF& rect, qreal radius, int segment
     }
 
     QVector<QPointF> points;
-    points.reserve(4 * (segments + 1));
+    points.reserve(qsizetype{4} * (segments + 1));
     const QPointF centers[] = {
         QPointF(rect.right() - r, rect.top() + r),
         QPointF(rect.right() - r, rect.bottom() - r),
@@ -63,9 +67,9 @@ void appendRoundedRect(QSGGeometry::Point2D* vertices, int& index, const QRectF&
     for (int i = 0; i < points.size(); ++i) {
         const QPointF& a = points[i];
         const QPointF& b = points[(i + 1) % points.size()];
-        vertices[index++].set(center.x(), center.y());
-        vertices[index++].set(a.x(), a.y());
-        vertices[index++].set(b.x(), b.y());
+        setPoint(vertices[index++], center.x(), center.y());
+        setPoint(vertices[index++], a.x(), a.y());
+        setPoint(vertices[index++], b.x(), b.y());
     }
 }
 
@@ -101,9 +105,9 @@ void appendPolygonFan(QSGGeometry::Point2D* vertices, int& index, const QVector<
     for (int i = 0; i < points.size(); ++i) {
         const QPointF& a = points[i];
         const QPointF& b = points[(i + 1) % points.size()];
-        vertices[index++].set(center.x(), center.y());
-        vertices[index++].set(a.x(), a.y());
-        vertices[index++].set(b.x(), b.y());
+        setPoint(vertices[index++], center.x(), center.y());
+        setPoint(vertices[index++], a.x(), a.y());
+        setPoint(vertices[index++], b.x(), b.y());
     }
 }
 } // namespace
@@ -631,7 +635,7 @@ void GpuCpuPerformanceGraph::onFrame() {
         return;
     }
 
-    const qreal dtMs = std::clamp<qreal>(m_frameClock.restart(), 1.0, 100.0);
+    const qreal dtMs = std::clamp<qreal>(static_cast<qreal>(m_frameClock.restart()), 1.0, 100.0);
     bool changed = false;
     changed = advanceVector(m_displayFrequency, m_frequencyTargets, m_telemetryEaseMs, dtMs) || changed;
     changed = advanceVector(m_displayUsage, m_usageTargets, m_telemetryEaseMs, dtMs) || changed;
@@ -657,7 +661,9 @@ void GpuCpuPerformanceGraph::scheduleUpdate() {
 }
 
 int GpuCpuPerformanceGraph::coreCount() const {
-    return std::max({m_frequencyTargets.size(), m_usageTargets.size(), m_limitTargets.size()});
+    return static_cast<int>(std::min<qsizetype>(
+        std::max({m_frequencyTargets.size(), m_usageTargets.size(), m_limitTargets.size()}),
+        std::numeric_limits<int>::max()));
 }
 
 qreal GpuCpuPerformanceGraph::normalizedAt(const QVector<qreal>& values, int index, qreal fallback) const {
@@ -678,8 +684,8 @@ QSGGeometryNode* GpuCpuPerformanceGraph::createGridNode(const QRectF& plot) cons
     int vertex = 0;
     for (int row = 0; row < rowCount; ++row) {
         const qreal y = plot.top() + plot.height() * row / qreal(rowCount - 1);
-        vertices[vertex++].set(plot.left(), y);
-        vertices[vertex++].set(plot.right(), y);
+        setPoint(vertices[vertex++], plot.left(), y);
+        setPoint(vertices[vertex++], plot.right(), y);
     }
 
     auto* node = new QSGGeometryNode;
@@ -700,7 +706,11 @@ QSGGeometryNode* GpuCpuPerformanceGraph::createRoundedRectsNode(const QVector<QR
     constexpr int segments = 8;
     constexpr int pointsPerRect = 4 * (segments + 1);
     constexpr int verticesPerRect = pointsPerRect * 3;
-    auto* geometry = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), rects.size() * verticesPerRect);
+    if (rects.size() > std::numeric_limits<int>::max() / verticesPerRect) {
+        return nullptr;
+    }
+    const int vertexCount = static_cast<int>(rects.size()) * verticesPerRect;
+    auto* geometry = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), vertexCount);
     geometry->setDrawingMode(QSGGeometry::DrawTriangles);
 
     auto* vertices = geometry->vertexDataAsPoint2D();
@@ -727,7 +737,11 @@ QSGGeometryNode* GpuCpuPerformanceGraph::createTopRoundedRectsNode(const QVector
     constexpr int segments = 8;
     constexpr int pointsPerRect = 2 * (segments + 1) + 2;
     constexpr int verticesPerRect = pointsPerRect * 3;
-    auto* geometry = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), rects.size() * verticesPerRect);
+    if (rects.size() > std::numeric_limits<int>::max() / verticesPerRect) {
+        return nullptr;
+    }
+    const int vertexCount = static_cast<int>(rects.size()) * verticesPerRect;
+    auto* geometry = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), vertexCount);
     geometry->setDrawingMode(QSGGeometry::DrawTriangles);
 
     auto* vertices = geometry->vertexDataAsPoint2D();

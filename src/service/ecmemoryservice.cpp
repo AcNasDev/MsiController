@@ -2,6 +2,8 @@
 
 #include <QtGlobal>
 
+#include <limits>
+
 #include "iobuffer.h"
 
 namespace {
@@ -72,7 +74,11 @@ QVariantMap EcMemoryService::readMemory(int offset, int length) const {
     }
 
     QString errorMessage;
-    const int bufferSize = mIoBuffer->buffer().size();
+    const qsizetype actualSize = mIoBuffer->buffer().size();
+    if (actualSize > std::numeric_limits<int>::max()) {
+        return memoryResult(false, QStringLiteral("EC buffer exceeds supported API size"), 0);
+    }
+    const int bufferSize = static_cast<int>(actualSize);
     if (!validateMemoryRange(offset, length, bufferSize, &errorMessage)) {
         return memoryResult(false, errorMessage, bufferSize);
     }
@@ -91,11 +97,19 @@ QVariantMap EcMemoryService::writeMemory(int offset, const QByteArray& bytes) {
     }
 
     QString errorMessage;
-    const int bufferSize = mIoBuffer->buffer().size();
-    if (!validateMemoryRange(offset, bytes.size(), bufferSize, &errorMessage)) {
+    const qsizetype actualSize = mIoBuffer->buffer().size();
+    if (actualSize > std::numeric_limits<int>::max()) {
+        return memoryResult(false, QStringLiteral("EC buffer exceeds supported API size"), 0);
+    }
+    const int bufferSize = static_cast<int>(actualSize);
+    if (bytes.size() > std::numeric_limits<int>::max()) {
+        return memoryResult(false, QStringLiteral("Write exceeds supported API size"), bufferSize);
+    }
+    const int length = static_cast<int>(bytes.size());
+    if (!validateMemoryRange(offset, length, bufferSize, &errorMessage)) {
         return memoryResult(false, errorMessage, bufferSize);
     }
-    if (!mWritePolicy.allows(offset, bytes.size(), &errorMessage)) {
+    if (!mWritePolicy.allows(offset, length, &errorMessage)) {
         mWritePolicy.recordWrite(QStringLiteral("writeBytes"), offset, bytes, false, errorMessage);
         return memoryResult(false, errorMessage, bufferSize);
     }
@@ -124,7 +138,11 @@ QVariantMap EcMemoryService::writeMemoryBits(int offset, int mask, int value) {
     }
 
     QString errorMessage;
-    const int bufferSize = mIoBuffer->buffer().size();
+    const qsizetype actualSize = mIoBuffer->buffer().size();
+    if (actualSize > std::numeric_limits<int>::max()) {
+        return memoryResult(false, QStringLiteral("EC buffer exceeds supported API size"), 0);
+    }
+    const int bufferSize = static_cast<int>(actualSize);
     if (!validateMemoryRange(offset, 1, bufferSize, &errorMessage)) {
         return memoryResult(false, errorMessage, bufferSize);
     }

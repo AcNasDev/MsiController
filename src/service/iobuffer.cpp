@@ -26,11 +26,14 @@ bool IOBuffer::writeBytes(const QByteArray& bytes, uint address) {
         return true;
     }
 
-    mDataCache[address] = bytes;
-    if (address + bytes.size() <= static_cast<uint>(mBuffer.size())) {
-        mBuffer.replace(static_cast<int>(address), bytes.size(), bytes);
-        emit bufferChanged(mBuffer);
+    const auto bufferSize = static_cast<quint64>(mBuffer.size());
+    if (!mBackend || address > bufferSize || static_cast<quint64>(bytes.size()) > bufferSize - address) {
+        return false;
     }
+
+    mDataCache[address] = bytes;
+    mBuffer.replace(static_cast<qsizetype>(address), bytes.size(), bytes);
+    emit bufferChanged(mBuffer);
     QTimer::singleShot(0, this, &IOBuffer::startRead);
     return true;
 }
@@ -48,13 +51,21 @@ void IOBuffer::startRead() {
         return;
     }
 
-    const QMap<uint, QByteArray> pendingWrites = mDataCache;
-    mDataCache.clear();
-    const QByteArray nextBuffer = mBackend->readAll(pendingWrites);
-    if (nextBuffer == mBuffer && pendingWrites.isEmpty()) {
+    QMap<uint, QByteArray> pendingWrites;
+    mDataCache.swap(pendingWrites);
+    const auto nextBuffer = mBackend->readAll(pendingWrites);
+    if (!nextBuffer) {
+        for (auto it = pendingWrites.cbegin(); it != pendingWrites.cend(); ++it) {
+            if (!mDataCache.contains(it.key())) {
+                mDataCache.insert(it.key(), it.value());
+            }
+        }
+        return;
+    }
+    if (*nextBuffer == mBuffer && pendingWrites.isEmpty()) {
         return;
     }
 
-    mBuffer = nextBuffer;
+    mBuffer = *nextBuffer;
     emit bufferChanged(mBuffer);
 }

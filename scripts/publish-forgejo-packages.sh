@@ -5,9 +5,19 @@ PACKAGE_DIR="${1:-packages}"
 PACKAGE_DIR="$(cd "${PACKAGE_DIR}" && pwd)"
 DEB_PACKAGE="${MSICONTROLLER_PUBLISH_DEB:-${PACKAGE_DIR}/msicontroller_amd64.deb}"
 RPM_PACKAGE="${MSICONTROLLER_PUBLISH_RPM:-${PACKAGE_DIR}/msicontroller_x86_64.rpm}"
+ARCH_PACKAGE="${MSICONTROLLER_PUBLISH_ARCH:-}"
+if [[ -z "$ARCH_PACKAGE" ]]; then
+  arch_packages=("${PACKAGE_DIR}"/msicontroller-*.pkg.tar.zst)
+  [[ ${#arch_packages[@]} -eq 1 && -f "${arch_packages[0]}" ]] || {
+    printf 'error: expected exactly one Arch package in %s\n' "$PACKAGE_DIR" >&2
+    exit 1
+  }
+  ARCH_PACKAGE="${arch_packages[0]}"
+fi
 DEBIAN_DISTRIBUTION="${MSICONTROLLER_FORGEJO_DEBIAN_DISTRIBUTION:-stable}"
 DEBIAN_COMPONENT="${MSICONTROLLER_FORGEJO_DEBIAN_COMPONENT:-main}"
 RPM_GROUP="${MSICONTROLLER_FORGEJO_RPM_GROUP:-}"
+ARCH_GROUP="${MSICONTROLLER_FORGEJO_ARCH_GROUP:-stable}"
 
 log() {
   printf '==> %s\n' "$*"
@@ -76,11 +86,16 @@ delete_if_present() {
 upload_file() {
   local file="$1"
   local url="$2"
+  local content_type="${3:-}"
   local response status
+  local headers=()
 
+  if [[ -n "$content_type" ]]; then
+    headers=(-H "Content-Type: ${content_type}")
+  fi
   response="$(mktemp)"
   status="$(curl -sS -o "$response" -w '%{http_code}' \
-    "${curl_auth[@]}" \
+    "${curl_auth[@]}" "${headers[@]}" \
     --upload-file "$file" \
     "$url" || true)"
 
@@ -141,8 +156,28 @@ publish_rpm() {
   upload_file "$file" "$upload_url"
 }
 
+publish_arch() {
+  local file="$1"
+  local package_info package_name package_version package_arch delete_url upload_url
+
+  command -v bsdtar >/dev/null 2>&1 || fail "bsdtar is required to publish Arch packages"
+  package_info="$(bsdtar -xOf "$file" .PKGINFO)"
+  package_name="$(awk -F ' = ' '$1 == "pkgname" { print $2; exit }' <<< "$package_info")"
+  package_version="$(awk -F ' = ' '$1 == "pkgver" { print $2; exit }' <<< "$package_info")"
+  package_arch="$(awk -F ' = ' '$1 == "arch" { print $2; exit }' <<< "$package_info")"
+  [[ -n "$package_name" && -n "$package_version" && -n "$package_arch" ]] || fail "invalid Arch package metadata: $file"
+
+  delete_url="${package_api}/arch/${ARCH_GROUP}/${package_name}/${package_version}/${package_arch}"
+  upload_url="${package_api}/arch/${ARCH_GROUP}"
+
+  log "Publishing Arch ${package_name} ${package_version} ${package_arch} to ${ARCH_GROUP}"
+  delete_if_present "$delete_url"
+  upload_file "$file" "$upload_url" "application/octet-stream"
+}
+
 require_file "$DEB_PACKAGE"
 require_file "$RPM_PACKAGE"
+require_file "$ARCH_PACKAGE"
 prepare_auth
 
 forgejo_base="$(forgejo_base_url)"
@@ -151,3 +186,4 @@ package_api="${forgejo_base}/api/packages/${owner}"
 
 publish_deb "$DEB_PACKAGE"
 publish_rpm "$RPM_PACKAGE"
+publish_arch "$ARCH_PACKAGE"

@@ -188,6 +188,8 @@ void ParameterClient::init() {
                 valueWatcher->deleteLater();
             });
 
+            // valueWatcher is owned by this QObject and deleted after its reply.
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
             QDBusPendingCall readCall = mParametersInterface->readParameter(MsiDbusCodec::wrapValue(name));
             QDBusPendingCallWatcher* readWatcher = new QDBusPendingCallWatcher(readCall, this);
             connect(readWatcher, &QDBusPendingCallWatcher::finished, this, [this, name, readWatcher]() {
@@ -223,8 +225,8 @@ void ParameterClient::setCpuScalingMaxFrequencies(const QVariantList& frequencie
         return;
     }
 
-    const int count = std::min<int>(config.cpus.size(), frequenciesKhz.size());
-    for (int i = 0; i < count; ++i) {
+    const qsizetype count = std::min(config.cpus.size(), frequenciesKhz.size());
+    for (qsizetype i = 0; i < count; ++i) {
         bool ok = false;
         const quint32 requested = frequenciesKhz.at(i).toUInt(&ok);
         if (!ok || requested == 0) {
@@ -405,7 +407,7 @@ void ParameterClient::flushPendingWrites() {
                 }
                 for (qsizetype i = 0; i + 1 < values.size(); i += 2) {
                     const auto param = values.at(i).value<Msi::Parametr>();
-                    const QVariant value = values.at(i + 1);
+                    const QVariant& value = values.at(i + 1);
                     confirmedParams.insert(param);
                     const QVariant expectedValue = mInFlightWrites.take(param);
                     if (!hasQueuedWrite(param)) {
@@ -482,6 +484,8 @@ void ParameterClient::refreshParameter(Msi::Parametr param) {
         }
         watcher->deleteLater();
     });
+    // The QObject parent owns the watcher until deleteLater runs.
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
 }
 
 void ParameterClient::beginConfirmation(Msi::Parametr param, const QVariant& expectedValue) {

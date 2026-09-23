@@ -42,7 +42,8 @@ bool QtFileSystemAccess::writeText(const QString& path, const QString& value, QS
         }
         return false;
     }
-    if (file.write(value.toUtf8()) == -1) {
+    const QByteArray bytes = value.toUtf8();
+    if (file.write(bytes) != bytes.size() || !file.flush()) {
         if (errorMessage) {
             *errorMessage = file.errorString();
         }
@@ -72,9 +73,17 @@ ProcessResult QtProcessRunner::run(const QString& program, const QStringList& ar
         return result;
     }
     result.finished = process.waitForFinished(timeoutMs);
-    result.exitCode = process.exitCode();
+    if (!result.finished) {
+        process.kill();
+        process.waitForFinished();
+    } else {
+        result.exitCode = process.exitCode();
+    }
     result.standardOutput = process.readAllStandardOutput();
     result.standardError = process.readAllStandardError();
+    if (!result.finished && result.standardError.isEmpty()) {
+        result.standardError = "Process timed out";
+    }
     return result;
 }
 

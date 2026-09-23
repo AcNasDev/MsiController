@@ -160,6 +160,11 @@ Item {
             return
         }
 
+        if (!values || typeof values !== "object" || Array.isArray(values)) {
+            statusLabel.text = qsTr("Profile values must be a JSON object")
+            return
+        }
+
         var id = profileIdField.text.trim()
         if (id.length === 0) {
             statusLabel.text = qsTr("Profile id is empty")

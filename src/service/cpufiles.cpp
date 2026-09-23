@@ -29,7 +29,7 @@ QString cpuPath(const QString& cpuDir, const char* filePath) {
 }
 
 QString normalizePowerProfile(const QString& value) {
-    const QString normalized = value.trimmed().toLower();
+    QString normalized = value.trimmed().toLower();
     if (normalized == QStringLiteral("powersave") || normalized == QStringLiteral("power_saver") ||
         normalized == QStringLiteral("power saver")) {
         return QStringLiteral("power-saver");

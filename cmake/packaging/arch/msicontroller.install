@@ -1,0 +1,14 @@
+# shellcheck shell=sh
+post_install() {
+  systemctl daemon-reload >/dev/null 2>&1 || true
+  printf '%s\n' 'msicontroller: DKMS builds msiecmodule for installed kernels with matching headers.'
+  printf '%s\n' 'msicontroller: after DKMS completes, run: sudo systemctl enable --now msi-ec-service.service'
+}
+
+post_upgrade() {
+  post_install
+}
+
+post_remove() {
+  systemctl daemon-reload >/dev/null 2>&1 || true
+}

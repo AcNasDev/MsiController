@@ -39,8 +39,9 @@ Pane {
 
         var values = internal.history.slice()
         values.push(Number(root.chartValue || 0))
-        while (values.length > root.maxHistoryLength)
-            values.shift()
+        var capacity = Math.max(1, root.maxHistoryLength)
+        if (values.length > capacity)
+            values.splice(0, values.length - capacity)
         internal.history = values
     }
 

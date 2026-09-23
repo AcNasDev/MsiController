@@ -1,0 +1,59 @@
+# A direct cmake --install must register DKMS source for future kernels.
+# Package builders stage with DESTDIR and let their package manager's hooks do it.
+if(NOT "$ENV{DESTDIR}" STREQUAL "")
+    return()
+endif()
+
+find_program(_msicontroller_dkms dkms)
+if(NOT _msicontroller_dkms)
+    message(FATAL_ERROR "DKMS is required for a direct install with MSICONTROLLER_INSTALL_DKMS=ON")
+endif()
+
+execute_process(COMMAND uname -r OUTPUT_VARIABLE _msicontroller_kernel
+    OUTPUT_STRIP_TRAILING_WHITESPACE RESULT_VARIABLE _msicontroller_result)
+if(NOT _msicontroller_result EQUAL 0)
+    message(FATAL_ERROR "Could not determine running kernel for DKMS")
+endif()
+
+execute_process(
+    COMMAND "${_msicontroller_dkms}" status -m "@MSICONTROLLER_DKMS_MODULE_NAME@" -v "@MSICONTROLLER_DKMS_VERSION@"
+    OUTPUT_VARIABLE _msicontroller_status ERROR_QUIET
+)
+if(NOT _msicontroller_status MATCHES "@MSICONTROLLER_DKMS_MODULE_NAME@/@MSICONTROLLER_DKMS_VERSION@")
+    execute_process(
+        COMMAND "${_msicontroller_dkms}" add -m "@MSICONTROLLER_DKMS_MODULE_NAME@" -v "@MSICONTROLLER_DKMS_VERSION@"
+        RESULT_VARIABLE _msicontroller_result
+    )
+    if(NOT _msicontroller_result EQUAL 0)
+        message(FATAL_ERROR "DKMS registration failed for @MSICONTROLLER_DKMS_MODULE_NAME@/@MSICONTROLLER_DKMS_VERSION@")
+    endif()
+endif()
+
+# The direct module build installs the current kernel's .ko below. Register its
+# source for future kernels without building a second copy for this kernel.
+if("@MSICONTROLLER_BUILD_KERNEL_MODULE@" STREQUAL "ON")
+    return()
+endif()
+
+execute_process(
+    COMMAND "${_msicontroller_dkms}" status -m "@MSICONTROLLER_DKMS_MODULE_NAME@" -v "@MSICONTROLLER_DKMS_VERSION@" -k "${_msicontroller_kernel}"
+    OUTPUT_VARIABLE _msicontroller_kernel_status ERROR_QUIET
+)
+if(_msicontroller_kernel_status MATCHES "installed")
+    return()
+endif()
+
+execute_process(
+    COMMAND "${_msicontroller_dkms}" build -m "@MSICONTROLLER_DKMS_MODULE_NAME@" -v "@MSICONTROLLER_DKMS_VERSION@" -k "${_msicontroller_kernel}"
+    RESULT_VARIABLE _msicontroller_result
+)
+if(NOT _msicontroller_result EQUAL 0)
+    message(FATAL_ERROR "DKMS build failed for kernel ${_msicontroller_kernel}; check matching kernel headers")
+endif()
+execute_process(
+    COMMAND "${_msicontroller_dkms}" install -m "@MSICONTROLLER_DKMS_MODULE_NAME@" -v "@MSICONTROLLER_DKMS_VERSION@" -k "${_msicontroller_kernel}" --force
+    RESULT_VARIABLE _msicontroller_result
+)
+if(NOT _msicontroller_result EQUAL 0)
+    message(FATAL_ERROR "DKMS install failed for kernel ${_msicontroller_kernel}")
+endif()

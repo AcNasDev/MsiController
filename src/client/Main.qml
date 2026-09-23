@@ -12,8 +12,8 @@ import MSI.Helpers 1.0
 ApplicationWindow {
     id: mainWindow
 
-    width: Math.max(minimumWidth, Math.min(1180, Screen.availableWidth > 0 ? Screen.availableWidth - 48 : 1180))
-    height: Math.max(minimumHeight, Math.min(720, Screen.availableHeight > 0 ? Screen.availableHeight - 72 : 720))
+    width: Math.max(minimumWidth, Math.min(1180, Screen.desktopAvailableWidth > 0 ? Screen.desktopAvailableWidth - 48 : 1180))
+    height: Math.max(minimumHeight, Math.min(720, Screen.desktopAvailableHeight > 0 ? Screen.desktopAvailableHeight - 72 : 720))
     minimumWidth: 820
     minimumHeight: 520
     visible: false
@@ -37,11 +37,10 @@ ApplicationWindow {
         property string savedTheme: "midnight"
     }
 
-    property string currentTheme: appSettings.savedTheme
+    property string currentTheme: palettes[appSettings.savedTheme] ? appSettings.savedTheme : "midnight"
     readonly property var themeChoices: [
         {key: "midnight", label: qsTr("Midnight")},
         {key: "graphite", label: qsTr("Graphite")},
-        {key: "webshare", label: qsTr("WebShare")},
         {key: "daylight", label: qsTr("Daylight")},
         {key: "contrast", label: qsTr("High Contrast")}
     ]
@@ -55,11 +54,6 @@ ApplicationWindow {
             window: "#151719", surface: "#202327", elevated: "#2a2e33", text: "#f0f2f4",
             muted: "#a1a8b2", accent: "#ff4d5e", accent2: "#7dd3fc", good: "#70d48c",
             warn: "#f0b75e", danger: "#ff6b6b", border: "#353b42", track: "#31363d"
-        },
-        webshare: {
-            window: "#030101", surface: "#100607", elevated: "#16090b", text: "#f7f0f0",
-            muted: "#9ca8bd", accent: "#2f9cff", accent2: "#24d0c2", good: "#29cf86",
-            warn: "#fbbf24", danger: "#ef4444", border: "#321113", track: "#241315"
         },
         daylight: {
             window: "#f4f6f8", surface: "#ffffff", elevated: "#eef2f6", text: "#17202c",
@@ -76,7 +70,11 @@ ApplicationWindow {
     readonly property color goodColor: theme.good
     readonly property color dangerColor: theme.danger
 
-    Component.onCompleted: visible = true
+    Component.onCompleted: {
+        if (appSettings.savedTheme !== currentTheme)
+            appSettings.savedTheme = currentTheme
+        visible = true
+    }
 
     palette: Palette {
         window: mainWindow.theme.window
@@ -262,6 +260,8 @@ ApplicationWindow {
             return
         if (parameter.availableValues && parameter.availableValues.length > 1)
             parameter.value = parameter.availableValues[checked ? 1 : 0]
+        else
+            parameter.value = checked
     }
 
     function writeFanCurvePoint(pointIndex, temperature, speed, speedParams, tempParams) {
@@ -730,7 +730,7 @@ ApplicationWindow {
 
                                 background: Rectangle {
                                     radius: 7
-                                    color: parent.highlighted
+                                    color: themeDelegate.highlighted
                                            ? Qt.rgba(mainWindow.theme.accent.r, mainWindow.theme.accent.g,
                                                      mainWindow.theme.accent.b, 0.18)
                                            : "transparent"

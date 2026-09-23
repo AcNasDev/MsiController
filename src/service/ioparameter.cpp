@@ -28,7 +28,7 @@ bool IOParameterString::writeValue(const QVariant& value) {
         qWarning() << "String too long for IOParameterString, truncating:" << strData;
         strData = strData.left(mLength);
     }
-    return mBuffer->write(strData, mAddress);
+    return mBuffer->writeBytes(strData, mAddress);
 }
 
 QVariant IOParameterString::readValue() const {

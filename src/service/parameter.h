@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include <QObject>
 #include <QVariant>
 
@@ -8,7 +10,7 @@ class SettingsStore;
 class Parameter : public QObject {
     Q_OBJECT
 public:
-    enum class Persistence { Persistent, Volatile };
+    enum class Persistence : std::uint8_t { Persistent, Volatile };
 
     explicit Parameter(const QVariant& name,
                        const QVariant& available,

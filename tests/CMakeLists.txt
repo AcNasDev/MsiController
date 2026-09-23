@@ -23,6 +23,14 @@ target_link_libraries(parameterregistrytest PRIVATE
 
 add_test(NAME parameterregistrytest COMMAND parameterregistrytest)
 
+add_executable(systemaccesstest
+    service/systemaccesstest.cpp
+    ${CMAKE_SOURCE_DIR}/src/service/systemaccess.cpp
+)
+target_include_directories(systemaccesstest PRIVATE ${CMAKE_SOURCE_DIR}/src/service)
+target_link_libraries(systemaccesstest PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Test)
+add_test(NAME systemaccesstest COMMAND systemaccesstest)
+
 add_executable(dbuscontracttest
     service/dbuscontracttest.cpp
     ${CMAKE_SOURCE_DIR}/src/service/dbusendpoints.cpp

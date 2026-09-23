@@ -22,20 +22,34 @@ QVariantMap EcMemoryBackend::diagnostics() const {
 FileEcMemoryBackend::FileEcMemoryBackend(QString fileName, QObject* parent)
     : EcMemoryBackend(parent), mFileName(std::move(fileName)) {}
 
-QByteArray FileEcMemoryBackend::readAll(const QMap<uint, QByteArray>& pendingWrites) {
+std::optional<QByteArray> FileEcMemoryBackend::readAll(const QMap<uint, QByteArray>& pendingWrites) {
     QFile file(mFileName);
-    if (!file.open(QIODevice::ReadWrite)) {
+    if (!file.open(QIODevice::ReadWrite | QIODevice::ExistingOnly)) {
         qWarning() << "Failed to open EC memory backend:" << mFileName << file.errorString();
-        return QByteArray();
+        return std::nullopt;
     }
 
     for (auto it = pendingWrites.cbegin(); it != pendingWrites.cend(); ++it) {
-        file.seek(it.key());
-        file.write(it.value());
+        if (!file.seek(it.key()) || file.write(it.value()) != it.value().size()) {
+            qWarning() << "Failed to write EC memory backend:" << mFileName << file.errorString();
+            return std::nullopt;
+        }
+    }
+    if (!pendingWrites.isEmpty() && !file.flush()) {
+        qWarning() << "Failed to flush EC memory backend:" << mFileName << file.errorString();
+        return std::nullopt;
     }
 
-    file.seek(0);
-    return file.readAll();
+    if (!file.seek(0)) {
+        qWarning() << "Failed to rewind EC memory backend:" << mFileName << file.errorString();
+        return std::nullopt;
+    }
+    QByteArray bytes = file.readAll();
+    if (file.error() != QFileDevice::NoError) {
+        qWarning() << "Failed to read EC memory backend:" << mFileName << file.errorString();
+        return std::nullopt;
+    }
+    return bytes;
 }
 
 QString FileEcMemoryBackend::displayName() const {
@@ -77,7 +91,7 @@ SimulatedEcMemoryBackend::SimulatedEcMemoryBackend(QObject* parent) : EcMemoryBa
     refreshTelemetry();
 }
 
-QByteArray SimulatedEcMemoryBackend::readAll(const QMap<uint, QByteArray>& pendingWrites) {
+std::optional<QByteArray> SimulatedEcMemoryBackend::readAll(const QMap<uint, QByteArray>& pendingWrites) {
     applyWrites(pendingWrites);
     refreshTelemetry();
     return mMemory;
@@ -102,7 +116,7 @@ QVariantMap SimulatedEcMemoryBackend::diagnostics() const {
 void SimulatedEcMemoryBackend::applyWrites(const QMap<uint, QByteArray>& pendingWrites) {
     for (auto it = pendingWrites.cbegin(); it != pendingWrites.cend(); ++it) {
         const int offset = static_cast<int>(it.key());
-        const QByteArray bytes = it.value();
+        const QByteArray& bytes = it.value();
         if (offset < 0 || offset + bytes.size() > mMemory.size()) {
             continue;
         }

@@ -30,7 +30,7 @@ The packaged build is designed for daily use: the application is installed into 
 - `msicontroller-doctor` CLI for install/service/module/D-Bus diagnostics.
 - Russian UI translation (`ru_RU`) when the system locale is Russian.
 - DEB/RPM packaging with DKMS-managed kernel module installation.
-- Forgejo CI package artifacts, release uploads, and apt/dnf package registry publishing.
+- Forgejo CI package artifacts, release uploads, and apt/dnf/pacman package registry publishing.
 
 Feature availability depends on the detected firmware configuration in `src/service/supported-devices.json` plus optional user profiles stored by the service in `/etc/MsiController/supported-devices.json`.
 
@@ -87,7 +87,32 @@ or:
 sudo rpm -Uvh ./packages/msicontroller_x86_64.rpm
 ```
 
-The install host needs DKMS, `kmod`, systemd, and kernel headers for the running kernel. The package installs application files into `/opt/msicontroller` and system integration files into standard locations:
+### Arch Linux / Omarchy
+
+Install the kernel headers matching your running kernel first. On Omarchy, use its kernel-specific headers rather than the stock `linux-headers` package. Then install the release asset:
+
+```sh
+sudo pacman -U ./msicontroller-*.pkg.tar.zst
+dkms status -m msiecmodule
+modinfo msiecmodule
+sudo systemctl enable --now msi-ec-service.service
+```
+
+The Arch package has no fixed kernel dependency: DKMS builds the module for kernels with matching headers. CI verifies the package with Arch Linux 5.10 headers; [systemd 261 requires Linux 5.10 and recommends 5.14](https://github.com/systemd/systemd/blob/v261/README). Old headers may need a compatible signing tool for Secure Boot.
+
+To build on Arch/Omarchy, install `base-devel`, `git`, `cmake`, `ninja`, `qt6-base`, `qt6-declarative`, `qt6-tools`, `dkms`, `systemd`, `dbus`, and `kmod`, then run `./scripts/build-arch-package.sh` as a regular user. The package is written to `packages/`.
+
+For pacman updates, [add the Forgejo Arch repository](https://forgejo.org/docs/latest/user/packages/arch/) using its [signing key](https://forgejo.acnas.net/api/packages/app/arch/repository.key) (fingerprint `BB7B F0EF F45C 1C45 AEBE 81F7 57A1 F2EA 20FE 92F7`):
+
+```ini
+[app.stable.forgejo.acnas.net]
+SigLevel = Required
+Server = https://forgejo.acnas.net/api/packages/app/arch/stable/$arch
+```
+
+After the first tagged release, use `sudo pacman -Syu msicontroller` to install, then `sudo pacman -Syu` to update.
+
+For DEB/RPM, the install host needs DKMS, `kmod`, systemd, and kernel headers for the running kernel. These packages install application files into `/opt/msicontroller` and system integration files into standard locations:
 
 - systemd service: `/lib/systemd/system/msi-ec-service.service`
 - D-Bus policy: `/etc/dbus-1/system.d/msi-ec-service.conf`
@@ -136,7 +161,7 @@ The fake backend uses a built-in firmware profile and changing simulated telemet
 
 ## Building Packages
 
-The recommended packaging path is Docker. It builds inside Ubuntu 22.04 with Qt 6.11.1 from `aqtinstall`, bundles the Qt runtime, and writes stable artifact names into `packages/`.
+The DEB/RPM packaging path is Docker. It builds inside Ubuntu 22.04 with Qt 6.11.1 from `aqtinstall`, bundles the Qt runtime, and writes stable artifact names into `packages/`.
 
 ```sh
 ./scripts/build-packages-docker.sh
@@ -147,7 +172,9 @@ Generated files:
 - `packages/msicontroller_amd64.deb`
 - `packages/msicontroller_x86_64.rpm`
 
-The filenames stay stable, but package release metadata is unique so upgrades work normally. The script keeps the `packages/` directory in place and atomically replaces package files, which avoids breaking terminals opened inside that directory.
+The native Arch package is built separately on an Arch host or in the Arch CI job with `./scripts/build-arch-package.sh`. Tagged releases produce `packages/msicontroller-<version>-1-x86_64.pkg.tar.zst`.
+
+The DEB/RPM filenames stay stable, but package release metadata is unique so upgrades work normally. The script keeps the `packages/` directory in place and atomically replaces package files, which avoids breaking terminals opened inside that directory.
 
 If your build environment needs a proxy:
 
@@ -172,7 +199,7 @@ Package install smoke tests run the generated DEB/RPM in clean containers and ch
 ./scripts/test-packages-docker.sh
 ```
 
-The test matrix covers Ubuntu 22.04, Ubuntu 24.04, Ubuntu 26.04, Debian 12, and Fedora. DKMS build/load is skipped only inside these container tests with `MSICONTROLLER_SKIP_DKMS=1`; normal user installation still builds and installs the module.
+Local Docker tests cover Ubuntu 22.04/24.04/26.04, Debian 12, and Fedora. Forgejo verifies the built Arch package and DKMS module with Linux 5.10 headers and separately compiles the module with Linux 4.4 headers. Containers do not test module loading or hardware.
 
 ## Unit Tests
 
@@ -187,21 +214,23 @@ It also covers fake EC backend/profile wiring and a headless runtime smoke test 
 
 ## Forgejo CI
 
-Forgejo builds the project on pushes to `main` and release tags, runs the CTest suite, has a dedicated package job, and runs package install smoke tests against the generated artifacts. Download ready-to-install packages from the workflow artifact named `msicontroller-packages`.
+Forgejo builds the project on pushes to `main` and release tags, runs the CTest suite, has a dedicated package job, and runs package install smoke tests against the generated artifacts. Download DEB/RPM packages from the workflow artifact named `msicontroller-packages` and the Arch package from `msicontroller-arch-package`.
 
 When a tag matching `v*` is pushed, packages are published only after the build/test gate and install smoke tests pass. The release job creates or updates the matching Forgejo Release and uploads:
 
 - `msicontroller_amd64.deb`
 - `msicontroller_x86_64.rpm`
+- `msicontroller-<version>-1-x86_64.pkg.tar.zst`
 
-The same files are uploaded to the Forgejo Package Registry as an apt/dnf repository:
+The DEB/RPM/Arch files are uploaded to the Forgejo Package Registry for apt, dnf, and pacman updates:
 
 - Debian registry: `https://forgejo.acnas.net/api/packages/app/debian`, distribution `stable`, component `main`
 - RPM registry: `https://forgejo.acnas.net/api/packages/app/rpm`
+- Arch registry: `https://forgejo.acnas.net/api/packages/app/arch/stable/$arch`
 
 If the `GITHUBTOKEN` secret is configured, the same tag is pushed to GitHub and the same package files are uploaded to the matching GitHub Release.
 
-Application, package, and DKMS versions are derived from the Git tag. For example, tag `v1.2.3` produces application version `1.2.3`, package version `1.2.3`, and DKMS module version `1.2.3`.
+Application, package, and DKMS versions are derived from the Git tag. Source archives made from this revision also use the version in their directory name (for example `MsiController-1.1.5`); `-DMSICONTROLLER_VERSION_OVERRIDE=1.1.5` sets it explicitly when the directory has been renamed. For example, tag `v1.2.3` produces application version `1.2.3`, package version `1.2.3`, and DKMS module version `1.2.3`.
 
 The CI package job supports the same proxy variable:
 
@@ -214,7 +243,7 @@ MSICONTROLLER_HTTP_PROXY
 Install development dependencies on Debian/Ubuntu:
 
 ```sh
-sudo apt install build-essential cmake ninja-build pkg-config git \
+sudo apt install build-essential cmake ninja-build pkg-config git dkms \
   qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools \
   qt6-charts-dev qt6-qmltooling-plugins \
   libdbus-1-dev libsystemd-dev \

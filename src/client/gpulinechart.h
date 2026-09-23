@@ -25,7 +25,7 @@ class GpuLineChart : public QQuickItem {
     Q_PROPERTY(int gridRows READ gridRows WRITE setGridRows NOTIFY appearanceChanged)
     Q_PROPERTY(int gridColumns READ gridColumns WRITE setGridColumns NOTIFY appearanceChanged)
     Q_PROPERTY(int sampleCapacity READ sampleCapacity WRITE setSampleCapacity NOTIFY appearanceChanged)
-    Q_PROPERTY(bool smooth READ smooth WRITE setSmooth NOTIFY appearanceChanged)
+    Q_PROPERTY(bool curveSmooth READ curveSmooth WRITE setCurveSmooth NOTIFY appearanceChanged)
     Q_PROPERTY(int smoothSteps READ smoothSteps WRITE setSmoothSteps NOTIFY appearanceChanged)
     Q_PROPERTY(qreal lineWidth READ lineWidth WRITE setLineWidth NOTIFY appearanceChanged)
     Q_PROPERTY(qreal leftPadding READ leftPadding WRITE setLeftPadding NOTIFY paddingChanged)
@@ -81,8 +81,8 @@ public:
     int sampleCapacity() const;
     void setSampleCapacity(int capacity);
 
-    bool smooth() const;
-    void setSmooth(bool smooth);
+    bool curveSmooth() const;
+    void setCurveSmooth(bool smooth);
 
     int smoothSteps() const;
     void setSmoothSteps(int steps);
