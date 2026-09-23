@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = msicontroller
+
+[Action]
+Description = Start MSI EC service after DKMS
+When = PostTransaction
+Depends = systemd
+Exec = /usr/lib/msicontroller/arch-service-after-dkms

@@ -223,7 +223,12 @@ jobs:
           pacman -U --noconfirm "$headers"
           # The DKMS pacman hook requires the kernel module tree as well as headers.
           mkdir -p /usr/lib/modules/5.10.70-1-lts/kernel
+          pacman-key --init
           pacman -U --noconfirm packages/msicontroller-*.pkg.tar.zst
+          pacman-conf --repo-list | grep -Fx 'app.stable.forgejo.acnas.net'
+          LC_ALL=C pacman-key --finger BB7BF0EFF45C1C45AEBE81F757A1F2EA20FE92F7 | grep -F '[  full  ]'
+          systemctl is-enabled --quiet msi-ec-service.service
+          test -f /usr/share/libalpm/hooks/90-msicontroller-service.hook
           installed_version="$(pacman -Q msicontroller | awk '{print $2}')"
           module_version="${installed_version%-*}"
           test -x /usr/bin/MsiControlCenterClient
@@ -245,6 +250,8 @@ jobs:
             ! ldd "/usr/bin/${binary}" | grep -q 'not found'
           done
           pacman -R --noconfirm msicontroller
+          ! pacman-conf --repo-list | grep -Fx 'app.stable.forgejo.acnas.net'
+          ! grep -Fq '# BEGIN MsiController Forgejo repository' /etc/pacman.conf
 
   package-install-tests:
     needs: packages

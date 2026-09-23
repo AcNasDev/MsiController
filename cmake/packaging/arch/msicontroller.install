@@ -1,14 +1,77 @@
 # shellcheck shell=sh
+REPOSITORY_NAME='app.stable.forgejo.acnas.net'
+REPOSITORY_URL='https://forgejo.acnas.net/api/packages/app/arch/stable/$arch'
+REPOSITORY_FINGERPRINT='BB7BF0EFF45C1C45AEBE81F757A1F2EA20FE92F7'
+REPOSITORY_KEY='/usr/share/msicontroller/forgejo-repository.asc'
+REPOSITORY_BEGIN='# BEGIN MsiController Forgejo repository'
+REPOSITORY_END='# END MsiController Forgejo repository'
+PACMAN_CONF='/etc/pacman.conf'
+
+repository_warning() {
+  printf 'msicontroller: warning: %s\n' "$1" >&2
+}
+
+configure_repository() {
+  [ "${MSICONTROLLER_DISABLE_REPOSITORY_SETUP:-0}" = '1' ] && return 0
+
+  if [ ! -r "$REPOSITORY_KEY" ] || [ ! -f "$PACMAN_CONF" ]; then
+    repository_warning 'cannot find the bundled signing key or pacman.conf'
+    return 0
+  fi
+
+  key_fingerprint="$(gpg --show-keys --with-colons "$REPOSITORY_KEY" 2>/dev/null | awk -F: '$1 == "fpr" { print $10; exit }')"
+  if [ "$key_fingerprint" != "$REPOSITORY_FINGERPRINT" ]; then
+    repository_warning 'Forgejo signing key fingerprint does not match; repository was not enabled'
+    return 0
+  fi
+
+  if ! pacman-key --add "$REPOSITORY_KEY" >/dev/null 2>&1 ||
+     ! pacman-key --lsign-key "$REPOSITORY_FINGERPRINT" >/dev/null 2>&1; then
+    repository_warning 'could not trust the Forgejo signing key; repository was not enabled'
+    return 0
+  fi
+
+  if pacman-conf --repo-list 2>/dev/null | grep -Fxq "$REPOSITORY_NAME"; then
+    return 0
+  fi
+  if grep -Fxq "$REPOSITORY_BEGIN" "$PACMAN_CONF"; then
+    repository_warning 'incomplete Forgejo repository configuration in pacman.conf'
+    return 0
+  fi
+
+  if ! printf '\n%s\n[%s]\nSigLevel = Required\nServer = %s\n%s\n' \
+      "$REPOSITORY_BEGIN" "$REPOSITORY_NAME" "$REPOSITORY_URL" "$REPOSITORY_END" >> "$PACMAN_CONF"; then
+    repository_warning 'could not update pacman.conf; repository was not enabled'
+    return 0
+  fi
+  printf '%s\n' 'msicontroller: Forgejo repository enabled for pacman updates.'
+}
+
+remove_repository() {
+  [ -f "$PACMAN_CONF" ] || return 0
+  grep -Fxq "$REPOSITORY_BEGIN" "$PACMAN_CONF" || return 0
+  grep -Fxq "$REPOSITORY_END" "$PACMAN_CONF" || return 0
+  sed -i "/^${REPOSITORY_BEGIN}$/,/^${REPOSITORY_END}$/d" "$PACMAN_CONF" ||
+    repository_warning 'could not remove the Forgejo repository from pacman.conf'
+}
+
 post_install() {
+  configure_repository
   systemctl daemon-reload >/dev/null 2>&1 || true
+  systemctl enable msi-ec-service.service >/dev/null 2>&1 || true
   printf '%s\n' 'msicontroller: DKMS builds msiecmodule for installed kernels with matching headers.'
-  printf '%s\n' 'msicontroller: after DKMS completes, run: sudo systemctl enable --now msi-ec-service.service'
 }
 
 post_upgrade() {
-  post_install
+  configure_repository
+  systemctl daemon-reload >/dev/null 2>&1 || true
+}
+
+pre_remove() {
+  systemctl disable --now msi-ec-service.service >/dev/null 2>&1 || true
 }
 
 post_remove() {
+  remove_repository
   systemctl daemon-reload >/dev/null 2>&1 || true
 }

@@ -28,6 +28,13 @@ build() {
 package() {
   DESTDIR="${pkgdir}" cmake --install "${srcdir}/build"
 
+  install -Dm644 "${srcdir}/MsiController-${pkgver}/cmake/packaging/arch/forgejo-repository.asc" \
+    "${pkgdir}/usr/share/msicontroller/forgejo-repository.asc"
+  install -Dm644 "${srcdir}/MsiController-${pkgver}/cmake/packaging/arch/90-msicontroller-service.hook" \
+    "${pkgdir}/usr/share/libalpm/hooks/90-msicontroller-service.hook"
+  install -Dm755 "${srcdir}/MsiController-${pkgver}/cmake/packaging/arch/arch-service-after-dkms.sh" \
+    "${pkgdir}/usr/lib/msicontroller/arch-service-after-dkms"
+
   # Arch places systemd units under /usr/lib; the common CMake path is /lib.
   install -d "${pkgdir}/usr/lib/systemd/system"
   mv "${pkgdir}/lib/systemd/system/msi-ec-service.service" \

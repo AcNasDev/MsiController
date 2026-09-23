@@ -4,35 +4,17 @@
 
 **MSI Control Center** is a Linux control panel for supported MSI laptops. It combines a Qt 6 desktop client, a system D-Bus service, a helper library, and an EC kernel module for monitoring thermals and controlling laptop-specific features.
 
-The packaged build is designed for daily use: the application is installed into `/opt/msicontroller`, Qt runtime files are bundled privately, and the kernel module is managed through DKMS so it is rebuilt when the kernel changes.
+DEB/RPM packages bundle Qt under `/opt/msicontroller`; the Arch package uses system Qt under `/usr`. All packages install the same client, system service, and DKMS kernel module.
 
 ## Features
 
-- Dashboard with CPU/GPU temperatures, fan speed, battery state, and live GPU-rendered mini charts.
-- Built-in and user-editable supported-device profiles in JSON format.
-- Profile import/export from the desktop client for sharing or backing up firmware configurations.
-- Developer mode gate for advanced configuration and EC memory tools.
-- Cooling modes: firmware auto, manual fan curve, target temperature, and Cooler Boost.
-- Optional automatic shift-mode selection based on battery state and CPU/GPU temperature.
-- Behavior presets for Silent, Balanced, Performance, and Adaptive device behavior.
-- Service-managed target temperature mode for CPU/GPU fan adjustment.
-- Editable CPU and GPU fan curves with temperature-to-speed maps.
-- CPU performance view for per-core frequency, usage, and frequency limits.
-- CPU controls for frequency limit and governor selection.
-- Optional NVIDIA/AMD GPU controls for power limit, persistence mode, or AMD performance level when the driver exposes them.
-- Shift mode switching where firmware supports it: Eco, Comfort, Sport, Turbo.
-- Device controls for webcam, USB Power Share, FN/Meta swap, Super Battery, mute state, LEDs, keyboard backlight, and battery charge threshold where available.
-- EC memory debugger for service-mediated hex byte and bit edits with explicit confirmation, service-side allowlist checks, and audit logging.
-- Diagnostics page with service/client API version checks, degraded-state reporting, support bundle export, settings import/export, and telemetry history export.
-- Multiple UI themes, desktop entry, autostart entry, and system tray integration with live telemetry status.
-- Versioned system service over D-Bus with systemd integration.
-- Fake EC backend for development, demos, and repeatable tests without MSI hardware.
-- `msicontroller-doctor` CLI for install/service/module/D-Bus diagnostics.
-- Russian UI translation (`ru_RU`) when the system locale is Russian.
-- DEB/RPM packaging with DKMS-managed kernel module installation.
-- Forgejo CI package artifacts, release uploads, and apt/dnf/pacman package registry publishing.
+- Live temperatures, fan speeds, battery status, and CPU/GPU controls.
+- Cooling modes, fan curves, shift modes, keyboard backlight, and battery charge settings where supported by firmware.
+- Built-in and editable MSI device profiles, with JSON import and export.
+- Diagnostics, a support bundle, and the `msicontroller-doctor` command.
+- Russian translation, desktop launcher, system tray, and a fake EC backend for development.
 
-Feature availability depends on the detected firmware configuration in `src/service/supported-devices.json` plus optional user profiles stored by the service in `/etc/MsiController/supported-devices.json`.
+Available controls depend on the detected firmware profile in `src/service/supported-devices.json`.
 
 ## Screenshots
 
@@ -54,248 +36,42 @@ Feature availability depends on the detected firmware configuration in `src/serv
 
 ## Architecture
 
-- `src/client` - Qt/QML desktop client (`MsiControlCenterClient`).
-- `src/service` - privileged system service (`MsiControlCenterService`) exposing device state and commands over D-Bus.
-- `src/helper` - shared D-Bus/helper library used by the client and service.
-- `src/module` - EC kernel module and DKMS source files.
-- `cmake/packaging` - DEB/RPM, DKMS, Docker, and Qt runtime bundling helpers.
-- `scripts` - package build and package install test entry points.
-
-The client does not talk to EC hardware directly. It talks to the service, and the service owns hardware access, CPU control readback, fan target control, and state synchronization. The service API is split into focused D-Bus objects for parameters, raw EC memory, supported-device profiles, and health/diagnostics.
-
-The D-Bus contract is versioned by the shared helper library. Client and service code use the same API constants and typed message codec so generated D-Bus bindings stay isolated from UI and hardware logic.
-
-Raw EC memory writes are guarded in the service. The active supported-device profile produces the write allowlist, and every accepted or rejected raw write is added to the diagnostics audit log. Regular parameter writes still go through their typed parameter classes.
+The Qt/QML client talks to a privileged system D-Bus service. The service owns EC access and validates raw writes against the active device profile. DKMS builds the EC kernel module for installed kernels with matching headers.
 
 ## Installation
 
-### DEB
+Download the package for your distribution from a [Forgejo release](https://forgejo.acnas.net/app/msicontroller/releases) or CI artifacts. Install headers matching your kernel first; on Omarchy use the headers for its kernel, not the stock `linux-headers` package.
 
-```sh
-sudo apt install ./packages/msicontroller_amd64.deb
-```
+| Distribution | Install downloaded package |
+| --- | --- |
+| Debian / Ubuntu | `sudo apt install ./msicontroller_amd64.deb` |
+| Fedora / RPM | `sudo dnf install ./msicontroller_x86_64.rpm` |
+| Arch / Omarchy | `sudo pacman -U ./msicontroller-*.pkg.tar.zst` |
 
-### RPM
+The packages set up the signed Forgejo repository for future updates. On Arch, the package checks the bundled public key before trusting it and removes its repository entry when uninstalled. No manual `pacman.conf` edit is needed.
 
-```sh
-sudo dnf install ./packages/msicontroller_x86_64.rpm
-```
+The service is enabled and started during package installation; on Arch it starts after DKMS finishes.
 
-or:
+Update as usual with `sudo apt update && sudo apt upgrade`, `sudo dnf upgrade`, or `sudo pacman -Syu`. Launch **MSI Control Center** from the application menu. If DKMS fails, check that your running kernel has matching headers and run `dkms status -m msiecmodule`.
 
-```sh
-sudo rpm -Uvh ./packages/msicontroller_x86_64.rpm
-```
+## Building and Testing
 
-### Arch Linux / Omarchy
+- DEB/RPM: run `./scripts/build-packages-docker.sh` to build with Qt 6.11.1 in Docker. Packages are written to `packages/`.
+- Arch: install the build dependencies in [`PKGBUILD.in`](cmake/packaging/arch/PKGBUILD.in), then run `./scripts/build-arch-package.sh` as a regular user. The package is written to `packages/`.
+- Package install tests: run `./scripts/test-packages-docker.sh`.
+- Unit tests: run `ctest --test-dir build --output-on-failure` after a CMake build.
 
-Install the kernel headers matching your running kernel first. On Omarchy, use its kernel-specific headers rather than the stock `linux-headers` package. Then install the release asset:
+Forgejo CI builds and tests all three package formats. Tagged releases publish the packages to the Forgejo registry, so later versions arrive through the normal package manager.
 
-```sh
-sudo pacman -U ./msicontroller-*.pkg.tar.zst
-dkms status -m msiecmodule
-modinfo msiecmodule
-sudo systemctl enable --now msi-ec-service.service
-```
-
-The Arch package has no fixed kernel dependency: DKMS builds the module for kernels with matching headers. CI verifies the package with Arch Linux 5.10 headers; [systemd 261 requires Linux 5.10 and recommends 5.14](https://github.com/systemd/systemd/blob/v261/README). Old headers may need a compatible signing tool for Secure Boot.
-
-To build on Arch/Omarchy, install `base-devel`, `git`, `cmake`, `ninja`, `qt6-base`, `qt6-declarative`, `qt6-tools`, `dkms`, `systemd`, `dbus`, and `kmod`, then run `./scripts/build-arch-package.sh` as a regular user. The package is written to `packages/`.
-
-For pacman updates, [add the Forgejo Arch repository](https://forgejo.org/docs/latest/user/packages/arch/) using its [signing key](https://forgejo.acnas.net/api/packages/app/arch/repository.key) (fingerprint `BB7B F0EF F45C 1C45 AEBE 81F7 57A1 F2EA 20FE 92F7`):
-
-```ini
-[app.stable.forgejo.acnas.net]
-SigLevel = Required
-Server = https://forgejo.acnas.net/api/packages/app/arch/stable/$arch
-```
-
-After the first tagged release, use `sudo pacman -Syu msicontroller` to install, then `sudo pacman -Syu` to update.
-
-For DEB/RPM, the install host needs DKMS, `kmod`, systemd, and kernel headers for the running kernel. These packages install application files into `/opt/msicontroller` and system integration files into standard locations:
-
-- systemd service: `/lib/systemd/system/msi-ec-service.service`
-- D-Bus policy: `/etc/dbus-1/system.d/msi-ec-service.conf`
-- DKMS source: `/usr/src/msiecmodule-<version>`
-- modules-load config: `/etc/modules-load.d/msiecmodule.conf`
-- desktop/autostart entries: `/usr/share/applications` and `/etc/xdg/autostart`
-
-Release packages also connect the Forgejo package repository during installation. After installing a downloaded `.deb` or `.rpm`, future tagged releases can be installed by the normal system updater:
-
-```sh
-sudo apt update
-sudo apt upgrade
-```
-
-or:
-
-```sh
-sudo dnf upgrade
-```
-
-Repository files are installed as:
-
-- apt source: `/etc/apt/sources.list.d/msicontroller-forgejo.list`
-- apt key: `/etc/apt/keyrings/msicontroller-forgejo.asc`
-- dnf/yum repo: `/etc/yum.repos.d/msicontroller-forgejo.repo`
-
-After installation:
-
-```sh
-systemctl status msi-ec-service
-/opt/msicontroller/bin/msicontroller-client
-/opt/msicontroller/bin/msicontroller-doctor
-```
-
-The desktop launcher is named **MSI Control Center**.
-
-After an upgrade, restart any already running desktop client so it reconnects with the updated service/API contract. Package post-install scripts restart the service and log a warning when an old client process is still running.
-
-For development without MSI hardware:
-
-```sh
-MSICONTROLLER_FAKE_EC=1 build/src/service/MsiControlCenterService --fake-ec
-```
-
-The fake backend uses a built-in firmware profile and changing simulated telemetry. It is intended for development and tests, not for package-managed production service units.
-
-## Building Packages
-
-The DEB/RPM packaging path is Docker. It builds inside Ubuntu 22.04 with Qt 6.11.1 from `aqtinstall`, bundles the Qt runtime, and writes stable artifact names into `packages/`.
-
-```sh
-./scripts/build-packages-docker.sh
-```
-
-Generated files:
-
-- `packages/msicontroller_amd64.deb`
-- `packages/msicontroller_x86_64.rpm`
-
-The native Arch package is built separately on an Arch host or in the Arch CI job with `./scripts/build-arch-package.sh`. Tagged releases produce `packages/msicontroller-<version>-1-x86_64.pkg.tar.zst`.
-
-The DEB/RPM filenames stay stable, but package release metadata is unique so upgrades work normally. The script keeps the `packages/` directory in place and atomically replaces package files, which avoids breaking terminals opened inside that directory.
-
-If your build environment needs a proxy:
-
-```sh
-export MSICONTROLLER_HTTP_PROXY="http://user:password@proxy.example:3128"
-./scripts/build-packages-docker.sh
-```
-
-To build packages without Docker, install Qt 6.11.1 locally and run:
-
-```sh
-export MSICONTROLLER_QT_VERSION=6.11.1
-export MSICONTROLLER_QT_HOST_DIR=/opt/Qt/6.11.1/gcc_64
-./scripts/build-packages.sh
-```
-
-## Testing Packages
-
-Package install smoke tests run the generated DEB/RPM in clean containers and check dependency resolution, installed file layout, desktop/autostart entries, D-Bus/systemd files, DKMS source placement, and unresolved shared libraries.
-
-```sh
-./scripts/test-packages-docker.sh
-```
-
-Local Docker tests cover Ubuntu 22.04/24.04/26.04, Debian 12, and Fedora. Forgejo verifies the built Arch package and DKMS module with Linux 5.10 headers and separately compiles the module with Linux 4.4 headers. Containers do not test module loading or hardware.
-
-## Unit Tests
-
-Fast unit tests are built by default with CMake and can be run with:
-
-```sh
-ctest --test-dir build --output-on-failure
-```
-
-The test suite covers parameter-registry behavior, the service D-Bus contract on a temporary session-bus name, and a QML smoke test that loads the client proxy path and verifies typed parameter creation.
-It also covers fake EC backend/profile wiring and a headless runtime smoke test of the real GUI binary with a nonblank frame check.
-
-## Forgejo CI
-
-Forgejo builds the project on pushes to `main` and release tags, runs the CTest suite, has a dedicated package job, and runs package install smoke tests against the generated artifacts. Download DEB/RPM packages from the workflow artifact named `msicontroller-packages` and the Arch package from `msicontroller-arch-package`.
-
-When a tag matching `v*` is pushed, packages are published only after the build/test gate and install smoke tests pass. The release job creates or updates the matching Forgejo Release and uploads:
-
-- `msicontroller_amd64.deb`
-- `msicontroller_x86_64.rpm`
-- `msicontroller-<version>-1-x86_64.pkg.tar.zst`
-
-The DEB/RPM/Arch files are uploaded to the Forgejo Package Registry for apt, dnf, and pacman updates:
-
-- Debian registry: `https://forgejo.acnas.net/api/packages/app/debian`, distribution `stable`, component `main`
-- RPM registry: `https://forgejo.acnas.net/api/packages/app/rpm`
-- Arch registry: `https://forgejo.acnas.net/api/packages/app/arch/stable/$arch`
-
-If the `GITHUBTOKEN` secret is configured, the same tag is pushed to GitHub and the same package files are uploaded to the matching GitHub Release.
-
-Application, package, and DKMS versions are derived from the Git tag. Source archives made from this revision also use the version in their directory name (for example `MsiController-1.1.5`); `-DMSICONTROLLER_VERSION_OVERRIDE=1.1.5` sets it explicitly when the directory has been renamed. For example, tag `v1.2.3` produces application version `1.2.3`, package version `1.2.3`, and DKMS module version `1.2.3`.
-
-The CI package job supports the same proxy variable:
-
-```sh
-MSICONTROLLER_HTTP_PROXY
-```
-
-## Building From Source
-
-Install development dependencies on Debian/Ubuntu:
-
-```sh
-sudo apt install build-essential cmake ninja-build pkg-config git dkms \
-  qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-tools-dev-tools \
-  qt6-charts-dev qt6-qmltooling-plugins \
-  libdbus-1-dev libsystemd-dev \
-  linux-headers-$(uname -r)
-```
-
-Build:
+For a source build on Debian/Ubuntu, install Qt 6 development packages, CMake, Ninja, D-Bus and systemd development files, and matching kernel headers, then run:
 
 ```sh
 cmake -S . -B build -G Ninja
 cmake --build build
-```
-
-Install from the source build:
-
-```sh
 sudo cmake --install build
 ```
 
-Uninstall a source install:
-
-```sh
-sudo cmake --build build --target uninstall
-```
-
-For package-style builds, the module is not compiled during CMake build; DKMS compiles it during package installation and on kernel updates:
-
-```sh
-cmake -S . -B build-package -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX=/opt/msicontroller \
-  -DMSICONTROLLER_BUNDLE_QT_RUNTIME=ON \
-  -DMSICONTROLLER_BUILD_KERNEL_MODULE=OFF \
-  -DMSICONTROLLER_INSTALL_DKMS=ON
-```
-
-## Runtime Commands
-
-```sh
-systemctl status msi-ec-service
-journalctl -u msi-ec-service -f
-/opt/msicontroller/bin/msicontroller-client
-/opt/msicontroller/bin/msicontroller-doctor --json
-```
-
-Use the **Diagnostics** page in the client to inspect service health, API compatibility, detected firmware, module status, EC write safety state, and system details. The same page can write a support bundle JSON file that includes service diagnostics, supported-device profile data, host command snapshots, client telemetry history, and app settings metadata.
-
-For a non-packaged source install, the client binary is usually available as:
-
-```sh
-MsiControlCenterClient
-```
+For diagnostics, run `systemctl status msi-ec-service`. The client and doctor binaries are under `/opt/msicontroller/bin/` on DEB/RPM and `/usr/bin/` on Arch.
 
 ## Supported Laptops
 
