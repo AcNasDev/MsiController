@@ -23,4 +23,4 @@ fi
 aqt install-qt \
   --outputdir "${QT_OUTPUT_DIR}" \
   linux desktop "${QT_VERSION}" "${QT_ARCH}" \
-  --modules qtcharts
+  --modules qtcharts qttasktree
