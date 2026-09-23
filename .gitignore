@@ -103,3 +103,7 @@ qrc_*
 *.rej
 *~
 # End
+
+# --- Serena ---
+.serena/
+# End
