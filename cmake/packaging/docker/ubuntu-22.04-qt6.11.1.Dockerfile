@@ -39,6 +39,7 @@ RUN --mount=type=secret,id=msicontroller_http_proxy \
     pkg-config \
     python3 \
     python3-pip \
+    python3-venv \
     rpm \
     && rm -rf /var/lib/apt/lists/*
 

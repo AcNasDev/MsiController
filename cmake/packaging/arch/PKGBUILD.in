@@ -6,19 +6,29 @@ pkgdesc='MSI laptop control center with a DKMS-managed EC kernel module'
 arch=('x86_64')
 url='https://github.com/AcNasDev/MsiController'
 license=('MIT')
-depends=('qt6-base' 'qt6-declarative' 'dkms' 'systemd' 'dbus' 'kmod')
-makedepends=('cmake' 'ninja' 'qt6-tools')
+depends=(
+  'dkms' 'systemd' 'dbus' 'kmod'
+  'libglvnd' 'libxkbcommon' 'libxkbcommon-x11'
+  'fontconfig' 'freetype2' 'libx11' 'libxcb'
+  'xcb-util' 'xcb-util-cursor' 'xcb-util-image'
+  'xcb-util-keysyms' 'xcb-util-renderutil' 'xcb-util-wm'
+)
+makedepends=('cmake' 'ninja' 'python')
 optdepends=('linux-headers: headers for the stock Arch kernel; use matching headers for other kernels')
 install=msicontroller.install
 source=("MsiController-${pkgver}.tar.gz")
 sha256sums=('@SHA256@')
 
 build() {
+  : "${MSICONTROLLER_QT_HOST_DIR:?Build with scripts/build-arch-package.sh or set the Qt 6.11.1 directory}"
+  export PATH="${MSICONTROLLER_QT_HOST_DIR}/bin:${PATH}"
   cmake -S "${srcdir}/MsiController-${pkgver}" -B "${srcdir}/build" -G Ninja \
+    -DCMAKE_PREFIX_PATH="${MSICONTROLLER_QT_HOST_DIR}" \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_PREFIX=/opt/msicontroller \
     -DCMAKE_INSTALL_LIBDIR=lib \
     -DMSICONTROLLER_VERSION_OVERRIDE="${pkgver}" \
+    -DMSICONTROLLER_BUNDLE_QT_RUNTIME=ON \
     -DMSICONTROLLER_BUILD_KERNEL_MODULE=OFF \
     -DMSICONTROLLER_INSTALL_DKMS=ON \
     -DMSICONTROLLER_BUILD_TESTS=OFF

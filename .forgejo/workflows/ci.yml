@@ -144,7 +144,7 @@ jobs:
             libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
             libxcb-render-util0 libxcb-render0 libxcb-shape0 libxcb-util1 \
             libxkbcommon-dev libxkbcommon-x11-0 ninja-build pkg-config \
-            python3 python3-pip rpm
+            python3 python3-pip python3-venv rpm
 
       - name: Install Qt with aqtinstall
         run: |
@@ -166,19 +166,28 @@ jobs:
     runs-on: docker
     container:
       image: archlinux:base-devel
+    env:
+      MSICONTROLLER_QT_VERSION: 6.11.1
+      MSICONTROLLER_HTTP_PROXY: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
+      http_proxy: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
+      https_proxy: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
+      HTTP_PROXY: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
+      HTTPS_PROXY: ${{ secrets.MSICONTROLLER_HTTP_PROXY }}
     steps:
       - name: Install action runtime and Arch build dependencies
         run: |
           pacman -Syu --noconfirm --needed \
-            nodejs git base-devel cmake ninja qt6-base qt6-declarative \
-            qt6-tools dkms systemd dbus kmod
+            nodejs git base-devel cmake ninja python dkms systemd dbus kmod
 
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Build native Arch package
+      - name: Install Qt 6.11.1 with aqtinstall
+        run: scripts/install-qt-aqt.sh
+
+      - name: Build Arch package with bundled Qt
         run: |
           useradd -m builder
           chown -R builder:builder .
@@ -199,7 +208,7 @@ jobs:
       - name: Install action runtime and package dependencies
         run: |
           pacman -Syu --noconfirm --needed \
-            nodejs git curl qt6-base qt6-declarative dkms systemd dbus kmod
+            nodejs git curl dkms systemd dbus kmod
 
       - uses: actions/checkout@v4
         with:
@@ -231,9 +240,16 @@ jobs:
           test -f /usr/share/libalpm/hooks/90-msicontroller-service.hook
           installed_version="$(pacman -Q msicontroller | awk '{print $2}')"
           module_version="${installed_version%-*}"
-          test -x /usr/bin/MsiControlCenterClient
-          test -x /usr/bin/MsiControlCenterService
-          test -x /usr/bin/MsiControllerDoctor
+          test -x /opt/msicontroller/bin/MsiControlCenterClient
+          test -x /opt/msicontroller/bin/MsiControlCenterService
+          test -x /opt/msicontroller/bin/MsiControllerDoctor
+          test -x /opt/msicontroller/bin/msicontroller-client
+          test -f /opt/msicontroller/qt/lib/libQt6Core.so.6
+          test -f /opt/msicontroller/qt/plugins/platforms/libqoffscreen.so
+          for qt_package in qt6-base qt6-declarative qt6-svg; do
+            ! pacman -Q "$qt_package" >/dev/null 2>&1
+          done
+          ! printf '%s\n' "$package_info" | grep -Eq '^depend = qt6-'
           test -f /usr/src/msiecmodule-${module_version}/dkms.conf
           grep -Fx "PACKAGE_VERSION=\"${module_version}\"" /usr/src/msiecmodule-${module_version}/dkms.conf
           dkms status -m msiecmodule -v "$module_version" -k 5.10.70-1-lts | grep -F 'installed'
@@ -244,11 +260,22 @@ jobs:
           test -f /etc/dbus-1/system.d/msi-ec-service.conf
           test -f /usr/share/applications/msi-control-center.desktop
           test ! -e /etc/modules-load.d/msiecmodule.conf
-          doctor_output="$(/usr/bin/MsiControllerDoctor --json || true)"
+          doctor_output="$(/opt/msicontroller/bin/MsiControllerDoctor --json || true)"
           printf '%s\n' "${doctor_output}" | grep -F "\"clientVersion\": \"${module_version}\""
           for binary in MsiControlCenterClient MsiControlCenterService MsiControllerDoctor; do
-            ! ldd "/usr/bin/${binary}" | grep -q 'not found'
+            links="$(ldd "/opt/msicontroller/bin/${binary}")"
+            ! printf '%s\n' "$links" | grep -q 'not found'
+            qt_core="$(printf '%s\n' "$links" | awk '$1 == "libQt6Core.so.6" { print $3; exit }')"
+            test "$(readlink -f "$qt_core")" = \
+              "$(readlink -f /opt/msicontroller/qt/lib/libQt6Core.so.6)"
           done
+          missing="$(find /opt/msicontroller -type f \
+            \( -name '*.so*' -o -name 'MsiControlCenter*' -o -name 'MsiControllerDoctor' \) \
+            -print0 | xargs -0 -r -n1 ldd 2>/dev/null | \
+            sed -n 's/^[[:space:]]*\([^[:space:]]*\) => not found$/\1/p' | sort -u)"
+          test -z "$missing"
+          QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 \
+            /opt/msicontroller/bin/msicontroller-client --smoke-test
           pacman -R --noconfirm msicontroller
           ! pacman-conf --repo-list | grep -Fx 'app.stable.forgejo.acnas.net'
           ! grep -Fq '# BEGIN MsiController Forgejo repository' /etc/pacman.conf

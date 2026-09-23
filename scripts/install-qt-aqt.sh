@@ -13,14 +13,17 @@ if [[ -n "${MSICONTROLLER_HTTP_PROXY:-}" ]]; then
   export HTTPS_PROXY="${MSICONTROLLER_HTTP_PROXY}"
 fi
 
-python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel
+AQT_VENV_DIR="$(mktemp -d "${TMPDIR:-/tmp}/msicontroller-aqt.XXXXXX")"
+trap 'rm -rf "${AQT_VENV_DIR}"' EXIT
+python3 -m venv "${AQT_VENV_DIR}"
+"${AQT_VENV_DIR}/bin/python" -m pip install --no-cache-dir --upgrade pip setuptools wheel
 if [[ -n "${AQT_VERSION}" ]]; then
-  python3 -m pip install --no-cache-dir "aqtinstall==${AQT_VERSION}"
+  "${AQT_VENV_DIR}/bin/python" -m pip install --no-cache-dir "aqtinstall==${AQT_VERSION}"
 else
-  python3 -m pip install --no-cache-dir aqtinstall
+  "${AQT_VENV_DIR}/bin/python" -m pip install --no-cache-dir aqtinstall
 fi
 
-aqt install-qt \
+"${AQT_VENV_DIR}/bin/aqt" install-qt \
   --outputdir "${QT_OUTPUT_DIR}" \
   linux desktop "${QT_VERSION}" "${QT_ARCH}" \
   --modules qtcharts qttasktree
