@@ -40,13 +40,15 @@ The Qt/QML client talks to a privileged system D-Bus service. The service owns E
 
 ## Installation
 
-Download the package for your distribution from a [Forgejo release](https://forgejo.acnas.net/app/msicontroller/releases) or CI artifacts. Install headers matching your kernel first; on Omarchy use the headers for its kernel, not the stock `linux-headers` package.
+Download the package for your distribution from a [Forgejo release](https://forgejo.acnas.net/app/msicontroller/releases) or CI artifacts. Install headers matching your running kernel first; DKMS uses them to build the module. On Arch/Omarchy, a dependency on `linux-headers` would pull headers for the stock Arch kernel even if you use another kernel.
 
 | Distribution | Install downloaded package |
 | --- | --- |
-| Debian / Ubuntu | `sudo apt install ./msicontroller_amd64.deb` |
-| Fedora / RPM | `sudo dnf install ./msicontroller_x86_64.rpm` |
+| Debian / Ubuntu | `sudo apt install ./msicontroller-*.deb` |
+| Fedora / RPM | `sudo dnf install ./msicontroller-*.rpm` |
 | Arch / Omarchy | `sudo pacman -U ./msicontroller-*.pkg.tar.zst` |
+
+Run the command in a directory containing only the package you downloaded. All filenames follow `msicontroller-version-release-architecture` plus the package extension.
 
 The packages set up the signed Forgejo repository for future updates. On Arch, the package checks the bundled public key before trusting it and removes its repository entry when uninstalled. No manual `pacman.conf` edit is needed.
 

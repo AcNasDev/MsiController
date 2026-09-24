@@ -443,7 +443,7 @@ jobs:
             -H "Authorization: token ${FORGEJO_TOKEN}" \
             "${FORGEJO_API_URL}/repos/${FORGEJO_REPOSITORY}/releases/${release_id}/assets")"
 
-          for package in packages/msicontroller_amd64.deb packages/msicontroller_x86_64.rpm packages/msicontroller-*.pkg.tar.zst; do
+          for package in packages/msicontroller-*.deb packages/msicontroller-*.rpm packages/msicontroller-*.pkg.tar.zst; do
             name="$(basename "${package}")"
             asset_id="$(ASSETS_JSON="${assets_json}" ASSET_NAME="${name}" python3 - <<'PY'
           import json
@@ -540,7 +540,7 @@ jobs:
             "${github_headers[@]}" \
             "${github_api}/releases/${release_id}/assets")"
 
-          for package in packages/msicontroller_amd64.deb packages/msicontroller_x86_64.rpm packages/msicontroller-*.pkg.tar.zst; do
+          for package in packages/msicontroller-*.deb packages/msicontroller-*.rpm packages/msicontroller-*.pkg.tar.zst; do
             name="$(basename "${package}")"
             asset_id="$(ASSETS_JSON="${assets_json}" ASSET_NAME="${name}" python3 - <<'PY'
           import json

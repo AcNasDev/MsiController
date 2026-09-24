@@ -3,8 +3,6 @@ set -euo pipefail
 
 PACKAGE_DIR="${1:-packages}"
 PACKAGE_DIR="$(cd "${PACKAGE_DIR}" && pwd)"
-DEB_PACKAGE="${MSICONTROLLER_TEST_DEB:-${PACKAGE_DIR}/msicontroller_amd64.deb}"
-RPM_PACKAGE="${MSICONTROLLER_TEST_RPM:-${PACKAGE_DIR}/msicontroller_x86_64.rpm}"
 export MSICONTROLLER_SKIP_DKMS="${MSICONTROLLER_SKIP_DKMS:-1}"
 export MSICONTROLLER_DISABLE_REPOSITORY_SETUP="${MSICONTROLLER_DISABLE_REPOSITORY_SETUP:-1}"
 
@@ -16,6 +14,25 @@ fail() {
   printf 'error: %s\n' "$*" >&2
   exit 1
 }
+
+select_package() {
+  local format="$1"
+  local selected="$2"
+  shift 2
+  if [[ -n "${selected}" ]]; then
+    printf '%s\n' "${selected}"
+    return
+  fi
+  [[ $# -eq 1 ]] || fail "expected exactly one versioned ${format} package in ${PACKAGE_DIR}"
+  printf '%s\n' "$1"
+}
+
+shopt -s nullglob
+if command -v apt-get >/dev/null 2>&1; then
+  DEB_PACKAGE="$(select_package DEB "${MSICONTROLLER_TEST_DEB:-}" "${PACKAGE_DIR}"/msicontroller-[0-9]*-*-*.deb)"
+elif command -v dnf >/dev/null 2>&1; then
+  RPM_PACKAGE="$(select_package RPM "${MSICONTROLLER_TEST_RPM:-}" "${PACKAGE_DIR}"/msicontroller-[0-9]*-*-*.rpm)"
+fi
 
 require_file() {
   [ -e "$1" ] || fail "missing $1"

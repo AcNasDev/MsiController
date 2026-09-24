@@ -6,17 +6,8 @@ QT_HOST_DIR="${MSICONTROLLER_QT_HOST_DIR:-/opt/Qt/${QT_VERSION}/gcc_64}"
 PACKAGE_PREFIX="${MSICONTROLLER_PACKAGE_PREFIX:-/opt/msicontroller}"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_OUTPUT_DIR="${MSICONTROLLER_PACKAGE_OUTPUT_DIR:-${PROJECT_ROOT}/packages}"
-if [[ -n "${MSICONTROLLER_PACKAGE_RELEASE:-}" ]]; then
-  PACKAGE_RELEASE="${MSICONTROLLER_PACKAGE_RELEASE}"
-elif git -C "${PROJECT_ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
-  PACKAGE_RELEASE="1"
-else
-  PACKAGE_RELEASE="$(date -u +%Y%m%d%H%M%S)"
-fi
-DEB_ARCH="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
-RPM_ARCH="$(rpm --eval '%{_target_cpu}' 2>/dev/null || uname -m)"
-DEB_FILE_NAME="${MSICONTROLLER_DEB_FILE_NAME:-msicontroller_${DEB_ARCH}.deb}"
-RPM_FILE_NAME="${MSICONTROLLER_RPM_FILE_NAME:-msicontroller_${RPM_ARCH}.rpm}"
+source "${PROJECT_ROOT}/scripts/package-release.sh"
+PACKAGE_RELEASE="$(msicontroller_package_release "${PROJECT_ROOT}")"
 REPOSITORY_ENABLE="${MSICONTROLLER_PACKAGE_REPOSITORY_ENABLE:-ON}"
 REPOSITORY_BASE_URL="${MSICONTROLLER_PACKAGE_REPOSITORY_BASE_URL:-https://forgejo.acnas.net}"
 REPOSITORY_OWNER="${MSICONTROLLER_PACKAGE_REPOSITORY_OWNER:-app}"
@@ -71,8 +62,23 @@ cmake --build "${BUILD_DIR}" --parallel
 
 DEB_PACKAGE="$(find "${BUILD_DIR}" -maxdepth 1 -type f -name '*.deb' -print -quit)"
 RPM_PACKAGE="$(find "${BUILD_DIR}" -maxdepth 1 -type f -name '*.rpm' -print -quit)"
+[[ -n "${DEB_PACKAGE}" && -n "${RPM_PACKAGE}" ]] || {
+  printf 'error: CPack did not produce both DEB and RPM packages\n' >&2
+  exit 1
+}
+DEB_VERSION_RELEASE="$(dpkg-deb -f "${DEB_PACKAGE}" Version)"
+RPM_VERSION_RELEASE="$(rpm --dbpath "${BUILD_DIR}/rpmdb" -qp --qf '%{VERSION}-%{RELEASE}' "${RPM_PACKAGE}")"
+[[ "${DEB_VERSION_RELEASE}" == "${RPM_VERSION_RELEASE}" ]] || {
+  printf 'error: DEB and RPM package versions differ\n' >&2
+  exit 1
+}
+DEB_ARCH="$(dpkg-deb -f "${DEB_PACKAGE}" Architecture)"
+RPM_ARCH="$(rpm --dbpath "${BUILD_DIR}/rpmdb" -qp --qf '%{ARCH}' "${RPM_PACKAGE}")"
+DEB_FILE_NAME="${MSICONTROLLER_DEB_FILE_NAME:-msicontroller-${DEB_VERSION_RELEASE}-${DEB_ARCH}.deb}"
+RPM_FILE_NAME="${MSICONTROLLER_RPM_FILE_NAME:-msicontroller-${RPM_VERSION_RELEASE}-${RPM_ARCH}.rpm}"
 
 install -m 0644 "${DEB_PACKAGE}" "${PACKAGE_OUTPUT_DIR}/${DEB_FILE_NAME}.tmp"
 install -m 0644 "${RPM_PACKAGE}" "${PACKAGE_OUTPUT_DIR}/${RPM_FILE_NAME}.tmp"
 mv -f "${PACKAGE_OUTPUT_DIR}/${DEB_FILE_NAME}.tmp" "${PACKAGE_OUTPUT_DIR}/${DEB_FILE_NAME}"
 mv -f "${PACKAGE_OUTPUT_DIR}/${RPM_FILE_NAME}.tmp" "${PACKAGE_OUTPUT_DIR}/${RPM_FILE_NAME}"
+printf 'Built %s\n' "${PACKAGE_OUTPUT_DIR}/${DEB_FILE_NAME}" "${PACKAGE_OUTPUT_DIR}/${RPM_FILE_NAME}"

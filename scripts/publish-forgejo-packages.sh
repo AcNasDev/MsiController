@@ -3,8 +3,23 @@ set -euo pipefail
 
 PACKAGE_DIR="${1:-packages}"
 PACKAGE_DIR="$(cd "${PACKAGE_DIR}" && pwd)"
-DEB_PACKAGE="${MSICONTROLLER_PUBLISH_DEB:-${PACKAGE_DIR}/msicontroller_amd64.deb}"
-RPM_PACKAGE="${MSICONTROLLER_PUBLISH_RPM:-${PACKAGE_DIR}/msicontroller_x86_64.rpm}"
+shopt -s nullglob
+if [[ -z "${MSICONTROLLER_PUBLISH_DEB:-}" ]]; then
+  deb_packages=("${PACKAGE_DIR}"/msicontroller-[0-9]*-*-*.deb)
+  [[ ${#deb_packages[@]} -eq 1 ]] || {
+    printf 'error: expected exactly one versioned DEB package in %s\n' "${PACKAGE_DIR}" >&2
+    exit 1
+  }
+fi
+DEB_PACKAGE="${MSICONTROLLER_PUBLISH_DEB:-${deb_packages[0]}}"
+if [[ -z "${MSICONTROLLER_PUBLISH_RPM:-}" ]]; then
+  rpm_packages=("${PACKAGE_DIR}"/msicontroller-[0-9]*-*-*.rpm)
+  [[ ${#rpm_packages[@]} -eq 1 ]] || {
+    printf 'error: expected exactly one versioned RPM package in %s\n' "${PACKAGE_DIR}" >&2
+    exit 1
+  }
+fi
+RPM_PACKAGE="${MSICONTROLLER_PUBLISH_RPM:-${rpm_packages[0]}}"
 ARCH_PACKAGE="${MSICONTROLLER_PUBLISH_ARCH:-}"
 if [[ -z "$ARCH_PACKAGE" ]]; then
   arch_packages=("${PACKAGE_DIR}"/msicontroller-*.pkg.tar.zst)

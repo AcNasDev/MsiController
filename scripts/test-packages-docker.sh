@@ -32,10 +32,13 @@ log() {
   printf '\n==> %s\n' "$*"
 }
 
-[ -f "${PACKAGE_DIR}/msicontroller_amd64.deb" ] || \
-  { printf 'error: missing %s\n' "${PACKAGE_DIR}/msicontroller_amd64.deb" >&2; exit 1; }
-[ -f "${PACKAGE_DIR}/msicontroller_x86_64.rpm" ] || \
-  { printf 'error: missing %s\n' "${PACKAGE_DIR}/msicontroller_x86_64.rpm" >&2; exit 1; }
+shopt -s nullglob
+deb_packages=("${PACKAGE_DIR}"/msicontroller-[0-9]*-*-*.deb)
+rpm_packages=("${PACKAGE_DIR}"/msicontroller-[0-9]*-*-*.rpm)
+[[ ${#deb_packages[@]} -eq 1 && ${#rpm_packages[@]} -eq 1 ]] || {
+  printf 'error: expected one versioned DEB and one versioned RPM package in %s\n' "${PACKAGE_DIR}" >&2
+  exit 1
+}
 
 for image in "${DEB_IMAGES[@]}"; do
   run_image "${image}"

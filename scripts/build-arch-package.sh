@@ -20,21 +20,8 @@ if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 1
 fi
 
-EXACT_TAG=""
-if [[ "${GIT_ROOT}" == "${PROJECT_ROOT}" ]]; then
-  EXACT_TAG="$(git -C "${PROJECT_ROOT}" describe --tags --exact-match 2>/dev/null || true)"
-fi
-if [[ -n "${MSICONTROLLER_PACKAGE_RELEASE:-}" ]]; then
-  RELEASE="${MSICONTROLLER_PACKAGE_RELEASE}"
-elif [[ "${GIT_ROOT}" == "${PROJECT_ROOT}" && -z "$(git -C "${PROJECT_ROOT}" status --porcelain --untracked-files=no)" && "${EXACT_TAG%%-*}" == "v${VERSION}" ]]; then
-  RELEASE=1
-else
-  RELEASE="$(date -u +%Y%m%d%H%M%S)"
-fi
-if [[ ! "${RELEASE}" =~ ^[0-9]+$ ]]; then
-  printf 'error: invalid Arch package release: %s\n' "${RELEASE}" >&2
-  exit 1
-fi
+source "${PROJECT_ROOT}/scripts/package-release.sh"
+RELEASE="$(msicontroller_package_release "${PROJECT_ROOT}")"
 
 if [[ "$(id -u)" == 0 ]]; then
   printf 'error: makepkg must run as an unprivileged user\n' >&2
