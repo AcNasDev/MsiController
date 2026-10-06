@@ -81,6 +81,63 @@ cleanup_broken_dkms_versions() {
         done
 }
 
+installed_kernel_module_path() {
+    kernel_version="$1"
+    command -v modinfo >/dev/null 2>&1 || return 1
+    modinfo -k "$kernel_version" -n "$DKMS_NAME" 2>/dev/null
+}
+
+module_layout_crc() {
+    awk '$2 == "module_layout" { print $1; exit }' "$1"
+}
+
+installed_module_layout_crc() {
+    module_path="$1"
+    command -v modprobe >/dev/null 2>&1 || return 1
+    modprobe --dump-modversions "$module_path" 2>/dev/null | \
+        awk '$2 == "module_layout" { print $1; exit }'
+}
+
+dkms_module_matches_kernel() {
+    kernel_version="$1"
+    symvers="/lib/modules/$kernel_version/build/Module.symvers"
+
+    [ -r "$symvers" ] || return 2
+    command -v modinfo >/dev/null 2>&1 || return 2
+    command -v modprobe >/dev/null 2>&1 || return 2
+
+    module_path="$(installed_kernel_module_path "$kernel_version")" || return 1
+    [ -n "$module_path" ] || return 1
+    [ -e "$module_path" ] || return 1
+
+    expected_crc="$(module_layout_crc "$symvers")"
+    actual_crc="$(installed_module_layout_crc "$module_path")"
+    [ -n "$expected_crc" ] || return 2
+    [ -n "$actual_crc" ] || return 1
+    [ "$actual_crc" = "$expected_crc" ]
+}
+
+ensure_current_dkms_module() {
+    kernel_version="$1"
+
+    if dkms status -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$kernel_version" 2>/dev/null | grep -q "installed"; then
+        dkms_module_matches_kernel "$kernel_version"
+        module_state=$?
+        if [ "$module_state" -eq 0 ]; then
+            return 0
+        fi
+        if [ "$module_state" -eq 2 ]; then
+            echo "msicontroller: warning: unable to validate $DKMS_NAME for kernel $kernel_version; keeping installed DKMS module" >&2
+            return 0
+        fi
+        echo "msicontroller: warning: rebuilding $DKMS_NAME for kernel $kernel_version because installed module symbols do not match" >&2
+    fi
+
+    dkms remove -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$kernel_version" >/dev/null 2>&1 || true
+    dkms build -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$kernel_version"
+    dkms install -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$kernel_version" --force
+}
+
 case "$1" in
     configure|"")
         configure_apt_repository
@@ -89,10 +146,7 @@ case "$1" in
             cleanup_broken_dkms_versions
             dkms add -m "$DKMS_NAME" -v "$DKMS_VERSION" >/dev/null 2>&1 || true
             KERNEL_VERSION="$(uname -r)"
-            if ! dkms status -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$KERNEL_VERSION" 2>/dev/null | grep -q "installed"; then
-                dkms build -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$KERNEL_VERSION"
-                dkms install -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$KERNEL_VERSION" --force
-            fi
+            ensure_current_dkms_module "$KERNEL_VERSION"
         fi
 
         if ! skip_dkms; then
